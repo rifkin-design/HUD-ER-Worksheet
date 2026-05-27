@@ -7,6 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>AZ-RI HUD Environmental Review — CEST / EA Worksheet</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPgogIDwhLS0gQVotUkkgbmF2eSByb3VuZGVkLXNxdWFyZSBiYWNrZ3JvdW5kIC0tPgogIDxyZWN0IHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHJ4PSIxODAiIGZpbGw9IiMwZjJhNDQiLz4KICA8IS0tIFN1YnRsZSBpbm5lciBoaWdobGlnaHQgLS0+CiAgPHJlY3QgeD0iNDAiIHk9IjQwIiB3aWR0aD0iOTQ0IiBoZWlnaHQ9Ijk0NCIgcng9IjE1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWEzYTVhIiBzdHJva2Utd2lkdGg9IjMiLz4KICA8IS0tIExlYWYgYWNjZW50IChlbnZpcm9ubWVudGFsIHJldmlldykgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTEyLDI5MCkiPgogICAgPGcgdHJhbnNmb3JtPSJyb3RhdGUoLTIyKSIgZmlsbD0iIzJjN2E3YiI+CiAgICAgIDxwYXRoIGQ9Ik0gLTkwIDAgQyAtNTUgLTEwMCA2MCAtMTEwIDExNSAtNTUgQyA4MCA1NSAtMzUgODAgLTkwIDM1IFoiLz4KICAgICAgPHBhdGggZD0iTSAtOTAgMzUgTCAtMTM1IDg4IiBzdHJva2U9IiMyYzdhN2IiIHN0cm9rZS13aWR0aD0iMjAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIvPgogICAgICA8IS0tIHZlaW5pbmcgLS0+CiAgICAgIDxwYXRoIGQ9Ik0gLTU1IC0yNSBMIDcwIC00NSIgc3Ryb2tlPSIjMGYyYTQ0IiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iMC40NSIvPgogICAgICA8cGF0aCBkPSJNIC01NSAtMjUgTCAtMjUgNSIgc3Ryb2tlPSIjMGYyYTQ0IiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iMC4zNSIvPgogICAgICA8cGF0aCBkPSJNIC01NSAtMjUgTCAyMCAtNSIgc3Ryb2tlPSIjMGYyYTQ0IiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iMC4zNSIvPgogICAgPC9nPgogIDwvZz4KICA8IS0tIEFaLVJJIHdvcmRtYXJrIC0tPgogIDx0ZXh0IHg9IjUxMiIgeT0iNjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhIE5ldWUsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjgwIiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZjdmM2VjIiBsZXR0ZXItc3BhY2luZz0iLTQiPkFaLVJJPC90ZXh0PgogIDwhLS0gSFVEIEVSIHN1YnRpdGxlIC0tPgogIDx0ZXh0IHg9IjUxMiIgeT0iODAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iSGVsdmV0aWNhIE5ldWUsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTA4IiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSIjMmM3YTdiIiBsZXR0ZXItc3BhY2luZz0iMTgiPkhVRCBFUjwvdGV4dD4KPC9zdmc+Cg==">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
 <style>
@@ -221,6 +222,7 @@
   .status-pill.compliant { background: var(--green-bg); color: var(--green); }
   .status-pill.followup { background: var(--yellow-bg); color: var(--yellow); }
   .status-pill.na { background: var(--gray-bg); color: var(--gray); }
+  .status-pill.exempt { background: #e6f0fa; color: #2b6cb0; }
   .status-pill.unset { background: #fff; color: var(--gray); border: 1px dashed var(--border); }
   .summary-counts {
     display: flex;
@@ -239,6 +241,7 @@
   .count-box.compliant { border-left-color: var(--green); }
   .count-box.followup { border-left-color: var(--yellow); }
   .count-box.na { border-left-color: var(--gray); }
+  .count-box.exempt { border-left-color: #2b6cb0; }
   .count-box .count { font-size: 28px; font-weight: 700; }
   .count-box .label-text { font-size: 12px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
   .ea-section { display: none; }
@@ -479,7 +482,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v89 — Completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v91 — Added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
   </div>
 </header>
 
@@ -516,6 +519,22 @@
       <button onclick="closeBoilerplate()" style="background:transparent;color:white;border:none;font-size:20px;cursor:pointer;">×</button>
     </div>
     <div id="bpModalBody" style="padding:18px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<div id="clientQuestionsModal" class="no-print" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:8px;max-width:680px;width:90%;max-height:82vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div style="background:var(--azri-teal);color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <strong>📋 Questions for the Client</strong>
+      <button onclick="closeClientQuestions()" style="background:transparent;color:white;border:none;font-size:20px;cursor:pointer;">×</button>
+    </div>
+    <div style="padding:14px 20px 4px;font-size:12px;color:#4a5568;">These are the open scope questions you flagged. Copy them into an email to the client to resolve the remaining exemption determinations.</div>
+    <pre id="clientQuestionsBody" style="margin:0;padding:8px 20px 16px;overflow-y:auto;white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.5;color:#2d3748;"></pre>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;">
+      <button onclick="copyClientQuestions()" style="background:var(--azri-navy);color:white;border:none;padding:7px 14px;border-radius:5px;font-size:13px;cursor:pointer;font-weight:600;">Copy to clipboard</button>
+      <button onclick="closeClientQuestions()" style="background:white;border:1px solid var(--border);color:#4a5568;padding:7px 14px;border-radius:5px;font-size:13px;cursor:pointer;">Close</button>
+      <span id="cqCopyStatus" style="font-size:12px;color:var(--green,#2f855a);font-weight:600;"></span>
+    </div>
   </div>
 </div>
 
@@ -963,9 +982,10 @@
   <h2>Compliance Summary</h2>
   <div class="card-body">
     <div class="summary-counts">
-      <div class="count-box compliant"><div class="count" id="cnt-compliant">0</div><div class="label-text">Compliant</div></div>
       <div class="count-box followup"><div class="count" id="cnt-followup">0</div><div class="label-text">Follow-Up Required</div></div>
+      <div class="count-box compliant"><div class="count" id="cnt-compliant">0</div><div class="label-text">Compliant</div></div>
       <div class="count-box na"><div class="count" id="cnt-na">0</div><div class="label-text">Not Applicable</div></div>
+      <div class="count-box exempt"><div class="count" id="cnt-exempt">0</div><div class="label-text">Exempt</div></div>
       <div class="count-box"><div class="count" id="cnt-unset">0</div><div class="label-text">Not Yet Assessed</div></div>
     </div>
     <table class="matrix">
@@ -1048,7 +1068,8 @@
     <strong>Directions:</strong> Click on the Compliance Factor links in the chart below. The links will take you to a separate screen to answer questions and provide documentation on the specific Compliance Factor. After completing each Compliance Factor screen you will automatically return to this screen to continue.
   </div>
   <div style="background:var(--azri-sand);padding:12px 22px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:14px;" class="no-print">
-    <span style="font-size:12px;color:var(--gray);flex:1;min-width:200px;">Work each authority below: use its <b>✔ Determine if Exempt</b> button (scope questions) for the §58.5 authorities, or <b>↻ Auto-Determine</b> (live FEMA/USFWS/NPS/EPA query) for the location-based ones, then insert the matching Write-Up.</span>
+    <button onclick="buildClientQuestionsList()" style="background:var(--azri-teal);color:white;border:none;padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-weight:600;">📋 Client Questions</button>
+    <span style="font-size:12px;color:var(--gray);flex:1;min-width:200px;">Work each authority below: use its <b>✔ Determine if Exempt</b> button (scope questions) for the §58.5 authorities. If you’re unsure of a scope answer, click <b>❓ Not sure — flag for client</b> in that panel; flagged items collect under <b>📋 Client Questions</b> as a list you can copy and send.</span>
     <span id="autoRunStatus" style="font-size:12px;color:var(--azri-navy);font-weight:600;"></span>
   </div>
   <div id="authorities-container"></div>
@@ -4238,8 +4259,8 @@ const EXEMPTION_CHECKS = {
       ]}
     ],
     evaluate: a => {
-      if (a.scope === 'deminimis') return { exempt: true, status: 'compliant', writeUpIdx: 0, msg: 'Exempt — de minimis (40 CFR 93.153(b)). Air Write Up 1 inserted; marked Compliant.' };
-      if (a.scope === 'sf') return { exempt: true, status: 'compliant', writeUpIdx: 1, msg: 'Exempt — Individual Action Exemption (single-family). Air Write Up 2 inserted; marked Compliant.' };
+      if (a.scope === 'deminimis') return { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt — de minimis (40 CFR 93.153(b)). Air Write Up 1 inserted; marked Exempt.' };
+      if (a.scope === 'sf') return { exempt: true, status: 'exempt', writeUpIdx: 1, msg: 'Exempt — Individual Action Exemption (single-family). Air Write Up 2 inserted; marked Exempt.' };
       return { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Complete Step 2 (EPA Green Book attainment) per the SOP, then insert the matching Write-Up.' };
     }
   },
@@ -4252,7 +4273,7 @@ const EXEMPTION_CHECKS = {
       ]}
     ],
     evaluate: a => a.scope === 'exempt'
-      ? { exempt: true, status: 'compliant', writeUpIdx: 0, msg: 'Exempt — no effect on listed species/critical habitat. ESA Write Up 1 inserted; marked Compliant.' }
+      ? { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt — no effect on listed species/critical habitat. ESA Write Up 1 inserted; marked Exempt.' }
       : { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Pull the IPaC official species list (Step 2) per the SOP, then insert the matching Write-Up.' }
   },
   explos: {
@@ -4264,7 +4285,7 @@ const EXEMPTION_CHECKS = {
       ]}
     ],
     evaluate: a => a.scope === 'no'
-      ? { exempt: true, status: 'compliant', writeUpIdx: 0, msg: 'Exempt. Explosive Write Up 1 inserted; marked Compliant.' }
+      ? { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt. Explosive Write Up 1 inserted; marked Exempt.' }
       : { exempt: false, status: 'followup', runAnalysis: false, msg: 'Not exempt — review the ERIS AST DBR (1-mile) per the SOP, then select Write Up 2–6.' }
   },
   farm: {
@@ -4276,7 +4297,7 @@ const EXEMPTION_CHECKS = {
       ]}
     ],
     evaluate: a => a.scope === 'no'
-      ? { exempt: true, status: 'compliant', writeUpIdx: 0, msg: 'Exempt — not new construction. Farmland Write Up 1 inserted; marked Compliant.' }
+      ? { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt — not new construction. Farmland Write Up 1 inserted; marked Exempt.' }
       : { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Check the urbanized-area exemption and Web Soil Survey (Steps 2–3) per the SOP, then insert the matching Write-Up.' }
   },
   wetlands: {
@@ -4288,7 +4309,7 @@ const EXEMPTION_CHECKS = {
       ]}
     ],
     evaluate: a => a.scope === 'no'
-      ? { exempt: true, status: 'compliant', writeUpIdx: 0, msg: 'Exempt — excluded from EO 11990. Wetlands Write Up 1 inserted; marked Compliant.' }
+      ? { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt — excluded from EO 11990. Wetlands Write Up 1 inserted; marked Exempt.' }
       : { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Check the National Wetlands Inventory (Step 2) per the SOP, then insert the matching Write-Up.' }
   },
   aquifer: {
@@ -4300,7 +4321,7 @@ const EXEMPTION_CHECKS = {
       ]}
     ],
     evaluate: a => a.scope === 'no'
-      ? { exempt: true, status: 'compliant', writeUpIdx: 0, msg: 'Exempt. Sole Source Aquifer Write Up 1 inserted; marked Compliant.' }
+      ? { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt. Sole Source Aquifer Write Up 1 inserted; marked Exempt.' }
       : { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Check the NEPAssist Sole Source Aquifer layer (Step 2) per the SOP, then insert the matching Write-Up.' }
   },
   noise: {
@@ -4318,7 +4339,7 @@ const EXEMPTION_CHECKS = {
     evaluate: a => {
       if (a.nc === 'yes') return { exempt: false, status: 'followup', runAnalysis: false, msg: 'Not exempt — new construction of a noise-sensitive use requires the preliminary screening and (if triggered) a full Noise Assessment per the SOP.' };
       if (a.atten === 'yes') return { exempt: false, status: 'followup', writeUpIdx: 1, runAnalysis: false, msg: 'Not exempt — rehab affects noise-attenuating materials. Write Up 1b inserted; complete the screening + attenuation note (24 CFR 51.101(a)(5)).' };
-      return { exempt: true, status: 'compliant', writeUpIdx: 0, msg: 'Exempt — not new construction and no impact to noise-attenuating materials. Noise Write Up 1 inserted; marked Compliant.' };
+      return { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt — not new construction and no impact to noise-attenuating materials. Noise Write Up 1 inserted; marked Exempt.' };
     }
   }
 };
@@ -4339,7 +4360,8 @@ function toggleExemptionCheck(id) {
   });
   html += '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">'
     + '<button type="button" onclick="applyExemptionCheck(\'' + id + '\')" style="background:var(--azri-navy);color:white;border:none;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Apply Determination</button>'
-    + '<span id="exemptResult_' + id + '" style="font-size:11.5px;color:#4a5568;"></span></div>';
+    + '<button type="button" id="flagBtn_' + id + '" onclick="flagForClient(\'' + id + '\')" style="background:white;border:1px solid #9b2c2c;color:#9b2c2c;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">' + ((typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[id]) ? '✓ Flagged for client (click to unflag)' : '❓ Not sure — flag for client') + '</button>'
+    + '<span id="exemptResult_' + id + '" style="font-size:11.5px;color:#4a5568;flex-basis:100%;"></span></div>';
   panel.innerHTML = html;
   panel.style.display = 'block';
 }
@@ -4369,6 +4391,69 @@ function applyExemptionCheck(id) {
   }
   if (rEl) { rEl.textContent = res.msg || ''; rEl.style.color = res.exempt ? 'var(--green,#2f855a)' : '#9b2c2c'; }
 }
+
+// ===== CLIENT QUESTIONS (info gaps to send the client) =====
+// Plain-language questions to ask the client when the reviewer is unsure whether a scope-based
+// exemption applies. Keyed by authority id (the exemption-eligible authorities only).
+const CLIENT_QUESTIONS = {
+  air:      'Will the project involve any new construction, a change in the building’s use, or the creation/addition of 5 or more dwelling units (or any commercial/industrial facilities)?',
+  esa:      'Will the project involve any exterior work beyond repainting or replacing siding — for example, additions, exterior expansion, demolition, ground disturbance, or new construction?',
+  explos:   'Will the project increase the number of dwelling units, convert the building’s use to residential/habitation, or make a currently vacant building habitable?',
+  farm:     'Will the project involve new construction or otherwise disturb or convert previously undeveloped land?',
+  wetlands: 'Will the project involve new construction, expand the building’s footprint, or disturb the ground in any way?',
+  aquifer:  'Will the project involve new construction or a rehabilitation that includes major ground disturbance?',
+  noise:    'Is this new construction of a residential or other noise-sensitive use? If it is a rehabilitation, will it replace or alter exterior walls, windows, or doors?'
+};
+let CLIENT_QUESTION_FLAGS = {};
+
+// Toggle "not sure — ask the client" for an authority. Flagging marks it Follow-Up (unresolved
+// pending client info) and adds its question to the Client Questions list.
+function flagForClient(id) {
+  CLIENT_QUESTION_FLAGS[id] = !CLIENT_QUESTION_FLAGS[id];
+  const rEl = document.getElementById('exemptResult_' + id);
+  if (CLIENT_QUESTION_FLAGS[id]) {
+    const radio = document.querySelector('input[name="' + id + '_status"][value="followup"]');
+    if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    if (rEl) { rEl.textContent = '❓ Flagged for client — added to the Client Questions list; marked Follow-Up pending their answer.'; rEl.style.color = '#9b2c2c'; }
+  } else if (rEl) {
+    rEl.textContent = 'Removed from the Client Questions list.'; rEl.style.color = '#4a5568';
+  }
+  const btn = document.getElementById('flagBtn_' + id);
+  if (btn) btn.textContent = CLIENT_QUESTION_FLAGS[id] ? '✓ Flagged for client (click to unflag)' : '❓ Not sure — flag for client';
+  if (typeof updateMatrix === 'function') updateMatrix();
+}
+
+function buildClientQuestionsList() {
+  const flagged = AUTHORITIES.filter(a => CLIENT_QUESTION_FLAGS[a.id]);
+  const proj = (document.querySelector('[data-field="projectName"]') || {}).value || '[Project Name]';
+  const body = document.getElementById('clientQuestionsBody');
+  if (!flagged.length) {
+    body.textContent = 'No sections are currently flagged.\n\nTo add a question: open an authority’s "✔ Determine if Exempt" panel and click "❓ Not sure — flag for client." Its question will appear here, grouped by authority, ready to copy into an email.';
+  } else {
+    let txt = 'Information needed to complete the HUD environmental review — ' + proj + '\n\n'
+      + 'To finish the review for the project, please answer the following:\n\n';
+    flagged.forEach((a, i) => {
+      txt += (i + 1) + '. ' + a.name.replace(/&amp;/g, '&') + '\n   ' + (CLIENT_QUESTIONS[a.id] || 'Please confirm the scope of work relevant to this authority.') + '\n\n';
+    });
+    body.textContent = txt;
+  }
+  document.getElementById('clientQuestionsModal').style.display = 'flex';
+}
+
+function copyClientQuestions() {
+  const text = document.getElementById('clientQuestionsBody').textContent;
+  const done = () => { const s = document.getElementById('cqCopyStatus'); if (s) { s.textContent = '✓ Copied to clipboard'; setTimeout(() => { s.textContent = ''; }, 3000); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {});
+  } else {
+    const r = document.createRange(); r.selectNode(document.getElementById('clientQuestionsBody'));
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+    try { document.execCommand('copy'); done(); } catch (e) {}
+    window.getSelection().removeAllRanges();
+  }
+}
+
+function closeClientQuestions() { document.getElementById('clientQuestionsModal').style.display = 'none'; }
 
 // ===== RENDER AUTHORITIES =====
 const authContainer = document.getElementById('authorities-container');
@@ -4407,6 +4492,7 @@ AUTHORITIES.forEach(a => {
           <label><input type="radio" name="${a.id}_status" value="compliant" data-auth="${a.id}"><span>Compliant</span></label>
           <label><input type="radio" name="${a.id}_status" value="followup" data-auth="${a.id}"><span>Follow-Up</span></label>
           <label><input type="radio" name="${a.id}_status" value="na" data-auth="${a.id}"><span>N/A</span></label>
+          ${EXEMPTION_CHECKS[a.id] ? `<label><input type="radio" name="${a.id}_status" value="exempt" data-auth="${a.id}"><span>Exempt</span></label>` : ''}
         </div>
         ${EXEMPTION_CHECKS[a.id]
             ? `<button class="no-print" onclick="toggleExemptionCheck('${a.id}')" id="exemptBtn_${a.id}" style="background:var(--azri-sand);border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✔ Determine if Exempt</button>`
@@ -4959,17 +5045,20 @@ document.addEventListener('change', e => {
 function updateMatrix() {
   const tbody = document.getElementById('matrix-body');
   tbody.innerHTML = '';
-  let counts = { compliant: 0, followup: 0, na: 0, unset: 0 };
+  let counts = { compliant: 0, followup: 0, na: 0, exempt: 0, unset: 0 };
   AUTHORITIES.forEach(a => {
     const checked = document.querySelector(`input[name="${a.id}_status"]:checked`);
     const status = checked ? checked.value : 'unset';
+    if (counts[status] === undefined) counts[status] = 0;
     counts[status]++;
     const sourceEl = document.querySelector(`[data-field="${a.id}_source"]`);
     const notesEl = document.querySelector(`[data-field="${a.id}_notes"]`);
     const source = sourceEl ? sourceEl.value : '';
     const notes = notesEl ? notesEl.value : '';
-    const display = [source, notes].filter(Boolean).join(' — ');
-    const pillLabel = { compliant: 'Compliant', followup: 'Follow-Up', na: 'N/A', unset: 'Not Set' }[status];
+    const flagged = (typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[a.id])
+      ? '<div style="font-size:11px;color:#9b2c2c;font-weight:600;">❓ Flagged — question for client</div>' : '';
+    const display = ([source, notes].filter(Boolean).join(' — ')) + flagged;
+    const pillLabel = { compliant: 'Compliant', followup: 'Follow-Up', na: 'N/A', exempt: 'Exempt', unset: 'Not Set' }[status];
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${a.name}</strong><br><span style="font-size:11px;color:var(--gray);">${a.cite}</span></td>
@@ -4981,6 +5070,7 @@ function updateMatrix() {
   document.getElementById('cnt-compliant').textContent = counts.compliant;
   document.getElementById('cnt-followup').textContent = counts.followup;
   document.getElementById('cnt-na').textContent = counts.na;
+  const ce = document.getElementById('cnt-exempt'); if (ce) ce.textContent = counts.exempt;
   document.getElementById('cnt-unset').textContent = counts.unset;
 }
 
@@ -5025,6 +5115,8 @@ function gatherData() {
   if (typeof mitigationRows !== 'undefined') data.mitigationRows = mitigationRows;
   // Edited SOP panels (per-authority overrides)
   if (typeof SOP_OVERRIDES !== 'undefined' && Object.keys(SOP_OVERRIDES).length) data.sopOverrides = SOP_OVERRIDES;
+  // Client-question flags (sections flagged "not sure — ask client")
+  if (typeof CLIENT_QUESTION_FLAGS !== 'undefined') data.clientQuestionFlags = CLIENT_QUESTION_FLAGS;
   return data;
 }
 
@@ -5114,6 +5206,10 @@ function loadJSON(event) {
         SOP_OVERRIDES = Object.assign(SOP_OVERRIDES, data.sopOverrides);
         if (typeof persistSOPOverrides === 'function') persistSOPOverrides();
         Object.keys(SOP_OVERRIDES).forEach(id => { const b = document.getElementById('sopBody_' + id); if (b) b.innerHTML = SOP_OVERRIDES[id]; });
+      }
+      // Client-question flags restore
+      if (data.clientQuestionFlags && typeof data.clientQuestionFlags === 'object') {
+        CLIENT_QUESTION_FLAGS = data.clientQuestionFlags;
       }
       document.getElementById('eaToggle').checked = !!data.eaToggle;
       toggleEA();
@@ -5244,8 +5340,8 @@ function exportWord() {
   const f = {};
   document.querySelectorAll('[data-field]').forEach(el => { f[el.dataset.field] = el.value || ''; });
   const eaOn = document.getElementById('eaToggle').checked;
-  const statusLabel = { compliant: 'Compliant', followup: 'Follow-Up Required', na: 'Not Applicable', unset: 'Not Yet Assessed' };
-  const counts = { compliant: 0, followup: 0, na: 0, unset: 0 };
+  const statusLabel = { compliant: 'Compliant', followup: 'Follow-Up Required', na: 'Not Applicable', exempt: 'Exempt', unset: 'Not Yet Assessed' };
+  const counts = { compliant: 0, followup: 0, na: 0, exempt: 0, unset: 0 };
 
   let authorityRows = '';
   AUTHORITIES.forEach(a => {
@@ -5321,7 +5417,7 @@ function exportWord() {
     ${document.getElementById('levelResult').innerHTML || '<p><em>Level of review not yet determined.</em></p>'}
 
     <h2 style="background:#0f2a44;color:white;padding:8px 12px;margin-top:16px;">Compliance Summary</h2>
-    <p><strong>Compliant:</strong> ${counts.compliant} &nbsp;|&nbsp; <strong>Follow-Up Required:</strong> ${counts.followup} &nbsp;|&nbsp; <strong>Not Applicable:</strong> ${counts.na} &nbsp;|&nbsp; <strong>Not Yet Assessed:</strong> ${counts.unset}</p>
+    <p><strong>Follow-Up Required:</strong> ${counts.followup} &nbsp;|&nbsp; <strong>Compliant:</strong> ${counts.compliant} &nbsp;|&nbsp; <strong>Not Applicable:</strong> ${counts.na} &nbsp;|&nbsp; <strong>Exempt:</strong> ${counts.exempt} &nbsp;|&nbsp; <strong>Not Yet Assessed:</strong> ${counts.unset}</p>
     <p><strong>Overall Recommendation:</strong><br>${(f.overallRecommendation||'').replace(/\n/g,'<br>')}</p>
 
     <h2 style="background:#0f2a44;color:white;padding:8px 12px;margin-top:16px;">§58.5 / §58.6 Related Federal Laws and Authorities</h2>
@@ -7436,7 +7532,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v89 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v91 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  STRUCTURE: Reorganized sections to match HEROS sidebar order — 1101 Review Type → 1105 Initial Screen → 1120 Project Location → 1125 Project Summary → 1340 Cooperating Agency Agreement (EA only, NEW) → 1366 Project Justification → 2005 Related Laws & Authorities → 4010 EA Factors (was 1370) → 4030 EA Analysis (was 1375 + 1380 merged) → 5000 Mitigation Measures and Conditions (was 1390) → 6205 Preparer Notification / Final Screen (NEW).');
   console.log('  INSTRUCTIONS: HEROS-verbatim instructional text added to 4010 EA Factors (impact codes legend + directions paragraph), 5000 Mitigation (Project Mitigation Plan + the "before proceeding" warning), 6205 Final Screen (Partner User warning + reassignment guidance).');
   console.log('  4030 EA Analysis now bundles: Cumulative Impact, Alternatives, No Action, Additional Studies, Sources/Agencies Consulted, List of Permits, Public Outreach, Public Comment dates, Finding (FONSI/EIS), Summary of Findings, Mitigation narrative — matching the HEROS Environmental Assessment Analysis screen.');
