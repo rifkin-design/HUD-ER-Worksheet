@@ -5101,6 +5101,13 @@ function gatherData() {
   document.querySelectorAll('input[type="radio"]:checked').forEach(r => {
     if (r.name) data.radios[r.name] = r.value;
   });
+  // Capture EVERY multi-select checkbox group (no data-field of their own) so they persist.
+  // Covers herosActivity (Activities), herosPlannedUse (Planned Use), and any similar groups.
+  data.checkboxGroups = {};
+  document.querySelectorAll('input[type="checkbox"][name]:not([data-field])').forEach(c => {
+    if (!data.checkboxGroups[c.name]) data.checkboxGroups[c.name] = [];
+    if (c.checked) data.checkboxGroups[c.name].push(c.value);
+  });
   // LORA answers
   ['loraUnits','loraExpand','loraUseChange','loraDensity','loraHistoric','loraFlood','loraDisplace','loraGround','loraSignificant'].forEach(n => {
     const c = document.querySelector(`input[name="${n}"]:checked`);
@@ -5199,6 +5206,19 @@ function loadJSON(event) {
           r.dispatchEvent(new Event('change', { bubbles: true }));
         }
       });
+      // Generic restore for multi-select checkbox groups (Activities, Planned Use, etc.)
+      const savedCheckboxGroups = data.checkboxGroups || {};
+      document.querySelectorAll('input[type="checkbox"][name]:not([data-field])').forEach(c => {
+        if (Object.prototype.hasOwnProperty.call(savedCheckboxGroups, c.name)) {
+          c.checked = (savedCheckboxGroups[c.name].indexOf(c.value) !== -1);
+        }
+      });
+      // Also restore the HEROS Activities / Land Use / Planned Use from their hidden mirror
+      // fields (handles JSON files saved before checkboxGroups existed), then re-run the
+      // sync helpers so the LORA inputs, level-of-review, and citations recompute.
+      if (typeof restoreHerosSummaryFromHidden === 'function') restoreHerosSummaryFromHidden();
+      if (typeof syncActivitiesToLora === 'function') syncActivitiesToLora();
+      if (typeof syncPlannedUse === 'function') syncPlannedUse();
       // Parcels restore — re-add to map using tracked-layer helper so each is independently removable
       if (data.parcels && data.parcels.features && typeof drawnItems !== 'undefined') {
         drawnItems.clearLayers();
@@ -5477,7 +5497,8 @@ function generateClientReport() {
   const counts = { compliant: 0, followup: 0, na: 0, exempt: 0, unset: 0 };
   const flaggedList = [];
 
-  let rows = '';
+  // Compliance summary — one self-contained card per authority (never splits across pages)
+  let cards = '';
   AUTHORITIES.forEach(a => {
     const checked = document.querySelector(`input[name="${a.id}_status"]:checked`);
     const status = checked ? checked.value : 'unset';
@@ -5486,23 +5507,27 @@ function generateClientReport() {
     if (flagged) flaggedList.push(a.name.replace(/&amp;/g, '&'));
     const body = [f[a.id + '_source'], f[a.id + '_notes']].filter(Boolean).map(nl).join('<br><br>')
       || '<span style="color:#a0aec0;font-style:italic;">Not yet assessed</span>';
-    rows += `<tr>
-      <td style="font-weight:600;color:#0f2a44;">${esc(a.name.replace(/&amp;/g, '&'))}<div style="font-size:10px;color:#718096;font-weight:400;margin-top:2px;">${esc(a.cite)}</div></td>
-      <td style="white-space:nowrap;"><span style="display:inline-block;padding:3px 10px;border-radius:12px;background:${statusColor[status]};color:#fff;font-size:10.5px;font-weight:700;">${statusLabel[status]}</span>${flagged ? '<div style="font-size:9.5px;color:#9b2c2c;font-weight:700;margin-top:4px;">&#10067; Question for you</div>' : ''}</td>
-      <td style="font-size:11.5px;color:#2d3748;">${body}</td>
-    </tr>`;
+    cards += `<div class="auth">
+      <div class="auth-head">
+        <div class="auth-name">${esc(a.name.replace(/&amp;/g, '&'))}<div class="auth-cite">${esc(a.cite)}</div></div>
+        <div class="auth-status"><span class="pill" style="background:${statusColor[status]};">${statusLabel[status]}</span>${flagged ? '<div class="flag">&#10067; Question for you</div>' : ''}</div>
+      </div>
+      <div class="findings">${body}</div>
+    </div>`;
   });
 
-  // Project information — show only fields that have a value, to keep it clean for the client
+  // Project information — label/value rows; show only fields that have a value
   const projFields = [
     ['Project Name', f.projectName], ['HEROS Number', f.herosNumber], ['Responsible Entity', f.responsibleEntity],
     ['Funding Program(s)', f.fundingProgram], ['Total HUD Funding', f.funding], ['Project Type', f.projectType],
     ['Site Address', f.siteAddress], ['APN / Parcel', f.apn], ['Lat / Long', f.latlong], ['Year Built', f.yearBuilt],
     ['Reviewer', f.reviewer], ['Review Date', f.reviewDate]
   ].filter(r => r[1] && String(r[1]).trim());
-  let projRows = projFields.map(r => `<tr><td style="width:32%;font-weight:600;background:#f7f3ec;color:#0f2a44;">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('');
+  let projRows = projFields.map(r => `<div class="info-row"><div class="k">${esc(r[0])}</div><div class="v">${esc(r[1])}</div></div>`).join('');
+  if (!projRows) projRows = '<div class="info-row"><div class="v" style="color:#a0aec0;font-style:italic;">No project details entered yet.</div></div>';
+  let descBlock = '';
   if (f.projectDescription && f.projectDescription.trim()) {
-    projRows += `<tr><td style="font-weight:600;background:#f7f3ec;color:#0f2a44;vertical-align:top;">Project Description</td><td>${nl(f.projectDescription)}</td></tr>`;
+    descBlock = `<div class="desc"><div class="desc-label">Project Description</div><div class="desc-body">${nl(f.projectDescription)}</div></div>`;
   }
 
   const levelHTML = (document.getElementById('levelResult') || {}).innerHTML || '';
@@ -5514,12 +5539,12 @@ function generateClientReport() {
   if (flaggedList.length) {
     openItems = `<h2 class="sec">Items We May Need From You</h2>
       <p style="margin:6px 0 4px;">To finalize the environmental review, we have a few open questions related to the following item(s):</p>
-      <ul style="margin:4px 0 0 18px;">${flaggedList.map(n => `<li style="margin-bottom:3px;">${esc(n)}</li>`).join('')}</ul>`;
+      <ul class="items">${flaggedList.map(n => `<li style="margin-bottom:3px;">${esc(n)}</li>`).join('')}</ul>`;
   }
 
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const logo = window.AZRI_REPORT_LOGO || '';
-  const sh = `<div style="margin:14px 0 22px;"><span style="display:inline-block;margin-right:18px;font-size:12px;"><strong style="color:#0f2a44;">${counts.followup}</strong> Follow-Up</span><span style="display:inline-block;margin-right:18px;font-size:12px;"><strong style="color:#0f2a44;">${counts.compliant}</strong> Compliant</span><span style="display:inline-block;margin-right:18px;font-size:12px;"><strong style="color:#0f2a44;">${counts.na}</strong> Not Applicable</span><span style="display:inline-block;margin-right:18px;font-size:12px;"><strong style="color:#0f2a44;">${counts.exempt}</strong> Exempt</span><span style="display:inline-block;font-size:12px;"><strong style="color:#0f2a44;">${counts.unset}</strong> Not Yet Assessed</span></div>`;
+  const sh = `<div class="counts"><span><strong>${counts.followup}</strong> Follow-Up</span><span><strong>${counts.compliant}</strong> Compliant</span><span><strong>${counts.na}</strong> Not Applicable</span><span><strong>${counts.exempt}</strong> Exempt</span><span><strong>${counts.unset}</strong> Not Yet Assessed</span></div>`;
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>AZ-RI HUD ER — Client Report${f.projectName ? ' — ' + esc(f.projectName) : ''}</title>
   <style>
@@ -5532,13 +5557,35 @@ function generateClientReport() {
     .header .title h1 { margin:0; font-size:18px; color:#0f2a44; letter-spacing:.2px; }
     .header .title .sub { font-size:11px; color:#2c7a7b; font-weight:600; margin-top:2px; }
     .header .title .date { font-size:10.5px; color:#718096; margin-top:2px; }
-    h2.sec { background:#0f2a44; color:#fff; font-size:13px; padding:6px 12px; margin:22px 0 8px; border-radius:3px; }
-    table { border-collapse:collapse; width:100%; }
-    td { border:1px solid #e2e8f0; padding:6px 9px; vertical-align:top; }
-    .matrix th { background:#2c7a7b; color:#fff; text-align:left; font-size:11px; padding:6px 9px; }
-    .reco { background:#f7f3ec; border-left:4px solid #2c7a7b; padding:10px 14px; border-radius:3px; }
-    .footer { margin-top:26px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:10px; color:#718096; }
-    .level-wrap { font-size:12px; }
+    h2.sec { background:#0f2a44; color:#fff; font-size:13px; padding:6px 12px; margin:22px 0 10px; border-radius:3px; page-break-after:avoid; break-after:avoid; }
+    .intro { font-size:11px; color:#718096; margin:0 0 4px; }
+    /* Project information — label/value rows */
+    .info { border:1px solid #e2e8f0; border-radius:4px; overflow:hidden; }
+    .info-row { display:flex; border-bottom:1px solid #edf2f7; page-break-inside:avoid; break-inside:avoid; }
+    .info-row:last-child { border-bottom:none; }
+    .info-row .k { flex:0 0 34%; background:#f7f3ec; color:#0f2a44; font-weight:600; padding:6px 10px; }
+    .info-row .v { flex:1 1 auto; padding:6px 10px; word-break:break-word; overflow-wrap:anywhere; }
+    .desc { margin-top:10px; }
+    .desc-label { font-weight:600; color:#0f2a44; margin-bottom:3px; }
+    .desc-body { overflow-wrap:anywhere; }
+    /* Compliance summary — cards */
+    .counts { margin:12px 0 16px; }
+    .counts span { display:inline-block; margin:0 16px 4px 0; font-size:12px; }
+    .counts strong { color:#0f2a44; }
+    .auth { border:1px solid #e2e8f0; border-radius:5px; padding:9px 12px; margin-bottom:9px; page-break-inside:avoid; break-inside:avoid; }
+    .auth-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .auth-name { font-weight:700; color:#0f2a44; font-size:12.5px; }
+    .auth-cite { font-size:10px; color:#718096; font-weight:400; margin-top:1px; }
+    .auth-status { text-align:right; flex:0 0 auto; }
+    .pill { display:inline-block; padding:3px 10px; border-radius:12px; color:#fff; font-size:10.5px; font-weight:700; white-space:nowrap; }
+    .flag { font-size:9.5px; color:#9b2c2c; font-weight:700; margin-top:4px; }
+    .findings { font-size:11.5px; color:#2d3748; margin-top:7px; overflow-wrap:anywhere; }
+    .reco { background:#f7f3ec; border-left:4px solid #2c7a7b; padding:10px 14px; border-radius:3px; page-break-inside:avoid; break-inside:avoid; }
+    .items { margin:4px 0 0 18px; }
+    .level-wrap { font-size:12px; overflow-wrap:anywhere; page-break-inside:avoid; break-inside:avoid; }
+    .level-wrap > * { page-break-inside:avoid; break-inside:avoid; }
+    .level-wrap img { max-width:100%; height:auto; }
+    .footer { margin-top:26px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:10px; color:#718096; page-break-inside:avoid; break-inside:avoid; }
     @media print { .noprint { display:none; } }
   </style></head><body>
   <div class="header">
@@ -5549,16 +5596,17 @@ function generateClientReport() {
       <div class="date">24 CFR Part 58 &middot; ${today}</div>
     </div>
   </div>
-  <p style="font-size:11px;color:#718096;margin:0 0 4px;">This summary presents the status of the environmental review for your project across all applicable Federal laws and authorities. Please review for accuracy; once confirmed, AZ-RI will finalize and submit the review through HUD's HEROS system.</p>
+  <p class="intro">This summary presents the status of the environmental review for your project across all applicable Federal laws and authorities. Please review for accuracy; once confirmed, AZ-RI will finalize and submit the review through HUD's HEROS system.</p>
 
   <h2 class="sec">Project Information</h2>
-  <table>${projRows || '<tr><td style="color:#a0aec0;font-style:italic;">No project details entered yet.</td></tr>'}</table>
+  <div class="info">${projRows}</div>
+  ${descBlock}
 
   ${levelHTML ? `<h2 class="sec">Level of Review</h2><div class="level-wrap">${levelHTML}</div>` : ''}
 
   <h2 class="sec">Compliance Summary</h2>
   ${sh}
-  <table class="matrix"><thead><tr><th style="width:32%;">Authority</th><th style="width:16%;">Determination</th><th>Findings / Notes</th></tr></thead><tbody>${rows}</tbody></table>
+  ${cards}
 
   <h2 class="sec">Overall Recommendation</h2>
   <div class="reco">${recommendation}</div>
