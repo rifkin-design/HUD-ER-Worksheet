@@ -1,1 +1,7 @@
 .DS_Store
+
+# Local-only files — not needed in the repo
+# Timestamped safety backups of the worksheet
+AZRI_HUD_ER_Form.backup-*.html
+# Logo source image (already embedded in the HTML as a data URI)
+AZRI_Logo_report.png
