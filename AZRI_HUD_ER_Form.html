@@ -981,7 +981,7 @@
 
 <!-- SUMMARY ROLLUP (rendered first in print) -->
 <section class="card">
-  <h2>Compliance Summary</h2>
+  <h2>Compliance Summary <button type="button" class="no-print" onclick="updateMatrix(); buildResourceLinks();" title="Rebuild this summary from the current statuses and write-ups in the sections below" style="float:right;background:var(--azri-teal);color:#fff;border:none;padding:5px 12px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;">🔄 Refresh from sections</button></h2>
   <div class="card-body">
     <div class="summary-counts">
       <div class="count-box followup"><div class="count" id="cnt-followup">0</div><div class="label-text">Follow-Up Required</div></div>
@@ -5049,17 +5049,18 @@ function updateMatrix() {
   tbody.innerHTML = '';
   let counts = { compliant: 0, followup: 0, na: 0, exempt: 0, unset: 0 };
   AUTHORITIES.forEach(a => {
+   try {
     const checked = document.querySelector(`input[name="${a.id}_status"]:checked`);
     const status = checked ? checked.value : 'unset';
     if (counts[status] === undefined) counts[status] = 0;
     counts[status]++;
-    const sourceEl = document.querySelector(`[data-field="${a.id}_source"]`);
     const notesEl = document.querySelector(`[data-field="${a.id}_notes"]`);
-    const source = sourceEl ? sourceEl.value : '';
     const notes = notesEl ? notesEl.value : '';
     const flagged = (typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[a.id])
       ? '<div style="font-size:11px;color:#9b2c2c;font-weight:600;">❓ Flagged — question for client</div>' : '';
-    const display = ([source, notes].filter(Boolean).join(' — ')) + flagged;
+    // Show only the write-up (Notes / Mitigation). The short "source" tag (e.g.
+    // "AZ-RI exemption (not new construction)") is intentionally excluded.
+    const display = (notes || '') + flagged;
     const pillLabel = { compliant: 'Compliant', followup: 'Follow-Up', na: 'N/A', exempt: 'Exempt', unset: 'Not Set' }[status];
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -5068,6 +5069,7 @@ function updateMatrix() {
       <td>${display || '<span style="color:var(--gray);font-style:italic;">—</span>'}</td>
     `;
     tbody.appendChild(tr);
+   } catch (e) { console.warn('Compliance Summary row failed for', a && a.id, e); }
   });
   document.getElementById('cnt-compliant').textContent = counts.compliant;
   document.getElementById('cnt-followup').textContent = counts.followup;
@@ -5076,9 +5078,10 @@ function updateMatrix() {
   document.getElementById('cnt-unset').textContent = counts.unset;
 }
 
-// Live update on any change
-document.addEventListener('input', () => { updateMatrix(); buildResourceLinks(); });
-document.addEventListener('change', () => { updateMatrix(); buildResourceLinks(); });
+// Live update on any change. Capture phase (3rd arg = true) guarantees these fire before
+// anything in the page can intercept/stop the event, so EVERY edit reaches the summary.
+document.addEventListener('input', () => { updateMatrix(); buildResourceLinks(); }, true);
+document.addEventListener('change', () => { updateMatrix(); buildResourceLinks(); }, true);
 updateMatrix();
 buildResourceLinks();
 
@@ -5216,9 +5219,10 @@ function loadJSON(event) {
       // Also restore the HEROS Activities / Land Use / Planned Use from their hidden mirror
       // fields (handles JSON files saved before checkboxGroups existed), then re-run the
       // sync helpers so the LORA inputs, level-of-review, and citations recompute.
-      if (typeof restoreHerosSummaryFromHidden === 'function') restoreHerosSummaryFromHidden();
-      if (typeof syncActivitiesToLora === 'function') syncActivitiesToLora();
-      if (typeof syncPlannedUse === 'function') syncPlannedUse();
+      // Wrapped so a failure in any helper can NEVER skip the summary refresh below.
+      try { if (typeof restoreHerosSummaryFromHidden === 'function') restoreHerosSummaryFromHidden(); } catch (e) { console.warn('restoreHerosSummaryFromHidden failed:', e); }
+      try { if (typeof syncActivitiesToLora === 'function') syncActivitiesToLora(); } catch (e) { console.warn('syncActivitiesToLora failed:', e); }
+      try { if (typeof syncPlannedUse === 'function') syncPlannedUse(); } catch (e) { console.warn('syncPlannedUse failed:', e); }
       // Parcels restore — re-add to map using tracked-layer helper so each is independently removable
       if (data.parcels && data.parcels.features && typeof drawnItems !== 'undefined') {
         drawnItems.clearLayers();
@@ -5265,6 +5269,9 @@ function loadJSON(event) {
     } catch (err) {
       alert('Could not load file: ' + err.message);
     }
+    // Safety net: rebuild the summary once more after the load settles, so it always
+    // reflects the loaded statuses and write-ups even if a step above hiccuped.
+    setTimeout(() => { try { updateMatrix(); buildResourceLinks(); } catch (e) { console.warn('post-load summary refresh failed:', e); } }, 150);
   };
   reader.readAsText(file);
 }
@@ -5505,7 +5512,7 @@ function generateClientReport() {
     counts[status] = (counts[status] || 0) + 1;
     const flagged = (typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[a.id]);
     if (flagged) flaggedList.push(a.name.replace(/&amp;/g, '&'));
-    const body = [f[a.id + '_source'], f[a.id + '_notes']].filter(Boolean).map(nl).join('<br><br>')
+    const body = (f[a.id + '_notes'] ? nl(f[a.id + '_notes']) : '')
       || '<span style="color:#a0aec0;font-style:italic;">Not yet assessed</span>';
     cards += `<div class="auth">
       <div class="auth-head">
@@ -5545,6 +5552,109 @@ function generateClientReport() {
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const logo = window.AZRI_REPORT_LOGO || '';
   const sh = `<div class="counts"><span><strong>${counts.followup}</strong> Follow-Up</span><span><strong>${counts.compliant}</strong> Compliant</span><span><strong>${counts.na}</strong> Not Applicable</span><span><strong>${counts.exempt}</strong> Exempt</span><span><strong>${counts.unset}</strong> Not Yet Assessed</span></div>`;
+
+  // ----- Comprehensive, HEROS section-by-section content -----
+  const eaOn = !!(document.getElementById('eaToggle') && document.getElementById('eaToggle').checked);
+  const ACT_LABELS = { acq:'Acquisition (incl. refinance) of real property', lease:'Leasing', maint:'Maintenance', rehab:'Repair / Improvement / Rehabilitation', newconst:'New construction / Reconstruction', demo:'Demolition', dispo:'Disposition', arch_barriers:'Removal of architectural barriers', soft:'Soft costs / other non-physical activities' };
+  const USE_LABELS = { vacant:'Vacant land', public:'Public facility', nonres:'Nonresidential building(s)', res:'Residential building(s)' };
+  const parseList = (jsonStr, labels) => { try { const a = JSON.parse(jsonStr || '[]'); if (Array.isArray(a)) return a.map(v => labels[v] || v).join(', '); } catch (e) {} return ''; };
+  const rowsHtml = pairs => pairs.filter(p => p[1] && String(p[1]).trim()).map(p => `<div class="info-row"><div class="k">${esc(p[0])}</div><div class="v">${esc(p[1])}</div></div>`).join('');
+  const wrapInfo = rowHtml => (rowHtml && rowHtml.trim()) ? `<div class="info">${rowHtml}</div>` : '';
+  const textBlock = (label, val) => (val && String(val).trim()) ? `<div class="desc"><div class="desc-label">${esc(label)}</div><div class="desc-body">${nl(val)}</div></div>` : '';
+  const section = (title, inner) => (inner && inner.trim()) ? `<h2 class="sec">${esc(title)}</h2>${inner}` : '';
+
+  // Funding sources (multi-row table stored as JSON)
+  let fundingHtml = '';
+  try {
+    const fs = JSON.parse(f.fundingSourcesJSON || '[]');
+    if (Array.isArray(fs) && fs.length) {
+      const lines = fs.map(it => (it && typeof it === 'object')
+        ? Object.entries(it).filter(([k, v]) => v && String(v).trim()).map(([k, v]) => esc(String(v))).join(' — ')
+        : esc(String(it))).filter(Boolean).join('<br>');
+      if (lines) fundingHtml = `<div class="info-row"><div class="k">Funding Source(s)</div><div class="v">${lines}</div></div>`;
+    }
+  } catch (e) {}
+
+  const frameworkLabel = f.reviewFramework === '50' ? 'Part 50 — HUD direct review' : (f.reviewFramework === '58' ? 'Part 58 — Responsible Entity' : '');
+  const siteFull = [f.siteAddress, f.siteCity, [f.siteState, f.siteZip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+
+  // HEROS 1105 — Initial Screen / Project Setup
+  const initInner = wrapInfo(rowsHtml([
+    ['Review Framework', frameworkLabel], ['Project Name', f.projectName], ['HEROS Review ID', f.herosNumber],
+    ['Start Date', f.startDate], ['HUD Program', f.hudProgram], ['Program Name', f.programName],
+    ['Funding Program(s)', f.fundingProgram], ['Grant ID', f.grantId], ['Grant Amount', f.grantAmount]
+  ]) + fundingHtml + rowsHtml([
+    ['Total HUD-Funded / Assisted / Insured Amount', f.totalHudAmount || f.funding], ['Total Project Cost', f.totalProjectCost],
+    ['Other Federal Agency Involved?', f.otherFedAgency], ['Other Federal Agency — Explain', f.otherFedAgencyExplain],
+    ['Over 200 Lots / Units / Beds?', f.over200], ['Applicant / Grant Recipient', f.applicant], ['Applicant Point of Contact', f.applicantPOC],
+    ['HUD Preparer', f.hudPreparer], ['Consulting Firm', f.consultant], ['Consultant Point of Contact', f.consultantPOC],
+    ['Responsible Entity', f.responsibleEntity], ['RE Certifying Officer', f.certifyingOfficer], ['RE Point of Contact', f.rePOC],
+    ['HUD Field Office', f.hudFieldOffice], ['HUD Approving Official', f.hudApprovingOfficial], ['Reviewer', f.reviewer], ['Review Date', f.reviewDate]
+  ]));
+
+  // HEROS 1125 — Project Summary
+  const psInner = textBlock('Project Description', f.projectDescription)
+    + wrapInfo(rowsHtml([
+        ['Site Address', siteFull], ['APN / Parcel', f.apn], ['Lat / Long', f.latlong], ['Additional Location Info', f.additionalLocation],
+        ['Field Inspection By', f.fieldInspectionBy], ['Inspector Title', f.fieldInspectionTitle], ['Date of Inspection', f.fieldInspectionDate],
+        ['Project Activities', parseList(f.herosActivities, ACT_LABELS)], ['Change in Land Use?', f.landUseChange],
+        ['Planned Use After Completion', parseList(f.plannedUse, USE_LABELS)], ['Additional Studies Performed', f.additionalStudies],
+        ['Project Type', f.projectType], ['Year Built', f.yearBuilt], ['Recommended Level of Review', f.reviewLevel]
+      ]))
+    + (levelHTML ? `<div class="level-wrap" style="margin-top:10px;">${levelHTML}</div>` : '')
+    + textBlock('Preparer Attestation', f.preparerAttestation);
+
+  // HEROS 1340 — Cooperating Agency Agreement (EA only)
+  const caInner = eaOn ? (wrapInfo(rowsHtml([['Cooperating Agency Required?', f.coopAgencyRequired]])) + textBlock('Cooperating Agency — Name(s) & Scope', f.coopAgencyDetails)) : '';
+
+  // HEROS 1366 — Project Justification
+  const pjInner = textBlock('Statement of Purpose and Need', f.purposeAndNeed) + textBlock('Existing Conditions', f.existingConditions);
+
+  // HEROS 4010 / 4030 — Environmental Assessment (EA only)
+  let eaInner = '';
+  if (eaOn) {
+    let eaFactorCards = '';
+    if (typeof EA_FACTORS !== 'undefined') {
+      EA_FACTORS.forEach(group => {
+        let r = '';
+        group.items.forEach((item, idx) => {
+          const slug = group.group.toLowerCase().replace(/[^a-z]/g, '') + '_' + idx;
+          const impact = f[slug + '_impact'] || ''; const note = f[slug + '_notes'] || '';
+          if ((impact && impact.trim()) || (note && note.trim()))
+            r += `<div class="info-row"><div class="k">${esc(item)}${impact ? ` <span style="font-weight:400;color:#718096;">(${esc(impact)})</span>` : ''}</div><div class="v">${note ? nl(note) : '<span style="color:#a0aec0;">—</span>'}</div>`;
+        });
+        if (r) eaFactorCards += `<div style="margin-bottom:10px;"><div class="desc-label">${esc(group.group)}</div><div class="info">${r}</div></div>`;
+      });
+    }
+    eaInner = eaFactorCards
+      + textBlock('Cumulative Impact Analysis', f.eaCumulative) + textBlock('Alternatives Considered', f.eaAlternatives)
+      + textBlock('No Action Alternative', f.eaNoAction) + textBlock('Additional Studies Performed', f.eaAdditionalStudies)
+      + textBlock('Sources, Agencies & Persons Consulted', f.agenciesConsulted) + textBlock('Permits Obtained or Required', f.permitsObtained)
+      + textBlock('Public Outreach', f.eaPublicOutreach) + textBlock('Public Comment Period', f.eaPublicComment)
+      + textBlock('Finding', f.eaFinding) + textBlock('Summary of Findings', f.eaSummary) + textBlock('Mitigation Measures (narrative)', f.eaMitigation);
+  }
+
+  // HEROS 5000 — Mitigation Measures & Conditions
+  let mitInner = textBlock('Mitigation Plan / Conditions', f.mitigationPlanNarrative);
+  if (typeof mitigationRows !== 'undefined' && Array.isArray(mitigationRows) && mitigationRows.length) {
+    const items = mitigationRows.map(r => {
+      const vals = (r && typeof r === 'object') ? Object.entries(r).filter(([k, v]) => v && String(v).trim()).map(([k, v]) => esc(String(v))).join(' — ') : esc(String(r));
+      return vals ? `<li style="margin-bottom:3px;">${vals}</li>` : '';
+    }).filter(Boolean).join('');
+    if (items) mitInner += `<ul class="items">${items}</ul>`;
+  }
+
+  const bodySections = [
+    section('Initial Screen & Project Setup (HEROS 1105)', initInner),
+    section('Project Summary (HEROS 1125)', psInner),
+    section('Cooperating Agency Agreement (HEROS 1340)', caInner),
+    section('Project Justification (HEROS 1366)', pjInner),
+    section('Related Federal Laws & Authorities (HEROS 2005)', sh + cards),
+    eaOn ? section('Environmental Assessment (HEROS 4010 / 4030)', eaInner) : '',
+    section('Mitigation Measures & Conditions (HEROS 5000)', mitInner),
+    section('Overall Recommendation', `<div class="reco">${recommendation}</div>`),
+    openItems
+  ].filter(Boolean).join('\n');
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>AZ-RI HUD ER — Client Report${f.projectName ? ' — ' + esc(f.projectName) : ''}</title>
   <style>
@@ -5592,26 +5702,13 @@ function generateClientReport() {
     ${logo ? `<img src="${logo}" alt="AZ-RI Consultants">` : '<div style="font-size:22px;font-weight:800;color:#6b8e23;">AZ-RI<span style="color:#0f2a44;"> Consultants</span></div>'}
     <div class="title">
       <h1>HUD Environmental Review</h1>
-      <div class="sub">Compliance Summary &mdash; Prepared for Client Review</div>
+      <div class="sub">${eaOn ? 'Environmental Assessment (EA)' : 'CEST'} Summary &mdash; Prepared for Client Review</div>
       <div class="date">24 CFR Part 58 &middot; ${today}</div>
     </div>
   </div>
-  <p class="intro">This summary presents the status of the environmental review for your project across all applicable Federal laws and authorities. Please review for accuracy; once confirmed, AZ-RI will finalize and submit the review through HUD's HEROS system.</p>
+  <p class="intro">This report compiles, section by section, the information being entered into HUD's HEROS system for your project. Please review each section for accuracy; once you confirm, AZ-RI will finalize and submit the review through HEROS. Sections appear in HEROS order; any section left blank has no information entered yet.</p>
 
-  <h2 class="sec">Project Information</h2>
-  <div class="info">${projRows}</div>
-  ${descBlock}
-
-  ${levelHTML ? `<h2 class="sec">Level of Review</h2><div class="level-wrap">${levelHTML}</div>` : ''}
-
-  <h2 class="sec">Compliance Summary</h2>
-  ${sh}
-  ${cards}
-
-  <h2 class="sec">Overall Recommendation</h2>
-  <div class="reco">${recommendation}</div>
-
-  ${openItems}
+  ${bodySections}
 
   <div class="footer">
     <strong style="color:#0f2a44;">AZ-RI Consultants</strong> &middot; Environmental Compliance Services &middot; 919 W. 34th Street, #4706, Baltimore, MD 21211 &middot; az-ri.com<br>
