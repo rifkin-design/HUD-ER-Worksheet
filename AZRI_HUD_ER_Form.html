@@ -483,7 +483,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v93 — Review Questions are now part of the 1310 Level of Review flow: the block sits above the "Determine Level of Review" button, the button considers the answers, applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, write-up inserted), and folds the results into the level rationale. Prior (v92): Removed the "Additional AZ-RI fields" block from 1125 (Project Type / Year Built / Level of Review / Preparer Attestation — hidden mirrors kept for logic + back-compat). Field Resources trimmed to Subject-Property location map links only. Renamed "✔ Determine if Exempt" → "✔ Review Questions" and added a consolidated Review Questions block to Screen 1310 (answers sync both ways with the Section 2005 panels; "Apply All Determinations" button) including new Section 106 screening questions (50+ yr structure, ground disturbance → tribal consultation) that sync to the level-of-review questions. Historic SOP: added HistoryQuest DC GIS link + DC HPO 5-point letter requirements. New DC HPO and VA DHR (ePIX) Section 106 letter formats + cover email templates (📄/✉ buttons on the Historic card). Prior (v91): added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v94 — (1) Any radio button can now be cleared by clicking it again (mirrored 1310 ↔ 2005 question groups clear together). (2) Removed duplicate questions: the 1310 Review Questions now ask only Air Quality, Endangered Species, Explosive &amp; Flammable, and Noise; Farmland, Wetlands, Sole Source Aquifers, and the Section 106 Historic triggers are derived automatically from Activity Questions 1, 3, 6 &amp; 9. (3) Fixed wrong flow-through write-ups: scope-exempt determinations now insert the correct base "Write Up 1" exemption text (state overrides like MD's ESA "No Effect — IPaC" or Wetlands "NWI shows no wetlands" were shifting the indices). Prior (v93): Review Questions are part of the 1310 Level of Review flow: the block sits above the "Determine Level of Review" button, the button considers the answers, applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, write-up inserted), and folds the results into the level rationale. Prior (v92): Removed the "Additional AZ-RI fields" block from 1125 (Project Type / Year Built / Level of Review / Preparer Attestation — hidden mirrors kept for logic + back-compat). Field Resources trimmed to Subject-Property location map links only. Renamed "✔ Determine if Exempt" → "✔ Review Questions" and added a consolidated Review Questions block to Screen 1310 (answers sync both ways with the Section 2005 panels; "Apply All Determinations" button) including new Section 106 screening questions (50+ yr structure, ground disturbance → tribal consultation) that sync to the level-of-review questions. Historic SOP: added HistoryQuest DC GIS link + DC HPO 5-point letter requirements. New DC HPO and VA DHR (ePIX) Section 106 letter formats + cover email templates (📄/✉ buttons on the Historic card). Prior (v91): added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
   </div>
 </header>
 
@@ -805,7 +805,7 @@
          matching Related Laws & Authorities sections (Section 2005). Section 106 answers also
          sync to Activity Questions 6 & 9 above. -->
     <div id="reviewQuestions1310" style="margin-top:18px;padding:14px 18px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;">
-      <h3 style="margin:0 0 6px;color:var(--azri-navy);font-size:15px;">Review Questions <span style="font-weight:400;color:var(--gray);font-size:12px;">— answered once here. Clicking <b>Determine Level of Review</b> below considers these answers AND applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, no further air analysis). Answers also pull down to each authority's <b>✔ Review Questions</b> panel.</span></h3>
+      <h3 style="margin:0 0 6px;color:var(--azri-navy);font-size:15px;">Review Questions <span style="font-weight:400;color:var(--gray);font-size:12px;">— only what Activity Questions 1–10 don't already cover (Air Quality, Endangered Species, Explosive &amp; Flammable, Noise). Clicking <b>Determine Level of Review</b> below considers these answers AND applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, no further air analysis). Farmland, Wetlands, Sole Source Aquifers, and Section 106 triggers are derived from your activity answers automatically. Click a selected radio button again to clear it.</span></h3>
       <div id="rq1310Body"></div>
       <div id="rq1310Status" style="font-size:11.5px;color:#4a5568;margin-top:6px;"></div>
     </div>
@@ -4356,25 +4356,36 @@ const EXEMPTION_CHECKS = {
   }
 };
 
-// ===== 1310 REVIEW QUESTIONS (v92) =====
-// Mirrors each authority's Review Questions (formerly "Determine if Exempt") in Screen 1310 so
-// the reviewer can answer everything up front. Answers sync BOTH ways with the per-authority
-// panels in Section 2005. Also adds Section 106 Historic Preservation screening questions
-// (50+ yr structure; ground disturbance → tribal consultation) that can change the level of
-// review — those sync to Activity Questions 6 and 9 (loraHistoric / loraGround).
-const RQ1310_HISTORIC = {
-  intro: 'Historic Preservation — Section 106 (NHPA / 36 CFR Part 800). These questions can change the level of review and trigger SHPO and Tribal (THPO) consultation.',
-  questions: [
-    { id: 'age50', label: 'Is any structure on or immediately adjacent to the site 50+ years old, or listed on / eligible for the National Register of Historic Places?', lora: 'loraHistoric', options: [
-      { v: 'no', t: 'No — all structures are under 50 years old and not NRHP-listed/eligible' },
-      { v: 'yes', t: 'Yes — a structure is 50+ years old or NRHP-listed/eligible → Section 106 SHPO consultation required regardless of level of review' },
-      { v: 'unknown', t: 'Unknown — verify build date (assessor/SDAT) and SHPO inventory before clearance' }
-    ]},
-    { id: 'ground', label: 'Will the project involve ground disturbance beyond utility tie-ins? Ground disturbance triggers archaeological review of the APE and Tribal consultation (36 CFR 800.2(c)(2)(ii)).', lora: 'loraGround', options: [
-      { v: 'no', t: 'No ground disturbance' },
-      { v: 'yes', t: 'Yes — ground disturbance → THPO/Tribal notification and archaeological consideration required' }
-    ]}
-  ]
+// ===== 1310 REVIEW QUESTIONS (v94) =====
+// Only questions NOT already answered by Activity Questions 1–10 are asked here (Air Quality,
+// Endangered Species, Explosive & Flammable, Noise). Farmland, Wetlands, Sole Source Aquifers,
+// and the Section 106 Historic Preservation triggers are DERIVED automatically from the
+// Activity Question answers — nothing is asked twice. Answers sync both ways with the
+// per-authority ✔ Review Questions panels in Section 2005.
+
+// Authorities whose scope answers are fully derivable from Activity Questions (no duplicate
+// questions shown; the answers are computed when Determine Level of Review runs).
+const RQ_DERIVED = {
+  farm: { from: 'Activity Question 1', get: function () {
+    const a = (document.getElementById('loraActivity') || {}).value;
+    if (!a) return null;
+    return { scope: (a === 'newconst' || a === 'combo_nc') ? 'yes' : 'no' };
+  }},
+  wetlands: { from: 'Activity Questions 1, 3 & 9', get: function () {
+    const a = (document.getElementById('loraActivity') || {}).value;
+    const x = (document.querySelector('input[name="loraExpand"]:checked') || {}).value;
+    const g = (document.querySelector('input[name="loraGround"]:checked') || {}).value;
+    if (a === 'newconst' || a === 'combo_nc' || x === 'yes' || g === 'yes') return { scope: 'yes' };
+    if (!a || !g) return null;
+    return { scope: 'no' };
+  }},
+  aquifer: { from: 'Activity Questions 1 & 9', get: function () {
+    const a = (document.getElementById('loraActivity') || {}).value;
+    const g = (document.querySelector('input[name="loraGround"]:checked') || {}).value;
+    if (a === 'newconst' || a === 'combo_nc') return { scope: 'yes' };
+    if (!a || !g) return null;
+    return { scope: (g === 'yes' && (a === 'rehab' || a === 'combo_no_nc' || a === 'infra' || a === 'demo')) ? 'yes' : 'no' };
+  }}
 };
 
 function rq1310Block(id, title, cfg) {
@@ -4395,27 +4406,21 @@ function rq1310Block(id, title, cfg) {
 function buildReviewQuestions1310() {
   const host = document.getElementById('rq1310Body');
   if (!host) return;
-  let html = rq1310Block('historic', 'Historic Preservation §58.5(a) — Section 106 screening', RQ1310_HISTORIC);
+  let html = '';
   AUTHORITIES.forEach(a => {
-    if (EXEMPTION_CHECKS[a.id]) html += rq1310Block(a.id, a.name.replace(/&amp;/g, '&'), EXEMPTION_CHECKS[a.id]);
+    if (EXEMPTION_CHECKS[a.id] && !RQ_DERIVED[a.id]) html += rq1310Block(a.id, a.name.replace(/&amp;/g, '&'), EXEMPTION_CHECKS[a.id]);
   });
+  html += '<div style="font-size:11.5px;color:#4a5568;margin-top:4px;font-style:italic;">Farmland Protection, Wetlands Protection, Sole Source Aquifers, and the Section 106 Historic Preservation triggers (SHPO consultation, Tribal/THPO notification) are derived automatically from Activity Questions 1, 3, 6 &amp; 9 above — they are not asked again here.</div>';
   host.innerHTML = html;
 }
 
-// 1310 answer → pull down into the authority's panel (if built) + Section 106 → Activity Questions
+// 1310 answer → pull down into the authority's panel (if built)
 function onRQ1310Change(id, qid, v) {
   const down = document.querySelector('input[name="exq_' + id + '_' + qid + '"][value="' + v + '"]');
   if (down && !down.checked) down.checked = true;
-  if (id === 'historic') {
-    const q = RQ1310_HISTORIC.questions.find(x => x.id === qid);
-    if (q && q.lora) {
-      const lr = document.querySelector('input[name="' + q.lora + '"][value="' + v + '"]');
-      if (lr && !lr.checked) { lr.checked = true; lr.dispatchEvent(new Event('change', { bubbles: true })); }
-    }
-  }
 }
 
-// Reverse sync: answering in a Section 2005 panel (exq_*) or Activity Questions 6/9 updates 1310
+// Reverse sync: answering in a Section 2005 panel (exq_*) updates the 1310 Review Questions
 document.addEventListener('change', e => {
   const t = e.target;
   if (!t || !t.name || t.type !== 'radio' || !t.checked) return;
@@ -4425,17 +4430,54 @@ document.addEventListener('change', e => {
       const up = document.querySelector('input[name="rq1310_' + parts[1] + '_' + parts[2] + '"][value="' + t.value + '"]');
       if (up && !up.checked) up.checked = true;
     }
-  } else if (t.name === 'loraHistoric' || t.name === 'loraGround') {
-    const qid = t.name === 'loraHistoric' ? 'age50' : 'ground';
-    const up = document.querySelector('input[name="rq1310_historic_' + qid + '"][value="' + t.value + '"]');
-    if (up && !up.checked) up.checked = true;
   }
 });
 
-// Apply every answered authority's determination from the 1310 answers. Called automatically by
-// determineLevel() (v93) so clicking "Determine Level of Review" considers the Review Questions
-// and flows each determination through to its Related Laws & Authorities section.
-// Returns an array of human-readable result lines for the Level of Review rationale.
+// ===== RADIO UNCHECK (v94) — clicking an already-selected radio button clears it =====
+// mousedown captures the pre-click checked state (works for clicks on the radio OR its label);
+// the click handler then unchecks if it was already selected, keeping mirrored groups in sync.
+document.addEventListener('mousedown', e => {
+  let inp = null;
+  if (e.target && e.target.type === 'radio') inp = e.target;
+  else if (e.target && e.target.closest) {
+    const lab = e.target.closest('label');
+    if (lab) inp = lab.querySelector('input[type="radio"]');
+  }
+  if (inp) inp.dataset.rwas = inp.checked ? '1' : '0';
+}, true);
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (!t || t.type !== 'radio' || !t.name) return;
+  if (t.dataset.rwas === '1') {
+    t.checked = false;
+    t.dataset.rwas = '0';
+    // Clear the mirrored question group too (1310 Review Questions ↔ Section 2005 panels)
+    let parts = null;
+    if (/^rq1310_/.test(t.name)) parts = ['exq', t.name.split('_')[1], t.name.split('_')[2]];
+    else if (/^exq_/.test(t.name)) parts = ['rq1310', t.name.split('_')[1], t.name.split('_')[2]];
+    if (parts && parts[1] && parts[2]) {
+      document.querySelectorAll('input[name="' + parts[0] + '_' + parts[1] + '_' + parts[2] + '"]').forEach(r => { r.checked = false; r.dataset.rwas = '0'; });
+    }
+    t.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+});
+
+// Insert a write-up from the BASE (national) BOILERPLATE list by index, REPLACING the notes.
+// The Review Questions writeUpIdx values index the national list; the state boilerplateOverrides
+// are prepended in the dropdowns, which previously shifted the indices and inserted the WRONG
+// write-up (e.g., MD ESA "No Effect — IPaC list generated" instead of the scope exemption text).
+function insertBaseWriteUp(authId, idx) {
+  const item = (typeof BOILERPLATE !== 'undefined' && BOILERPLATE[authId] || [])[idx];
+  const ta = document.querySelector('[data-field="' + authId + '_notes"]');
+  if (!item || !ta) return;
+  ta.value = item.text;
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// Apply every answered authority's determination from the 1310 answers (asked or derived).
+// Called automatically by determineLevel() so clicking "Determine Level of Review" considers
+// the Review Questions and flows each determination through to its Related Laws & Authorities
+// section. Returns result lines for the Level of Review rationale.
 function applyAllReviewQuestions() {
   const authName = id => {
     const a = (typeof AUTHORITIES !== 'undefined') ? AUTHORITIES.find(x => x.id === id) : null;
@@ -4444,40 +4486,43 @@ function applyAllReviewQuestions() {
   const summary = [], applied = [], incomplete = [];
   Object.keys(EXEMPTION_CHECKS).forEach(id => {
     const cfg = EXEMPTION_CHECKS[id];
-    const ans = {};
-    cfg.questions.forEach(q => {
-      const sel = document.querySelector('input[name="rq1310_' + id + '_' + q.id + '"]:checked');
-      ans[q.id] = sel ? sel.value : null;
-    });
-    if (!ans[cfg.questions[0].id]) { incomplete.push(authName(id)); return; }
+    let ans, derivedNote = '';
+    if (RQ_DERIVED[id]) {
+      ans = RQ_DERIVED[id].get();
+      derivedNote = ' — derived from ' + RQ_DERIVED[id].from;
+      if (!ans) { incomplete.push(authName(id) + ' (answer ' + RQ_DERIVED[id].from + ')'); return; }
+    } else {
+      ans = {};
+      cfg.questions.forEach(q => {
+        const sel = document.querySelector('input[name="rq1310_' + id + '_' + q.id + '"]:checked');
+        ans[q.id] = sel ? sel.value : null;
+      });
+      if (!ans[cfg.questions[0].id]) { incomplete.push(authName(id)); return; }
+    }
     const res = cfg.evaluate(ans);
     if (res.status) {
       const radio = document.querySelector('input[name="' + id + '_status"][value="' + res.status + '"]');
       if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
     }
-    if (res.writeUpIdx != null && typeof insertBoilerplateByIdx === 'function') {
-      const ta = document.querySelector('[data-field="' + id + '_notes"]');
-      if (ta) ta.value = '';
-      insertBoilerplateByIdx(id, res.writeUpIdx);
-    }
+    if (res.writeUpIdx != null) insertBaseWriteUp(id, res.writeUpIdx);
     const rEl = document.getElementById('exemptResult_' + id);
     if (rEl) { rEl.textContent = res.msg || ''; rEl.style.color = res.exempt ? 'var(--green,#2f855a)' : '#9b2c2c'; }
     applied.push(authName(id));
     summary.push(authName(id) + ' → ' + (res.exempt
       ? 'scope-exempt (does not apply to this scope of work — marked Exempt, write-up inserted)'
-      : 'Follow-Up (full analysis required per the section SOP)'));
+      : 'Follow-Up (full analysis required per the section SOP)') + derivedNote);
   });
-  // Section 106: 50+ yr / unknown structure or ground disturbance → Historic marked Follow-Up
-  const a50 = document.querySelector('input[name="rq1310_historic_age50"]:checked');
-  const grd = document.querySelector('input[name="rq1310_historic_ground"]:checked');
+  // Section 106 triggers — derived from Activity Questions 6 & 9 (loraHistoric / loraGround)
+  const a50 = document.querySelector('input[name="loraHistoric"]:checked');
+  const grd = document.querySelector('input[name="loraGround"]:checked');
   let histMsg = '';
   if ((a50 && a50.value !== 'no') || (grd && grd.value === 'yes')) {
     const radio = document.querySelector('input[name="historic_status"][value="followup"]');
     if (radio && !radio.checked) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
-    histMsg = 'Historic Preservation → Follow-Up (Section 106 consultation' + ((grd && grd.value === 'yes') ? ' incl. Tribal/THPO notification' : '') + ' required).';
+    histMsg = 'Historic Preservation → Follow-Up (Section 106 consultation' + ((grd && grd.value === 'yes') ? ' incl. Tribal/THPO notification' : '') + ' required) — derived from Activity Questions 6 & 9.';
     summary.push(histMsg);
   } else if (a50 && grd) {
-    histMsg = 'Historic Preservation: no Section 106 triggers from these answers — complete the Historic SOP and set its determination manually.';
+    histMsg = 'Historic Preservation: no Section 106 triggers (structure <50 yr, no ground disturbance) — complete the Historic SOP and set its determination manually.';
     summary.push(histMsg);
   }
   const s = document.getElementById('rq1310Status');
@@ -4509,11 +4554,18 @@ function toggleExemptionCheck(id) {
     + '<span id="exemptResult_' + id + '" style="font-size:11.5px;color:#4a5568;flex-basis:100%;"></span></div>';
   panel.innerHTML = html;
   panel.style.display = 'block';
-  // Pull down any answers already given in the 1310 Review Questions block
+  // Pull down answers from the 1310 Review Questions block — asked answers for air/esa/explos/
+  // noise, derived-from-Activity-Question answers for farm/wetlands/aquifer (v94).
   cfg.questions.forEach(q => {
+    let v = null;
     const up = document.querySelector('input[name="rq1310_' + id + '_' + q.id + '"]:checked');
-    if (up) {
-      const mine = panel.querySelector('input[name="exq_' + id + '_' + q.id + '"][value="' + up.value + '"]');
+    if (up) v = up.value;
+    else if (typeof RQ_DERIVED !== 'undefined' && RQ_DERIVED[id]) {
+      const d = RQ_DERIVED[id].get();
+      if (d) v = d[q.id];
+    }
+    if (v) {
+      const mine = panel.querySelector('input[name="exq_' + id + '_' + q.id + '"][value="' + v + '"]');
       if (mine) mine.checked = true;
     }
   });
@@ -4537,11 +4589,9 @@ function applyExemptionCheck(id) {
     const radio = document.querySelector('input[name="' + id + '_status"][value="' + res.status + '"]');
     if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
   }
-  if (res.writeUpIdx != null && typeof insertBoilerplateByIdx === 'function') {
-    const ta = document.querySelector('[data-field="' + id + '_notes"]');
-    if (ta) ta.value = '';  // replace (don't append) so re-running stays clean
-    insertBoilerplateByIdx(id, res.writeUpIdx);
-  }
+  // v94: insert from the BASE write-up list (state overrides shift the combined indices and
+  // previously inserted the wrong text). Replaces (doesn't append) so re-running stays clean.
+  if (res.writeUpIdx != null) insertBaseWriteUp(id, res.writeUpIdx);
   if (rEl) { rEl.textContent = res.msg || ''; rEl.style.color = res.exempt ? 'var(--green,#2f855a)' : '#9b2c2c'; }
 }
 
