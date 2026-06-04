@@ -483,7 +483,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v91 — Added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v93 — Review Questions are now part of the 1310 Level of Review flow: the block sits above the "Determine Level of Review" button, the button considers the answers, applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, write-up inserted), and folds the results into the level rationale. Prior (v92): Removed the "Additional AZ-RI fields" block from 1125 (Project Type / Year Built / Level of Review / Preparer Attestation — hidden mirrors kept for logic + back-compat). Field Resources trimmed to Subject-Property location map links only. Renamed "✔ Determine if Exempt" → "✔ Review Questions" and added a consolidated Review Questions block to Screen 1310 (answers sync both ways with the Section 2005 panels; "Apply All Determinations" button) including new Section 106 screening questions (50+ yr structure, ground disturbance → tribal consultation) that sync to the level-of-review questions. Historic SOP: added HistoryQuest DC GIS link + DC HPO 5-point letter requirements. New DC HPO and VA DHR (ePIX) Section 106 letter formats + cover email templates (📄/✉ buttons on the Historic card). Prior (v91): added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
   </div>
 </header>
 
@@ -800,8 +800,19 @@
         <label><input type="radio" name="loraSignificant" value="yes"> Yes</label>
       </div>
     </div>
+    <!-- 1310 REVIEW QUESTIONS (v93) — part of the Level of Review determination. Answered here,
+         considered by "Determine Level of Review", and the determinations flow through to the
+         matching Related Laws & Authorities sections (Section 2005). Section 106 answers also
+         sync to Activity Questions 6 & 9 above. -->
+    <div id="reviewQuestions1310" style="margin-top:18px;padding:14px 18px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;">
+      <h3 style="margin:0 0 6px;color:var(--azri-navy);font-size:15px;">Review Questions <span style="font-weight:400;color:var(--gray);font-size:12px;">— answered once here. Clicking <b>Determine Level of Review</b> below considers these answers AND applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, no further air analysis). Answers also pull down to each authority's <b>✔ Review Questions</b> panel.</span></h3>
+      <div id="rq1310Body"></div>
+      <div id="rq1310Status" style="font-size:11.5px;color:#4a5568;margin-top:6px;"></div>
+    </div>
+
     <div style="margin-top:14px;" class="no-print">
       <button onclick="determineLevel()" style="background:var(--azri-navy);color:white;border:none;padding:10px 18px;border-radius:5px;font-size:14px;cursor:pointer;font-weight:600;">Determine Level of Review</button>
+      <span style="font-size:12px;color:var(--gray);margin-left:10px;">Considers Activity Questions 1–10 + Review Questions, and applies the Review Question determinations to Section 2005.</span>
     </div>
     <div id="levelResult" class="level-result"></div>
 
@@ -926,41 +937,13 @@
       <input type="hidden" data-field="plannedUse">
     </div>
 
-    <!-- AZ-RI ADDITIONS — keep but de-emphasize -->
-    <details style="margin-top:18px;font-size:12px;">
-      <summary style="cursor:pointer;color:var(--azri-navy);font-weight:600;">▸ Additional AZ-RI fields (Project Type dropdown, Year Built, Level of Review, Preparer Attestation)</summary>
-      <div class="field-grid" style="margin-top:10px;">
-        <div><label>Project Type (AZ-RI summary)</label>
-          <select data-field="projectType">
-            <option value="">— select —</option>
-            <option>Acquisition</option>
-            <option>Rehabilitation</option>
-            <option>New Construction</option>
-            <option>Demolition</option>
-            <option>Infrastructure</option>
-            <option>Tenant-Based Rental Assistance</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div><label>Year Built (if rehab)</label><input type="text" data-field="yearBuilt"></div>
-        <div><label>Level of Review</label>
-          <select data-field="reviewLevel">
-            <option value="EXEMPT">Exempt — §58.34 / §50.19(a)</option>
-            <option value="CENST">CENST — §58.35(b) / §50.19(b)</option>
-            <option value="CEST" selected>CEST — §58.35(a) / §50.20(a)</option>
-            <option value="EA">EA — §58.36 / §50.31</option>
-            <option value="EIS">EIS — §58.37 / §50.36</option>
-          </select>
-          <div style="font-size:11px;color:var(--gray);margin-top:3px;font-style:italic;">When EA or EIS, Screen 1366 (Project Justification) and other EA sections auto-show.</div>
-        </div>
-        <div class="full" style="background:var(--azri-sand);padding:10px 14px;border-left:4px solid var(--azri-navy);border-radius:4px;">
-          <label style="display:flex;align-items:flex-start;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;">
-            <input type="checkbox" data-field="preparerAttestation" style="margin-top:3px;flex-shrink:0;">
-            <span>Preparer Attestation [HUD ERR practice; formerly 40 CFR 1506.5(b)(4)]: By checking this box, I attest that as a preparer, I have no financial or other interest in the outcome of the undertaking assessed in this environmental review.</span>
-          </label>
-        </div>
-      </div>
-    </details>
+    <!-- AZ-RI ADDITIONS — UI removed (v92); hidden mirrors kept because downstream logic
+         (auto-determine checks, EA auto-show via reviewLevel, save/load, report export)
+         still reads these data-fields. determineLevel() writes reviewLevel programmatically. -->
+    <input type="hidden" data-field="projectType">
+    <input type="hidden" data-field="yearBuilt">
+    <input type="hidden" data-field="reviewLevel" value="CEST">
+    <input type="hidden" data-field="preparerAttestation">
   </div>
 </section>
 
@@ -970,11 +953,11 @@
 
 <!-- FIELD RESOURCES / MAP LINKS -->
 <section class="card no-print" id="resources-card">
-  <h2>Field Resources &amp; Map Links <span class="citation">(opens agency tools — fill Lat/Long above for pre-filled links where supported)</span></h2>
+  <h2>Field Resources &amp; Map Links <span class="citation">(map links to identify the Subject Property location — fill Lat/Long above for pre-filled links where supported)</span></h2>
   <div class="card-body">
     <div id="resourceLinks" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;font-size:13px;"></div>
     <div style="margin-top:12px;font-size:12px;color:var(--gray);font-style:italic;">
-      Tip: Most agency mappers don't accept URL coordinates — they open at the national view, then you paste or click the site. The few that do (FEMA MSC, EJScreen, IPaC) auto-zoom to your lat/long.
+      Agency resource links removed per AZ-RI practice (reviewer performs authority research directly). Per-authority tools remain in each SOP below.
     </div>
   </div>
 </section>
@@ -1071,7 +1054,7 @@
   </div>
   <div style="background:var(--azri-sand);padding:12px 22px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:14px;" class="no-print">
     <button onclick="buildClientQuestionsList()" style="background:var(--azri-teal);color:white;border:none;padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-weight:600;">📋 Client Questions</button>
-    <span style="font-size:12px;color:var(--gray);flex:1;min-width:200px;">Work each authority below: use its <b>✔ Determine if Exempt</b> button (scope questions) for the §58.5 authorities. If you’re unsure of a scope answer, click <b>❓ Not sure — flag for client</b> in that panel; flagged items collect under <b>📋 Client Questions</b> as a list you can copy and send.</span>
+    <span style="font-size:12px;color:var(--gray);flex:1;min-width:200px;">Work each authority below: use its <b>✔ Review Questions</b> button (scope questions) for the §58.5 authorities — or answer them all up front in the <b>Review Questions</b> block on Screen 1310 (answers pull down here). If you’re unsure of a scope answer, click <b>❓ Not sure — flag for client</b> in that panel; flagged items collect under <b>📋 Client Questions</b> as a list you can copy and send.</span>
     <span id="autoRunStatus" style="font-size:12px;color:var(--azri-navy);font-weight:600;"></span>
   </div>
   <div id="authorities-container"></div>
@@ -1251,17 +1234,8 @@ const STATE_PACKS = {
     geocoderName: 'MD Statewide Composite Locator',
     viewer: { name: 'MERLIN', url: 'https://dnr.maryland.gov/pages/Merlin.aspx' },
     fieldResources: [
-      // MD-specific resources for federal §58.5/58.6 authorities
-      { name: 'MD iMAP PropertyView', authority: 'Parcel / SDAT', url: 'https://geodata.md.gov/imap/' },
-      { name: 'MD MERLIN (DNR Env. Data)', authority: 'Multi-authority field review', url: 'https://dnr.maryland.gov/pages/Merlin.aspx' },
-      { name: 'MHT MEDUSA (State SHPO)', authority: 'Historic Preservation §58.5(a)', url: 'https://mht.maryland.gov/medusa/' },
-      { name: 'MD DNR Sensitive Species Project Review', authority: 'Endangered Species §58.5(e)', url: 'https://dnr.maryland.gov/wildlife/Pages/plants_wildlife/EnvReview.aspx' },
-      { name: 'MDE Wetlands &amp; Waterways', authority: 'Wetlands §58.5(b)', url: 'https://mde.maryland.gov/programs/water/wetlandsandwaterways/Pages/index.aspx' },
-      { name: 'MDE Land Restoration Program', authority: 'Contamination §58.5(i)(2)', url: 'https://mde.maryland.gov/programs/Land/MarylandBrownfieldVCP/Pages/index.aspx' },
-      { name: 'MDE Air Quality', authority: 'Air Quality §58.5(g)', url: 'https://mde.maryland.gov/programs/Air/Pages/index.aspx' },
-      { name: 'MD Coastal Zone Management', authority: 'Coastal Zone §58.5(c)', url: 'https://dnr.maryland.gov/ccs/Pages/czm.aspx' },
-      { name: 'USACE Baltimore District (404)', authority: 'Wetlands §58.5(b)', url: 'https://www.nab.usace.army.mil/Missions/Regulatory/' },
-      { name: 'USFWS Chesapeake Bay Field Office', authority: 'ESA §58.5(e)', url: 'https://www.fws.gov/office/chesapeake-bay' }
+      // v92: Only Subject Property location/parcel map links kept (agency resources removed).
+      { name: 'MD iMAP PropertyView', authority: 'Subject Property location — Parcel / SDAT', url: 'https://geodata.md.gov/imap/' }
     ],
     boilerplateOverrides: {
       historic: [
@@ -1295,7 +1269,9 @@ const STATE_PACKS = {
     ],
     parcelFieldMap: { apn: 'PIN' },
     viewer: { name: 'DE FirstMap', url: 'https://firstmap.delaware.gov/' },
-    fieldResources: [],
+    fieldResources: [
+      { name: 'DE FirstMap (Parcels)', authority: 'Subject Property location — Parcel / PIN', url: 'https://firstmap.delaware.gov/' }
+    ],
     boilerplateOverrides: {}
   },
   DC: {
@@ -1309,7 +1285,9 @@ const STATE_PACKS = {
     ],
     parcelFieldMap: { apn: 'SSL', owner: 'OWNERNAME', address: 'PREMISEADD' },
     viewer: { name: 'DC GIS Atlas Plus', url: 'https://atlasplus.dcgis.dc.gov/' },
-    fieldResources: [],
+    fieldResources: [
+      { name: 'DC GIS Atlas Plus (Parcels / SSL)', authority: 'Subject Property location — Square-Suffix-Lot', url: 'https://atlasplus.dcgis.dc.gov/' }
+    ],
     boilerplateOverrides: {}
   },
   PA: {
@@ -1326,7 +1304,9 @@ const STATE_PACKS = {
     ],
     parcelFieldMap: { apn: 'PIN', owner: 'OWNER', address: 'SITUS' },
     viewer: { name: 'Cumberland County Property Mapper', url: 'https://gis.ccpa.net/propertymapper/' },
-    fieldResources: [],
+    fieldResources: [
+      { name: 'Cumberland County Property Mapper', authority: 'Subject Property location — Parcel / PIN', url: 'https://gis.ccpa.net/propertymapper/' }
+    ],
     boilerplateOverrides: {}
   },
   VA: {
@@ -1353,7 +1333,11 @@ const STATE_PACKS = {
     ],
     parcelFieldMap: { apn: 'PIN', address: 'ADDRESS_GIS' },
     viewer: { name: 'VA DHR / VEDGN', url: 'https://www.dhr.virginia.gov/historic-registers/' },
-    fieldResources: [],
+    fieldResources: [
+      { name: 'Fairfax County Jade GIS (Parcels)', authority: 'Subject Property location — Parcel / PIN', url: 'https://www.fairfaxcounty.gov/maps/' },
+      { name: 'Arlington County GIS Mapper', authority: 'Subject Property location — Parcel / RPC', url: 'https://gis.arlingtonva.us/Maps/Standard_Maps/Property_Maps/' },
+      { name: 'City of Alexandria Parcel Viewer', authority: 'Subject Property location — Parcel / PID', url: 'https://maps.alexandriava.gov/' }
+    ],
     boilerplateOverrides: {}
   },
   GENERIC: {
@@ -1684,7 +1668,7 @@ const AUTHORITY_SOP = {
     <div style="margin-bottom:8px;"><b>Step 2 — Request the SHPO determination (state-specific)</b>
       <div style="margin:6px 0 4px 0;"><b>Maryland (MHT)</b> — Background in <a href="https://apps.mht.maryland.gov/medusa/" target="_blank" rel="noopener">MEDUSA</a> (apps.mht.maryland.gov/medusa). Submit the review through the <a href="https://apps.mht.maryland.gov/OnlineComplianceLog" target="_blank" rel="noopener">e106 Online Project Submittal System</a> (apps.mht.maryland.gov/OnlineComplianceLog): log in → "Submit a New Project" → enter project/funding info, APE, and upload the project packet, location/APE maps, and photos → submit. Reviewer: <b>Liz Casso</b>, <a href="mailto:liz.casso@maryland.gov" target="_blank" rel="noopener">liz.casso@maryland.gov</a>, 410-697-9533. MHT, 100 Community Place, Crownsville, MD 21032. Statutory review period 30 days.</div>
       <div style="margin:4px 0;"><b>Delaware (DHCA/SHPO)</b> — Background in <a href="https://chris-users.delaware.gov/public/" target="_blank" rel="noopener">CHRIS</a> (chris-users.delaware.gov/public). Submit a 106 consultation letter (see template below) to <b>Ms. Gwen Davis</b>, Deputy SHPO, <a href="mailto:Gwen.Davis@delaware.gov" target="_blank" rel="noopener">Gwen.Davis@delaware.gov</a>, cc <a href="mailto:Carlton.Hall@delaware.gov" target="_blank" rel="noopener">Carlton.Hall@delaware.gov</a>. DE Division of Historical and Cultural Affairs, 21 The Green, Dover, DE 19901.</div>
-      <div style="margin:4px 0;"><b>District of Columbia (HPO)</b> — Follow <a href="https://planning.dc.gov/page/federal-projects-historic-preservation" target="_blank" rel="noopener">"Federal Projects in Historic Preservation"</a> on planning.dc.gov. Submit to the general inbox <a href="mailto:Consult.HPO@dc.gov" target="_blank" rel="noopener">Consult.HPO@dc.gov</a>; reviewer <b>Anne Brockett</b>, <a href="mailto:anne.brockett@dc.gov" target="_blank" rel="noopener">anne.brockett@dc.gov</a>, (202) 442-8842 (HPO main (202) 442-7600). DC HPO, 1100 4th St SW, Suite E650, Washington, DC 20024.</div>
+      <div style="margin:4px 0;"><b>District of Columbia (HPO)</b> — Follow <a href="https://planning.dc.gov/page/federal-projects-historic-preservation" target="_blank" rel="noopener">"Federal Projects in Historic Preservation"</a> on planning.dc.gov. <b>Background research in <a href="https://dcgis.maps.arcgis.com/apps/webappviewer/index.html?id=2ab24bc3b6da4314b9f2c74b69190333" target="_blank" rel="noopener">HistoryQuest DC (DC GIS)</a></b> — historic data on ~127,000 extant DC buildings (build dates, architects), NRHP landmarks/districts and documentation layers (info: <a href="https://planning.dc.gov/page/historyquest-dc" target="_blank" rel="noopener">planning.dc.gov/page/historyquest-dc</a>). Screenshot the site + surrounding properties for the ERR. Submit to the general inbox <a href="mailto:Consult.HPO@dc.gov" target="_blank" rel="noopener">Consult.HPO@dc.gov</a>; reviewer <b>Anne Brockett</b>, <a href="mailto:anne.brockett@dc.gov" target="_blank" rel="noopener">anne.brockett@dc.gov</a>, (202) 442-8842 (HPO main (202) 442-7600). DC HPO, 1100 4th St SW, Suite E650, Washington, DC 20024. The consultation letter must: (1) describe the project and precise project-area boundaries, (2) identify/document all NRHP-listed or eligible properties, (3) describe anticipated effects, (4) explain avoidance/mitigation of adverse effects, and (5) give a project + review timetable. Use the 📄 Letter button (DC format).</div>
       <div style="margin:4px 0;"><b>Virginia (DHR)</b> — Background in <a href="https://www.dhr.virginia.gov/programs/vcris/" target="_blank" rel="noopener">V-CRIS</a> (inventory only). <b>Submit the Section 106 review through ePIX</b> — <a href="https://epix.dhr.virginia.gov/" target="_blank" rel="noopener">epix.dhr.virginia.gov</a> — the Review &amp; Compliance Division's electronic submission portal (V-CRIS is NOT used to submit 106 projects). Reviewer: <b>Adrienne Birge-Wilson</b>, Project Review Architectural Historian, <a href="mailto:adrienne.birge-wilson@dhr.virginia.gov" target="_blank" rel="noopener">adrienne.birge-wilson@dhr.virginia.gov</a>. VA DHR, 2801 Kensington Ave, Richmond, VA 23221. Comments issued electronically.</div>
       <div style="margin:4px 0;"><b>Pennsylvania (PA SHPO / PHMC)</b> — Submit through <a href="https://share.phmc.pa.gov/pashare/" target="_blank" rel="noopener">PA-SHARE</a> (share.phmc.pa.gov/pashare). Requires a <a href="https://keystonelogin.pa.gov/" target="_blank" rel="noopener">Keystone Login</a> account (keystonelogin.pa.gov) if you don't have CWOPA credentials. In PA-SHARE: start a new <b>Environmental Review</b> submission → enter the project, APE, and undertaking details → upload the packet and maps → submit. Help: <a href="mailto:pashare@pa.gov" target="_blank" rel="noopener">pashare@pa.gov</a>. Statutory review period 30 days.</div>
     </div>
@@ -1818,7 +1802,7 @@ let SOP_OVERRIDES = {};
 // Bump SOP_VERSION whenever the built-in SOP defaults change. On a version change we clear saved
 // per-machine SOP edits so the new firm defaults show (otherwise an old saved copy would shadow the
 // update — which is what hid the DE form link). Genuine edits can be re-made after an update.
-const SOP_VERSION = '84';
+const SOP_VERSION = '92';
 try {
   if (localStorage.getItem('azri_sopVersion') !== SOP_VERSION) {
     localStorage.removeItem('azri_sopOverrides');
@@ -3557,7 +3541,20 @@ const LETTER_TEMPLATES = {
       };
       return { title: '[State Historic Preservation Office]\n[Address]', agency: 'State Historic Preservation Office (SHPO)', portal: '' };
     },
-    body: (proj, site, recip) => `Re: Section 106 Consultation — ${proj.projectName || '[Project Name]'} — HUD Project ${proj.herosNumber || '[HEROS #]'}\n\nDear ${recip.agency} Reviewer,\n\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}, AZ-RI Consultants is initiating consultation under Section 106 of the National Historic Preservation Act (NHPA), as implemented at 36 CFR Part 800, for the above-referenced project.\n\nPROJECT DESCRIPTION\nProject Name: ${proj.projectName || '[Project Name]'}\nHEROS Number: ${proj.herosNumber || '[HEROS #]'}\nHUD Funding Program: ${proj.fundingProgram || '[Program]'}\nTotal HUD Funding: ${proj.funding || '[Amount]'}\nProject Type: ${proj.projectType || '[Type]'}\n\nDescription: ${proj.projectDescription || '[Project description]'}\n\nSITE LOCATION\nAddress: ${site.addr}\nParcel(s) / Account ID(s): ${site.acctids || '[ACCTIDs]'}\nSite Area: ${site.acres} acres\nCentroid (Lat, Long): ${site.centroid || '[coords]'}\nYear Built (if existing structure): ${proj.yearBuilt || '[N/A or year]'}\n\nAREA OF POTENTIAL EFFECT\nThe Area of Potential Effect (APE) for this undertaking is defined as the project parcel(s) and any areas where ground-disturbing activities, visual changes, or atmospheric/audible effects from the undertaking may occur.\n\nREQUEST\nWe respectfully request your office's review of the attached project information and concurrence with our determination of effects pursuant to 36 CFR 800.4–800.5. Specifically, we are seeking concurrence that the proposed undertaking will result in [No Historic Properties Affected / No Adverse Effect / Adverse Effect with conditions].\n\nAttachments:\n• Project description and scope of work\n• Site location map and APE map\n• Photographs of existing conditions (if applicable)\n• Building/structure inventory (if rehab of pre-1976 structure)\n\n${recip.portal ? 'This consultation has also been entered in ' + recip.portal + '.\n\n' : ''}If you have questions or require additional information, please contact the undersigned. We respectfully request a response within thirty (30) days per 36 CFR 800.3(c)(4).\n\nSincerely,\n\n${proj.reviewer || '[Reviewer Name]'}\nAZ-RI Consultants\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}\n\ncc: HUD Field Office; Tribal Historic Preservation Officers (separate notifications)`
+    body: (proj, site, recip) => {
+      // ---- DC HPO format (v92) — letter must address the five elements required by DC HPO's
+      // "Federal Projects in Historic Preservation" guidance (planning.dc.gov). ----
+      if (CURRENT_STATE === 'DC') {
+        return `Re: Section 106 Consultation Request — ${proj.projectName || '[Project Name]'} — ${proj.siteAddress || site.addr} (Square-Suffix-Lot: ${site.acctids || '[SSL]'}) — HUD Project ${proj.herosNumber || '[HEROS #]'}\n\nDear Ms. Brockett:\n\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}, AZ-RI Consultants is initiating consultation with the DC State Historic Preservation Officer under Section 106 of the National Historic Preservation Act (NHPA), as implemented at 36 CFR Part 800, for the above-referenced HUD-assisted undertaking. Consistent with DC HPO's "Federal Projects in Historic Preservation" guidance, this letter addresses each required element:\n\n1. PROJECT DESCRIPTION AND PRECISE PROJECT-AREA BOUNDARIES\nProject Name: ${proj.projectName || '[Project Name]'} (HEROS ${proj.herosNumber || '[#]'})\nHUD Funding Program: ${proj.fundingProgram || '[Program]'} — ${proj.funding || '[Amount]'}\nResponsible Entity: ${proj.responsibleEntity || '[RE]'} (24 CFR Part 58)\nDescription: ${proj.projectDescription || '[Project description — include all physical work, whether ground disturbance will occur, and any change of use]'}\nProject Area: ${proj.siteAddress || site.addr}; SSL ${site.acctids || '[SSL]'}; ${site.acres} acres; centroid ${site.centroid || '[coords]'}.\nArea of Potential Effects (APE): the project parcel(s) plus [adjacent parcels / viewshed] where ground-disturbing activities, visual changes, or audible effects may occur. [Adjust and justify.]\n\n2. NATIONAL REGISTER-LISTED OR ELIGIBLE PROPERTIES WITHIN THE PROJECT AREA\nA records review was conducted on [DATE] using HistoryQuest DC (DC GIS) and the DC Inventory of Historic Sites. Construction date(s) of on-site structure(s): ${proj.yearBuilt || '[year(s) per HistoryQuest/assessor]'}. [Findings: identify and document each NRHP-listed or eligible property and historic district within or adjacent to the APE — OR state that no listed or eligible properties were identified within the APE.]\n\n3. ANTICIPATED EFFECTS\nBased on the scope of work, the Responsible Entity has determined the undertaking will result in [No Historic Properties Affected (36 CFR 800.4(d)(1)) / No Adverse Effect (36 CFR 800.5(b)) / Adverse Effect (36 CFR 800.5(d)(2))]. Basis: [explain].\n\n4. AVOIDANCE / MITIGATION OF ADVERSE EFFECTS\n[None required — no adverse effects anticipated. / Describe how predicted adverse effects will be avoided, minimized, or mitigated.]\n\n5. PROJECT AND REVIEW TIMETABLE\nAnticipated construction start: [DATE]; duration: [#] months. We respectfully request the SHPO's comments within thirty (30) days per 36 CFR 800.3(c)(4).\n\nAttachments:\n• Project description and scope of work\n• Site location map and APE map\n• Photographs of existing conditions and streetscape\n• HistoryQuest DC excerpt (site and surrounding properties)\n• Building/structure inventory (if structure is 50+ years old)\n\nIf you have questions or require additional information, please contact the undersigned.\n\nSincerely,\n\n${proj.reviewer || '[Reviewer Name]'}\nAZ-RI Consultants\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}\n\ncc: Consult.HPO@dc.gov; HUD Field Office; Tribal Historic Preservation Officers (separate notifications if ground disturbance)`;
+      }
+      // ---- VA DHR format (v92) — mirrors the content DHR requires in an ePIX Environmental
+      // Review submission (epix.dhr.virginia.gov); the letter accompanies/summarizes the ePIX entry. ----
+      if (CURRENT_STATE === 'VA') {
+        return `Re: Section 106 Project Review — ${proj.projectName || '[Project Name]'} — ${proj.siteAddress || site.addr} — HUD Project ${proj.herosNumber || '[HEROS #]'} — DHR File No. [____] (submitted via ePIX)\n\nDear Ms. Birge-Wilson:\n\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}, AZ-RI Consultants has submitted the above-referenced HUD-assisted undertaking for review through DHR's ePIX portal pursuant to Section 106 of the NHPA (36 CFR Part 800). This letter summarizes the submission per DHR's project review requirements:\n\nFEDERAL AGENCY AND INVOLVEMENT\nAgency: U.S. Department of Housing and Urban Development — ${proj.fundingProgram || '[Program]'} (${proj.funding || '[Amount]'}). Responsible Entity assuming review responsibility under 24 CFR Part 58: ${proj.responsibleEntity || '[RE]'}. Agency contact: ${proj.reviewer || '[Reviewer Name]'}, AZ-RI Consultants, on behalf of the RE.\n\nPROJECT DESCRIPTION\n${proj.projectDescription || '[Project description]'}\nTotal acreage: ${site.acres} acres. Past and current land use: [describe]. Proposed work to buildings/structures over 50 years of age: [describe scope — or state none; year built: ${proj.yearBuilt || '[year]'}]. Nature and extent of proposed ground disturbance: [describe depth/extent — or state none beyond utility tie-ins].\n\nAREA OF POTENTIAL EFFECTS (APE)\nDirect effects APE: [project parcel(s) and limits of disturbance]. Indirect (visual/audible) effects APE: [describe]. Justification: [brief justification]. The written boundary description matches the APE map uploaded to ePIX.\n\nPREVIOUS STUDIES AND KNOWN RESOURCES WITHIN THE APE\nA V-CRIS archives search was conducted on [DATE]: [summarize previously recorded architectural and archaeological resources and prior surveys within the APE — attach results].\n\nPUBLIC AND CONSULTING PARTY COMMENT\n[Describe past and planned efforts to obtain public and consulting party comment — e.g., RE public notices under Part 58, locality coordination, Tribal contact if ground disturbance.]\n\nEFFECT DETERMINATION REQUESTED\nWe respectfully request DHR's concurrence that the undertaking will result in [No Historic Properties Affected / No Adverse Effect] and a response within thirty (30) days per 36 CFR 800.3(c)(4).\n\nAttachments (uploaded to ePIX):\n• Site location map and APE map\n• Photographs of existing conditions\n• Project plans / scope of work\n• V-CRIS archives search results\n\nSincerely,\n\n${proj.reviewer || '[Reviewer Name]'}\nAZ-RI Consultants\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}\n\ncc: HUD Field Office`;
+      }
+      // ---- Generic / other states ----
+      return `Re: Section 106 Consultation — ${proj.projectName || '[Project Name]'} — HUD Project ${proj.herosNumber || '[HEROS #]'}\n\nDear ${recip.agency} Reviewer,\n\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}, AZ-RI Consultants is initiating consultation under Section 106 of the National Historic Preservation Act (NHPA), as implemented at 36 CFR Part 800, for the above-referenced project.\n\nPROJECT DESCRIPTION\nProject Name: ${proj.projectName || '[Project Name]'}\nHEROS Number: ${proj.herosNumber || '[HEROS #]'}\nHUD Funding Program: ${proj.fundingProgram || '[Program]'}\nTotal HUD Funding: ${proj.funding || '[Amount]'}\nProject Type: ${proj.projectType || '[Type]'}\n\nDescription: ${proj.projectDescription || '[Project description]'}\n\nSITE LOCATION\nAddress: ${site.addr}\nParcel(s) / Account ID(s): ${site.acctids || '[ACCTIDs]'}\nSite Area: ${site.acres} acres\nCentroid (Lat, Long): ${site.centroid || '[coords]'}\nYear Built (if existing structure): ${proj.yearBuilt || '[N/A or year]'}\n\nAREA OF POTENTIAL EFFECT\nThe Area of Potential Effect (APE) for this undertaking is defined as the project parcel(s) and any areas where ground-disturbing activities, visual changes, or atmospheric/audible effects from the undertaking may occur.\n\nREQUEST\nWe respectfully request your office's review of the attached project information and concurrence with our determination of effects pursuant to 36 CFR 800.4–800.5. Specifically, we are seeking concurrence that the proposed undertaking will result in [No Historic Properties Affected / No Adverse Effect / Adverse Effect with conditions].\n\nAttachments:\n• Project description and scope of work\n• Site location map and APE map\n• Photographs of existing conditions (if applicable)\n• Building/structure inventory (if rehab of pre-1976 structure)\n\n${recip.portal ? 'This consultation has also been entered in ' + recip.portal + '.\n\n' : ''}If you have questions or require additional information, please contact the undersigned. We respectfully request a response within thirty (30) days per 36 CFR 800.3(c)(4).\n\nSincerely,\n\n${proj.reviewer || '[Reviewer Name]'}\nAZ-RI Consultants\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}\n\ncc: HUD Field Office; Tribal Historic Preservation Officers (separate notifications)`;
+    }
   },
 
   esa: {
@@ -3673,6 +3670,59 @@ function generateLetter(letterId) {
   a.click();
 }
 
+// ===== SECTION 106 COVER EMAILS (v92) — DC HPO and VA DHR submittal standards =====
+// Template cover email transmitting the 106 letter + packet. Bracketed [placeholders] are
+// completed per project. DC: email submission to Consult.HPO@dc.gov. VA: submission is via
+// ePIX; the email notifies the DHR reviewer that the ePIX entry was made.
+const COVER_EMAIL_TEMPLATES = {
+  DC: (proj, site) => ({
+    to: 'Consult.HPO@dc.gov',
+    cc: 'anne.brockett@dc.gov',
+    subject: `Section 106 Consultation Request — ${proj.projectName || '[Project Name]'} — ${proj.siteAddress || site.addr} (SSL ${site.acctids || '[SSL]'})`,
+    body: `Dear DC HPO Reviewer (Ms. Brockett):\n\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}, AZ-RI Consultants is submitting the attached Section 106 consultation request for the above-referenced HUD-assisted undertaking (HEROS ${proj.herosNumber || '[#]'}).\n\nPer DC HPO's "Federal Projects in Historic Preservation" guidance, the attached packet addresses:\n  1. Project description and precise project-area boundaries\n  2. Identification and documentation of NRHP-listed or eligible properties (HistoryQuest DC research)\n  3. Anticipated effects on those properties\n  4. Avoidance/mitigation of any predicted adverse effects\n  5. Project and review timetable\n\nAttachments:\n  • Section 106 consultation letter\n  • Site location map and APE map\n  • Photographs of existing conditions and streetscape\n  • HistoryQuest DC excerpt\n  • Project plans / scope of work\n\nWe respectfully request the SHPO's comments within thirty (30) days per 36 CFR 800.3(c)(4). Please contact me if any additional information would assist your review.\n\nThank you,\n\n${proj.reviewer || '[Reviewer Name]'}\nAZ-RI Consultants\n[phone] | [email]\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}`
+  }),
+  VA: (proj, site) => ({
+    to: 'adrienne.birge-wilson@dhr.virginia.gov',
+    cc: '',
+    subject: `ePIX Section 106 Submission — ${proj.projectName || '[Project Name]'} — ${proj.siteAddress || site.addr} — DHR File No. [____]`,
+    body: `Dear Ms. Birge-Wilson:\n\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}, AZ-RI Consultants has entered the above-referenced HUD-assisted undertaking (HEROS ${proj.herosNumber || '[#]'}) in DHR's ePIX portal on [DATE] (submission/file no. [____]) for Section 106 review under 36 CFR Part 800.\n\nThe ePIX submission includes:\n  • Federal agency, involvement, and contact (HUD ${proj.fundingProgram || '[Program]'}; RE: ${proj.responsibleEntity || '[RE]'})\n  • Project description — total acreage, past/current land use, work to 50+ year-old structures, and nature/extent of ground disturbance\n  • APE for direct and indirect effects, with justification and matching APE map\n  • V-CRIS archives search results and previously recorded resources within the APE\n  • Public and consulting party comment efforts\n  • Site location map, photographs, and project plans\n\nWe are requesting DHR's concurrence with a determination of [No Historic Properties Affected / No Adverse Effect], and respectfully request a response within thirty (30) days per 36 CFR 800.3(c)(4).\n\nPlease let me know if the submission requires any additional information.\n\nThank you,\n\n${proj.reviewer || '[Reviewer Name]'}\nAZ-RI Consultants\n[phone] | [email]\nOn behalf of ${proj.responsibleEntity || '[Responsible Entity]'}`
+  })
+};
+
+function generateCoverEmail() {
+  const tmpl = COVER_EMAIL_TEMPLATES[CURRENT_STATE];
+  if (!tmpl) return alert('Cover email templates are currently set up for DC and VA. Set the project state to DC or VA (Screen 1125), or copy the DC/VA format manually.');
+  const proj = getProjectFields();
+  const site = siteSummaryForLetter();
+  const em = tmpl(proj, site);
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>Section 106 Cover Email — ${CURRENT_STATE}</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.4; margin: 0.75in; }
+  .hdr { border-bottom: 1px solid #999; padding-bottom: 8px; margin-bottom: 14px; }
+  .hdr div { margin: 2px 0; }
+  .hdr b { display: inline-block; width: 60px; }
+  .body { white-space: pre-line; }
+  .footer { margin-top: 24px; font-size: 8pt; color: #777; border-top: 1px solid #ccc; padding-top: 6px; }
+</style></head><body>
+<div class="hdr">
+  <div><b>To:</b> ${esc(em.to)}</div>
+  ${em.cc ? '<div><b>Cc:</b> ' + esc(em.cc) + '</div>' : ''}
+  <div><b>Subject:</b> ${esc(em.subject)}</div>
+</div>
+<div class="body">${esc(em.body)}</div>
+<div class="footer">Section 106 cover email template (${CURRENT_STATE}) — complete the [bracketed] items, then copy into your email client. Generated from AZ-RI HUD ER Worksheet · ${today}</div>
+</body></html>`;
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const projName = (proj.projectName || 'Untitled').replace(/[^a-z0-9]/gi, '_');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `AZRI_CoverEmail_106_${CURRENT_STATE}_${projName}.doc`;
+  a.click();
+}
+
 function generateAllRequiredLetters() {
   // Generate letters for any authority with status == 'followup' AND has a letter template
   const authIdsToLetterIds = {
@@ -3691,7 +3741,7 @@ function generateAllRequiredLetters() {
     }
   });
   if (!generated.length) {
-    alert('No authorities are currently marked Follow-Up. Set determinations first using the per-authority "✔ Determine if Exempt" / "↻ Auto-Determine" buttons, or generate letters individually using the per-authority "📄 Letter" buttons.');
+    alert('No authorities are currently marked Follow-Up. Set determinations first using the per-authority "✔ Review Questions" buttons (or the Screen 1310 Review Questions block), or generate letters individually using the per-authority "📄 Letter" buttons.');
   } else {
     setTimeout(() => alert(`Generated ${generated.length} letter(s): ${generated.join(', ')}.\nFiles downloaded to your default download location.`), 500);
   }
@@ -3815,50 +3865,10 @@ function buildResourceLinks() {
   const lon = lonRaw ? parseFloat(lonRaw) : null;
   const hasLL = lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon);
 
+  // v92: Agency resource links removed — reviewer performs authority research directly.
+  // Only map links used to identify the Subject Property location are kept here.
   const nationalLinks = [
-    { name: 'FEMA Map Service Center', url: hasLL ? `https://msc.fema.gov/portal/search?AddressQuery=${lat},${lon}` : 'https://msc.fema.gov/portal/home', authority: 'Floodplain §58.5(b) / Flood Ins §58.6(a)', scope: 'national' },
-    { name: 'FEMA Flood Map Changes Viewer', url: 'https://hazards-fema.maps.arcgis.com/apps/webappviewer/index.html?id=5852ea902db44e55bfce395799315f9c', authority: 'Flood Ins §58.6(a) — preliminary/pending', scope: 'national' },
-    { name: 'FEMA Community Status Book Report', url: 'https://www.fema.gov/flood-insurance/work-with-nfip/community-status-book', authority: 'Flood Ins §58.6(a) — NFIP participation', scope: 'national' },
-    { name: 'Topographic Map (BFE freeboard check)', url: 'https://en-us.topographic-map.com/', authority: 'Floodplain §58.5(b) — Freeboard Value approach', scope: 'national' },
-    { name: 'Federal Flood Standard Support Tool (Beta)', url: 'https://floodstandard.climate.gov/tool', authority: 'Floodplain §58.5(b) — FFRMS', scope: 'national' },
-    { name: '24 CFR 55.12 (5/8-step exemptions)', url: 'https://www.law.cornell.edu/cfr/text/24/55.12', authority: 'Floodplain §58.5(b) — 5/8-step', scope: 'national' },
-    { name: 'USFWS IPaC (ESA — login required for project def)', url: 'https://ecos.fws.gov/ipac/', authority: 'Endangered Species §58.5(e)', scope: 'national' },
-    { name: 'USFWS — Kathleen Cullen (MD ESA)', url: 'mailto:kathleen_cullen@fws.gov', authority: 'ESA §58.5(e) — MD contact', scope: 'national' },
-    { name: 'USFWS Field Offices (find local)', url: 'https://www.fws.gov/about/regions', authority: 'ESA §58.5(e) — non-MD contact', scope: 'national' },
-    { name: 'USFWS NWI Wetlands Mapper', url: 'https://www.fws.gov/wetlands/data/mapper.html', authority: 'Wetlands §58.5(b)', scope: 'national' },
-    { name: 'USFWS CBRS — Maps and Data (hub)', url: 'https://www.fws.gov/program/coastal-barrier-resources-act/maps-and-data', authority: 'Coastal Barrier §58.6(c)', scope: 'national' },
-    { name: 'USFWS CBRS Mapper (validation tool)', url: 'https://fwsprimary.wim.usgs.gov/CBRSMapper-v2/', authority: 'Coastal Barrier §58.6(c) — validation PDF', scope: 'national' },
-    { name: 'CBRS Validation Tool User Guide v2.2', url: 'https://www.fws.gov/sites/default/files/documents/cbrs-validation-tool-user-guide-v2.2.pdf', authority: 'Coastal Barrier §58.6(c) — guidance', scope: 'national' },
-    { name: 'EPA Green Book (Air NAAQS)', url: 'https://www.epa.gov/green-book', authority: 'Air Quality §58.5(g)', scope: 'national' },
-    { name: 'DE DNREC — Amy Mann (Air determination)', url: 'mailto:Amy.Mann@delaware.gov', authority: 'Air Quality §58.5(g) — DE contact', scope: 'national' },
-    { name: 'PA DEP — Susan Foster (Air determination)', url: 'mailto:sufoster@pa.gov', authority: 'Air Quality §58.5(g) — PA contact', scope: 'national' },
-    { name: 'VA DEQ — Chuck Turner (Air determination)', url: 'mailto:charles.turner@deq.virginia.gov', authority: 'Air Quality §58.5(g) — VA contact', scope: 'national' },
-    { name: 'DE Coastal Management Program (DCMP)', url: 'https://dnrec.delaware.gov/coastal-programs/about-czm/', authority: 'Air Quality §58.5(g) / CZM §58.5(c) — DE', scope: 'national' },
-    { name: 'NOAA CZM Programs (state list)', url: 'https://coast.noaa.gov/czm/mystate/', authority: 'CZM §58.5(c) — state CZMP lookup', scope: 'national' },
-    { name: 'MD CZM Enforceable Policies (checklists)', url: 'https://dnr.maryland.gov/ccs/Pages/Enforceable-Policies.aspx', authority: 'CZM §58.5(c) — MD', scope: 'national' },
-    { name: 'MD Coastal Consistency Submission Form', url: 'https://dnr.maryland.gov/ccs/Pages/MD-coastal-consistency-submission-form.aspx', authority: 'CZM §58.5(c) — MD', scope: 'national' },
-    { name: 'MD Critical Area Commission Portal (FED40)', url: 'https://dnr.maryland.gov/criticalarea/Pages/CAC-Project-Submission.aspx', authority: 'CZM §58.5(c) — MD Critical Area', scope: 'national' },
-    { name: 'MD Critical Area Map (DNR)', url: 'https://imap.maryland.gov/apps/684833605b9e4104bb290cab96f49ae4/explore', authority: 'CZM §58.5(c) — MD', scope: 'national' },
-    { name: 'DE DCMP Federal Consistency (CZM intake)', url: 'mailto:DNREC_FederalConsistency@delaware.gov', authority: 'CZM §58.5(c) — DE contact', scope: 'national' },
-    { name: 'MD Critical Area — Lisa Hoerger', url: 'mailto:lisa.hoerger@maryland.gov', authority: 'CZM §58.5(c) — MD Critical Area contact', scope: 'national' },
-    { name: 'EPA EJScreen', url: hasLL ? `https://ejscreen.epa.gov/mapper/index.html?wherestr=${lat},${lon}` : 'https://ejscreen.epa.gov/mapper/', authority: 'Environmental Justice §58.5(j)', scope: 'national' },
-    { name: 'EPA Sole Source Aquifer', url: 'https://www.epa.gov/dwssa', authority: 'Sole Source Aquifer §58.5(d)', scope: 'national' },
-    { name: 'EPA Region 3 SSA Project Review', url: 'https://www.epa.gov/dwssa/sole-source-aquifer-protection-program-region-3', authority: 'Sole Source Aquifer §58.5(d) — R3 review', scope: 'national' },
-    { name: 'NRCS Web Soil Survey', url: 'https://websoilsurvey.sc.egov.usda.gov/App/WebSoilSurvey.aspx', authority: 'Farmland §58.5(h)', scope: 'national' },
-    { name: 'NRCS Form AD-1006 (Farmland Conversion Impact Rating)', url: 'https://www.nrcs.usda.gov/sites/default/files/2022-06/AD1006.pdf', authority: 'Farmland §58.5(h)', scope: 'national' },
-    { name: 'NPS Wild &amp; Scenic Rivers', url: 'https://www.rivers.gov/map.php', authority: 'Wild &amp; Scenic Rivers §58.5(f)', scope: 'national' },
-    { name: 'Study Rivers (rivers.gov)', url: 'https://rivers.gov/study-rivers', authority: 'WSR §58.5(f) — Study Rivers', scope: 'national' },
-    { name: 'NPS Nationwide Rivers Inventory (NRI)', url: 'https://www.nps.gov/subjects/rivers/nationwide-rivers-inventory.htm', authority: 'WSR §58.5(f) — NRI Mapper', scope: 'national' },
-    { name: 'EPA NEPAssist', url: 'https://nepassisttool.epa.gov/nepassist/nepamap.aspx', authority: 'Airports / Multi-authority screen', scope: 'national' },
-    { name: 'HUD Buyer Notice (RPZ/CZ)', url: 'https://www.hudexchange.info/resource/2758/notice-prospective-buyers-properties-in-runway-clear-zones/', authority: 'Airport Hazards §58.6(d)', scope: 'national' },
-    { name: 'FAA Airport Data (5010)', url: 'https://adip.faa.gov/agis/public/#/airportSearch/advanced', authority: 'Airport Hazards §58.6(d)', scope: 'national' },
-    { name: 'HUD ASD Calculator', url: 'https://www.hudexchange.info/programs/environmental-review/asd-calculator/', authority: 'Explosive/Flammable 24 CFR 51C', scope: 'national' },
-    { name: 'HUD Fact Sheet — Which Tanks to Evaluate', url: 'https://files.hudexchange.info/resources/documents/Fact-Sheet-Determining-Which-Tanks-to-Evaluate-for-Acceptable-Separation-Distance.pdf', authority: 'Explosive/Flammable 24 CFR 51C', scope: 'national' },
-    { name: 'HUD DNL Noise Calculator', url: 'https://www.hud.gov/hudprograms/dnlcalculator', authority: 'Noise 24 CFR 51B', scope: 'national' },
-    { name: 'BTS National Transportation Noise Map', url: 'https://maps.dot.gov/BTS/NationalTransportationNoiseMap/', authority: 'Noise 24 CFR 51B — preliminary screening', scope: 'national' },
-    { name: 'FAA Airport Diagrams', url: 'https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/Airport_Data/', authority: 'Noise 24 CFR 51B / Airport §58.6(d)', scope: 'national' },
-    { name: 'HEROS (HUD Login)', url: 'https://heros.hud.gov/heros/', authority: 'ERR Submission', scope: 'national' },
-    { name: 'Google Maps', url: hasLL ? `https://www.google.com/maps/@${lat},${lon},18z` : 'https://www.google.com/maps', authority: 'Site Recon', scope: 'national' }
+    { name: 'Google Maps', url: hasLL ? `https://www.google.com/maps/@${lat},${lon},18z` : 'https://www.google.com/maps', authority: 'Subject Property location / site recon', scope: 'national' }
   ];
 
   const pack = STATE_PACKS[CURRENT_STATE] || STATE_PACKS.GENERIC;
@@ -4346,6 +4356,139 @@ const EXEMPTION_CHECKS = {
   }
 };
 
+// ===== 1310 REVIEW QUESTIONS (v92) =====
+// Mirrors each authority's Review Questions (formerly "Determine if Exempt") in Screen 1310 so
+// the reviewer can answer everything up front. Answers sync BOTH ways with the per-authority
+// panels in Section 2005. Also adds Section 106 Historic Preservation screening questions
+// (50+ yr structure; ground disturbance → tribal consultation) that can change the level of
+// review — those sync to Activity Questions 6 and 9 (loraHistoric / loraGround).
+const RQ1310_HISTORIC = {
+  intro: 'Historic Preservation — Section 106 (NHPA / 36 CFR Part 800). These questions can change the level of review and trigger SHPO and Tribal (THPO) consultation.',
+  questions: [
+    { id: 'age50', label: 'Is any structure on or immediately adjacent to the site 50+ years old, or listed on / eligible for the National Register of Historic Places?', lora: 'loraHistoric', options: [
+      { v: 'no', t: 'No — all structures are under 50 years old and not NRHP-listed/eligible' },
+      { v: 'yes', t: 'Yes — a structure is 50+ years old or NRHP-listed/eligible → Section 106 SHPO consultation required regardless of level of review' },
+      { v: 'unknown', t: 'Unknown — verify build date (assessor/SDAT) and SHPO inventory before clearance' }
+    ]},
+    { id: 'ground', label: 'Will the project involve ground disturbance beyond utility tie-ins? Ground disturbance triggers archaeological review of the APE and Tribal consultation (36 CFR 800.2(c)(2)(ii)).', lora: 'loraGround', options: [
+      { v: 'no', t: 'No ground disturbance' },
+      { v: 'yes', t: 'Yes — ground disturbance → THPO/Tribal notification and archaeological consideration required' }
+    ]}
+  ]
+};
+
+function rq1310Block(id, title, cfg) {
+  let h = '<details style="margin:8px 0;border:1px solid var(--border);border-radius:5px;background:white;" open>'
+    + '<summary style="cursor:pointer;padding:7px 12px;font-weight:700;font-size:12.5px;color:var(--azri-navy);list-style:none;">' + title + '</summary>'
+    + '<div style="padding:2px 14px 10px;">'
+    + (cfg.intro ? '<div style="font-size:11.5px;color:#4a5568;margin-bottom:6px;line-height:1.5;">' + cfg.intro + '</div>' : '');
+  cfg.questions.forEach(q => {
+    h += '<div style="margin-bottom:8px;"><div style="font-weight:600;font-size:12px;margin-bottom:3px;text-transform:none;letter-spacing:0;color:#2d3748;">' + q.label + '</div>';
+    q.options.forEach(o => {
+      h += '<label style="display:block;font-size:12px;line-height:1.4;margin:2px 0;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;color:#2d3748;"><input type="radio" name="rq1310_' + id + '_' + q.id + '" value="' + o.v + '" onchange="onRQ1310Change(\'' + id + '\',\'' + q.id + '\',this.value)" style="margin-right:6px;">' + o.t + '</label>';
+    });
+    h += '</div>';
+  });
+  return h + '</div></details>';
+}
+
+function buildReviewQuestions1310() {
+  const host = document.getElementById('rq1310Body');
+  if (!host) return;
+  let html = rq1310Block('historic', 'Historic Preservation §58.5(a) — Section 106 screening', RQ1310_HISTORIC);
+  AUTHORITIES.forEach(a => {
+    if (EXEMPTION_CHECKS[a.id]) html += rq1310Block(a.id, a.name.replace(/&amp;/g, '&'), EXEMPTION_CHECKS[a.id]);
+  });
+  host.innerHTML = html;
+}
+
+// 1310 answer → pull down into the authority's panel (if built) + Section 106 → Activity Questions
+function onRQ1310Change(id, qid, v) {
+  const down = document.querySelector('input[name="exq_' + id + '_' + qid + '"][value="' + v + '"]');
+  if (down && !down.checked) down.checked = true;
+  if (id === 'historic') {
+    const q = RQ1310_HISTORIC.questions.find(x => x.id === qid);
+    if (q && q.lora) {
+      const lr = document.querySelector('input[name="' + q.lora + '"][value="' + v + '"]');
+      if (lr && !lr.checked) { lr.checked = true; lr.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+  }
+}
+
+// Reverse sync: answering in a Section 2005 panel (exq_*) or Activity Questions 6/9 updates 1310
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (!t || !t.name || t.type !== 'radio' || !t.checked) return;
+  if (/^exq_/.test(t.name)) {
+    const parts = t.name.split('_'); // exq, authorityId, questionId
+    if (parts.length === 3) {
+      const up = document.querySelector('input[name="rq1310_' + parts[1] + '_' + parts[2] + '"][value="' + t.value + '"]');
+      if (up && !up.checked) up.checked = true;
+    }
+  } else if (t.name === 'loraHistoric' || t.name === 'loraGround') {
+    const qid = t.name === 'loraHistoric' ? 'age50' : 'ground';
+    const up = document.querySelector('input[name="rq1310_historic_' + qid + '"][value="' + t.value + '"]');
+    if (up && !up.checked) up.checked = true;
+  }
+});
+
+// Apply every answered authority's determination from the 1310 answers. Called automatically by
+// determineLevel() (v93) so clicking "Determine Level of Review" considers the Review Questions
+// and flows each determination through to its Related Laws & Authorities section.
+// Returns an array of human-readable result lines for the Level of Review rationale.
+function applyAllReviewQuestions() {
+  const authName = id => {
+    const a = (typeof AUTHORITIES !== 'undefined') ? AUTHORITIES.find(x => x.id === id) : null;
+    return a ? a.name.replace(/&amp;/g, '&') : id;
+  };
+  const summary = [], applied = [], incomplete = [];
+  Object.keys(EXEMPTION_CHECKS).forEach(id => {
+    const cfg = EXEMPTION_CHECKS[id];
+    const ans = {};
+    cfg.questions.forEach(q => {
+      const sel = document.querySelector('input[name="rq1310_' + id + '_' + q.id + '"]:checked');
+      ans[q.id] = sel ? sel.value : null;
+    });
+    if (!ans[cfg.questions[0].id]) { incomplete.push(authName(id)); return; }
+    const res = cfg.evaluate(ans);
+    if (res.status) {
+      const radio = document.querySelector('input[name="' + id + '_status"][value="' + res.status + '"]');
+      if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+    if (res.writeUpIdx != null && typeof insertBoilerplateByIdx === 'function') {
+      const ta = document.querySelector('[data-field="' + id + '_notes"]');
+      if (ta) ta.value = '';
+      insertBoilerplateByIdx(id, res.writeUpIdx);
+    }
+    const rEl = document.getElementById('exemptResult_' + id);
+    if (rEl) { rEl.textContent = res.msg || ''; rEl.style.color = res.exempt ? 'var(--green,#2f855a)' : '#9b2c2c'; }
+    applied.push(authName(id));
+    summary.push(authName(id) + ' → ' + (res.exempt
+      ? 'scope-exempt (does not apply to this scope of work — marked Exempt, write-up inserted)'
+      : 'Follow-Up (full analysis required per the section SOP)'));
+  });
+  // Section 106: 50+ yr / unknown structure or ground disturbance → Historic marked Follow-Up
+  const a50 = document.querySelector('input[name="rq1310_historic_age50"]:checked');
+  const grd = document.querySelector('input[name="rq1310_historic_ground"]:checked');
+  let histMsg = '';
+  if ((a50 && a50.value !== 'no') || (grd && grd.value === 'yes')) {
+    const radio = document.querySelector('input[name="historic_status"][value="followup"]');
+    if (radio && !radio.checked) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    histMsg = 'Historic Preservation → Follow-Up (Section 106 consultation' + ((grd && grd.value === 'yes') ? ' incl. Tribal/THPO notification' : '') + ' required).';
+    summary.push(histMsg);
+  } else if (a50 && grd) {
+    histMsg = 'Historic Preservation: no Section 106 triggers from these answers — complete the Historic SOP and set its determination manually.';
+    summary.push(histMsg);
+  }
+  const s = document.getElementById('rq1310Status');
+  if (s) {
+    s.textContent = (applied.length ? 'Applied to Section 2005: ' + applied.join('; ') + '.' : 'No determinations applied.')
+      + (incomplete.length ? ' Unanswered: ' + incomplete.join('; ') + '.' : '') + (histMsg ? ' ' + histMsg : '');
+  }
+  if (typeof updateMatrix === 'function') updateMatrix();
+  return { summary: summary, incomplete: incomplete };
+}
+
 function toggleExemptionCheck(id) {
   const panel = document.getElementById('exemptPanel_' + id);
   if (!panel) return;
@@ -4366,6 +4509,14 @@ function toggleExemptionCheck(id) {
     + '<span id="exemptResult_' + id + '" style="font-size:11.5px;color:#4a5568;flex-basis:100%;"></span></div>';
   panel.innerHTML = html;
   panel.style.display = 'block';
+  // Pull down any answers already given in the 1310 Review Questions block
+  cfg.questions.forEach(q => {
+    const up = document.querySelector('input[name="rq1310_' + id + '_' + q.id + '"]:checked');
+    if (up) {
+      const mine = panel.querySelector('input[name="exq_' + id + '_' + q.id + '"][value="' + up.value + '"]');
+      if (mine) mine.checked = true;
+    }
+  });
 }
 
 function applyExemptionCheck(id) {
@@ -4430,7 +4581,7 @@ function buildClientQuestionsList() {
   const proj = (document.querySelector('[data-field="projectName"]') || {}).value || '[Project Name]';
   const body = document.getElementById('clientQuestionsBody');
   if (!flagged.length) {
-    body.textContent = 'No sections are currently flagged.\n\nTo add a question: open an authority’s "✔ Determine if Exempt" panel and click "❓ Not sure — flag for client." Its question will appear here, grouped by authority, ready to copy into an email.';
+    body.textContent = 'No sections are currently flagged.\n\nTo add a question: open an authority’s "✔ Review Questions" panel and click "❓ Not sure — flag for client." Its question will appear here, grouped by authority, ready to copy into an email.';
   } else {
     let txt = 'Information needed to complete the HUD environmental review — ' + proj + '\n\n'
       + 'To finish the review for the project, please answer the following:\n\n';
@@ -4497,9 +4648,10 @@ AUTHORITIES.forEach(a => {
           ${EXEMPTION_CHECKS[a.id] ? `<label><input type="radio" name="${a.id}_status" value="exempt" data-auth="${a.id}"><span>Exempt</span></label>` : ''}
         </div>
         ${EXEMPTION_CHECKS[a.id]
-            ? `<button class="no-print" onclick="toggleExemptionCheck('${a.id}')" id="exemptBtn_${a.id}" style="background:var(--azri-sand);border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✔ Determine if Exempt</button>`
+            ? `<button class="no-print" onclick="toggleExemptionCheck('${a.id}')" id="exemptBtn_${a.id}" style="background:var(--azri-sand);border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✔ Review Questions</button>`
             : ''}
         ${mapBtnHtml}
+        ${a.id === 'historic' ? `<button class="no-print" onclick="generateLetter('historic')" title="Generates the Section 106 consultation letter in the state-specific format (DC HPO 5-point / VA DHR ePIX / generic)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📄 106 Letter (state format)</button><button class="no-print" onclick="generateCoverEmail()" title="Generates the matching cover email template (DC HPO / VA DHR)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✉ Cover Email (DC/VA)</button>` : ''}
         <span class="no-print" id="autoStatus_${a.id}" style="font-size:11px;color:var(--gray);"></span>
       </div>
     </div>
@@ -4571,6 +4723,9 @@ AUTHORITIES.forEach(a => {
     authContainer.appendChild(astPanel);
   }
 });
+
+// Build the consolidated 1310 Review Questions block (v92) now that AUTHORITIES + EXEMPTION_CHECKS exist
+try { buildReviewQuestions1310(); } catch (e) { console.warn('buildReviewQuestions1310 failed:', e); }
 
 // ===== AST WORKSHEET ROW MANAGEMENT =====
 let astRows = [];
@@ -7588,6 +7743,19 @@ function determineLevel() {
   if (ground === 'yes' && (a === 'newconst' || a === 'rehab' || a === 'infra' || a === 'combo_nc')) {
     why.push('NOTE: Ground disturbance triggers full ESA habitat review and Section 106 archaeological consideration.');
   }
+
+  // v93: Consider the 1310 Review Questions and flow their determinations through to the
+  // Related Laws & Authorities sections (Section 2005). Each answered authority is set to
+  // scope-exempt (write-up inserted) or Follow-Up, and the results are added to the rationale.
+  try {
+    const rq = applyAllReviewQuestions();
+    if (rq && rq.summary && rq.summary.length) {
+      rq.summary.forEach(line => why.push('REVIEW QUESTIONS: ' + line));
+    }
+    if (rq && rq.incomplete && rq.incomplete.length) {
+      why.push('REVIEW QUESTIONS unanswered (Section 2005 sections not yet determined): ' + rq.incomplete.join('; ') + '.');
+    }
+  } catch (e) { console.warn('applyAllReviewQuestions failed during determineLevel:', e); }
 
   showLevelResult(level, cite, why);
 
