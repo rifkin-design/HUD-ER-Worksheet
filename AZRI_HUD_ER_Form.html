@@ -483,7 +483,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v97 — Radon subsection rebuilt per the AZ-RI Radon SOP + HUD Notice CPD-23-103 (Jan 11, 2024): removed the EPA Radon Zone dropdown (the Notice PROHIBITS the EPA Map of Radon Zones for site-specific analysis); added the HEROS-style question flow (exemptions check → new-construction deferred testing → data source + concentration), a collapsible SOP with the CDC Data Explorer steps (Radon Tests from States/Labs → Mean Pre-mitigation Radon Level → State by County → most recent 10-yr period; min 10 county results), the FHA testing-required path, and an "Insert Radon Write-Up" button that auto-fills Write Up 1 (&lt;4 pCi/L), Write Up 2 (≥4 — mitigation + post-mitigation testing), Write Up 3 (FHA), exemption, deferred-testing, or lack-of-data text with the entered value and data source. Prior (v96): (1) NEW CZM Review Questions: no-CZMP states (e.g., DC, WV) derive Exempt automatically from the Project State with Write Up 1 inserted; CZM states ask inside/outside the designated coastal zone (Write Up 2 if outside). (2) Environmental Justice now auto-sets Not Applicable with a full write-up explaining that EO 12898 (basis for §58.5(j)) was revoked by EO 14173 (Jan 21, 2025) — applied at startup, on load, and in Determine Level of Review. Prior (v95): (1) Review Questions moved OUT of Screen 1310 and into each authority section (Section 2005), shown open so the reviewer sees per-section which authorities may be exempt and why; the ✔ Review Questions button now hides/shows the panel; saved answers restore on load. "Determine Level of Review" reads the per-section answers (plus the Farmland/Wetlands/Aquifer/§106 answers derived from Activity Questions 1, 3, 6 &amp; 9 — derived answers display in the section, overridable) and applies determinations. (2) NEW Radon · Lead-Based Paint · Asbestos subsection under Contamination &amp; Toxic Substances, consistent with HUD HEROS (Radon: Notice CPD-23-103 "considered" standard + EPA Radon Zone; LBP: 24 CFR Part 35 pre-1978 housing; Asbestos: NESHAP 40 CFR 61 Subpart M pre-renovation/demolition survey); entries append to the Contamination notes in the ERR preview and Client Report. Prior (v94): (1) Any radio button can be cleared by clicking it again. (3) Fixed wrong flow-through write-ups: scope-exempt determinations insert the correct base "Write Up 1" exemption text. Prior (v93): Review Questions are part of the 1310 Level of Review flow: the block sits above the "Determine Level of Review" button, the button considers the answers, applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, write-up inserted), and folds the results into the level rationale. Prior (v92): Removed the "Additional AZ-RI fields" block from 1125 (Project Type / Year Built / Level of Review / Preparer Attestation — hidden mirrors kept for logic + back-compat). Field Resources trimmed to Subject-Property location map links only. Renamed "✔ Determine if Exempt" → "✔ Review Questions" and added a consolidated Review Questions block to Screen 1310 (answers sync both ways with the Section 2005 panels; "Apply All Determinations" button) including new Section 106 screening questions (50+ yr structure, ground disturbance → tribal consultation) that sync to the level-of-review questions. Historic SOP: added HistoryQuest DC GIS link + DC HPO 5-point letter requirements. New DC HPO and VA DHR (ePIX) Section 106 letter formats + cover email templates (📄/✉ buttons on the Historic card). Prior (v91): added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v98 — LBP &amp; Asbestos subsections rebuilt per the AZ-RI SOP: LBP scenario dropdown with the firm's 8 write-ups (exemptions track 24 CFR 35.115 — no buildings / post-1978 / unoccupied-slated-for-demolition / exclusively elderly-disabled no child &lt;6 / zero-bedroom no child &lt;6 / LBP assumed / commercial OSHA+TCLP / LBP assumed + Recommended Follow up) and "Insert LBP Write-Up" button; Asbestos scenario dropdown with the firm's 4 write-ups (no buildings / post-1989 / pre-1989 / built-in-1989 roofing-only) + optional Recommended Follow up checkbox and "Insert Asbestos Write-Up" button; noted NESHAP demolition-survey duty applies regardless of age (1989 ban vacated 1991). Prior (v97): Radon subsection rebuilt per the AZ-RI Radon SOP + HUD Notice CPD-23-103 (Jan 11, 2024): removed the EPA Radon Zone dropdown (the Notice PROHIBITS the EPA Map of Radon Zones for site-specific analysis); added the HEROS-style question flow (exemptions check → new-construction deferred testing → data source + concentration), a collapsible SOP with the CDC Data Explorer steps (Radon Tests from States/Labs → Mean Pre-mitigation Radon Level → State by County → most recent 10-yr period; min 10 county results), the FHA testing-required path, and an "Insert Radon Write-Up" button that auto-fills Write Up 1 (&lt;4 pCi/L), Write Up 2 (≥4 — mitigation + post-mitigation testing), Write Up 3 (FHA), exemption, deferred-testing, or lack-of-data text with the entered value and data source. Prior (v96): (1) NEW CZM Review Questions: no-CZMP states (e.g., DC, WV) derive Exempt automatically from the Project State with Write Up 1 inserted; CZM states ask inside/outside the designated coastal zone (Write Up 2 if outside). (2) Environmental Justice now auto-sets Not Applicable with a full write-up explaining that EO 12898 (basis for §58.5(j)) was revoked by EO 14173 (Jan 21, 2025) — applied at startup, on load, and in Determine Level of Review. Prior (v95): (1) Review Questions moved OUT of Screen 1310 and into each authority section (Section 2005), shown open so the reviewer sees per-section which authorities may be exempt and why; the ✔ Review Questions button now hides/shows the panel; saved answers restore on load. "Determine Level of Review" reads the per-section answers (plus the Farmland/Wetlands/Aquifer/§106 answers derived from Activity Questions 1, 3, 6 &amp; 9 — derived answers display in the section, overridable) and applies determinations. (2) NEW Radon · Lead-Based Paint · Asbestos subsection under Contamination &amp; Toxic Substances, consistent with HUD HEROS (Radon: Notice CPD-23-103 "considered" standard + EPA Radon Zone; LBP: 24 CFR Part 35 pre-1978 housing; Asbestos: NESHAP 40 CFR 61 Subpart M pre-renovation/demolition survey); entries append to the Contamination notes in the ERR preview and Client Report. Prior (v94): (1) Any radio button can be cleared by clicking it again. (3) Fixed wrong flow-through write-ups: scope-exempt determinations insert the correct base "Write Up 1" exemption text. Prior (v93): Review Questions are part of the 1310 Level of Review flow: the block sits above the "Determine Level of Review" button, the button considers the answers, applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, write-up inserted), and folds the results into the level rationale. Prior (v92): Removed the "Additional AZ-RI fields" block from 1125 (Project Type / Year Built / Level of Review / Preparer Attestation — hidden mirrors kept for logic + back-compat). Field Resources trimmed to Subject-Property location map links only. Renamed "✔ Determine if Exempt" → "✔ Review Questions" and added a consolidated Review Questions block to Screen 1310 (answers sync both ways with the Section 2005 panels; "Apply All Determinations" button) including new Section 106 screening questions (50+ yr structure, ground disturbance → tribal consultation) that sync to the level-of-review questions. Historic SOP: added HistoryQuest DC GIS link + DC HPO 5-point letter requirements. New DC HPO and VA DHR (ePIX) Section 106 letter formats + cover email templates (📄/✉ buttons on the Historic card). Prior (v91): added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
   </div>
 </header>
 
@@ -4434,14 +4434,55 @@ document.addEventListener('click', e => {
 // (v95) Compose the Radon / LBP / Asbestos subsection text appended to the Contamination &
 // Toxic Substances notes in the ERR preview and Client Report exports.
 function contamSubsectionText(f) {
-  const lbpStatus = { na_age: 'Not applicable — built 1978 or later', na_nonres: 'Not applicable — non-residential / not target housing', na_scope: 'Not applicable — no paint-disturbing work per program rules', eval_req: 'Applicable — pre-1978 residential; evaluation required per 24 CFR Part 35', complete: 'Evaluation complete' }[f.contamLbpStatus] || '';
-  const asbStatus = { na_nostruct: 'Not applicable — no existing structures', na_scope: 'Not applicable — no renovation/demolition', survey_req: 'Survey required prior to renovation/demolition', complete: 'Survey complete' }[f.contamAsbestosStatus] || '';
   const parts = [];
   const radonExtra = (!f.contamRadonNotes && f.contamRadonValue) ? ('Radon concentration: ' + f.contamRadonValue + ' pCi/L.') : '';
   if (f.contamRadonNotes || radonExtra) parts.push('RADON (HUD Notice CPD-23-103): ' + [f.contamRadonNotes, radonExtra].filter(Boolean).join(' '));
-  if (lbpStatus || f.contamLbpNotes) parts.push('LEAD-BASED PAINT (24 CFR Part 35): ' + [lbpStatus, f.contamLbpNotes].filter(Boolean).join('. '));
-  if (asbStatus || f.contamAsbestosNotes) parts.push('ASBESTOS (NESHAP, 40 CFR 61 Subpart M): ' + [asbStatus, f.contamAsbestosNotes].filter(Boolean).join('. '));
+  // LBP/Asbestos: the inserted write-up in the notes is the ERR text; no status prefix needed.
+  if (f.contamLbpNotes) parts.push('LEAD-BASED PAINT (24 CFR Part 35): ' + f.contamLbpNotes);
+  if (f.contamAsbestosNotes) parts.push('ASBESTOS: ' + f.contamAsbestosNotes);
   return parts.join('\n\n');
+}
+
+// ===== LBP & ASBESTOS WRITE-UPS (v98) — per AZ-RI SOP =====
+// LBP exemptions track 24 CFR 35.115 (Lead Safe Housing Rule; target housing = pre-1978
+// residential). The asbestos 1989 threshold is the firm's screening convention (the 1989 EPA
+// ban was largely vacated in 1991; NESHAP demolition/renovation survey duties still apply).
+const LBP_WRITEUPS = {
+  no_struct: 'There were no structures on the Subject Property and therefore no Lead-based paint.',
+  post1978: 'The building(s) on the Subject Property was constructed after 1978 and is therefore assumed to not contain Lead-based paint (LBP).',
+  pre1978_demo: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because the project is unoccupied, proposed for demolition and the property will remain unoccupied until demolition, the Lead-based paint requirements do not apply.',
+  pre1978_elderly: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because the project is designated exclusively for the elderly or persons with disabilities and no child of less than 6 years of age resides or is expected to reside at the project, the Lead-based paint requirements do not apply.',
+  pre1978_zerobed: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because the project contains zero-bedroom dwelling units and no child of less than 6 years of age resides or is expected to reside at the project, the Lead-based paint requirements do not apply.',
+  pre1978: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP).',
+  pre1978_comm: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because this is a non-residential project, the LBP requirements do not apply. Nevertheless, contractors impacting surfaces containing LBP must adhere to the Occupational Safety and Health Administration\'s (OSHA’s) Lead in Construction Standard. Lead-containing materials should also be sampled and analyzed using the Toxicity Characteristic Leaching Procedure (TCLP) with lead analysis to ensure proper waste segregation and disposal.',
+  pre1978_followup: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP).\n\nRecommended Follow up (Mitigation): The grant recipient will ensure that contractors impacting surfaces containing LBP adhere to the Occupational Safety and Health Administration\'s (OSHA’s) Lead in Construction Standard and also ensure that Lead-containing materials are properly characterized for disposal.'
+};
+const ACM_WRITEUPS = {
+  no_struct: 'There were no structures on the Subject Property and therefore no Asbestos Containing Materials.',
+  post1989: 'The building(s) on the Subject Property was/were constructed after 1989 and is/are therefore assumed to not contain Asbestos Containing Materials.',
+  pre1989: 'The building(s) on the Subject Property were constructed before 1989 and therefore may contain Asbestos Containing Materials (ACMs). An ACM is a building material that contains greater than 1% asbestos.',
+  y1989: 'The building(s) on the Subject Property were constructed in 1989 and therefore may contain Asbestos Containing Materials (ACMs). Because asbestos had been phased out of most building materials by 1989 but remained in use in roofing products, only the roofing materials need to be considered: roofing materials should be sampled for asbestos prior to any disturbance, or assumed to be ACM and handled accordingly. [Review/adjust this roofing language per the project scope.]'
+};
+const ACM_FOLLOWUP = '\n\nRecommended Follow up (Mitigation): The grant recipient will ensure that ACMs are properly characterized and removed in accordance with applicable requirements prior to conducting any demolition activities that may impact ACMs.';
+
+function insertLbpWriteUp() {
+  const sel = (document.querySelector('[data-field="contamLbpStatus"]') || {}).value;
+  const ta = document.querySelector('[data-field="contamLbpNotes"]');
+  const st = document.getElementById('lbpWriteUpStatus');
+  if (!sel || !LBP_WRITEUPS[sel]) { if (st) st.textContent = 'Select the LBP scenario first.'; return; }
+  if (ta) { ta.value = LBP_WRITEUPS[sel]; ta.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (st) st.textContent = 'LBP write-up inserted.' + (sel === 'pre1978' || sel === 'pre1978_followup' ? ' Pre-1978 residential — 24 CFR Part 35 requirements apply; coordinate program-specific evaluation/reduction requirements.' : '');
+}
+
+function insertAsbestosWriteUp() {
+  const sel = (document.querySelector('[data-field="contamAsbestosStatus"]') || {}).value;
+  const fu = (document.querySelector('[data-field="contamAsbFollowup"]') || {}).checked;
+  const ta = document.querySelector('[data-field="contamAsbestosNotes"]');
+  const st = document.getElementById('asbWriteUpStatus');
+  if (!sel || !ACM_WRITEUPS[sel]) { if (st) st.textContent = 'Select the asbestos scenario first.'; return; }
+  const addFu = fu && (sel === 'pre1989' || sel === 'y1989');
+  if (ta) { ta.value = ACM_WRITEUPS[sel] + (addFu ? ACM_FOLLOWUP : ''); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (st) st.textContent = 'Asbestos write-up inserted' + (addFu ? ' with Recommended Follow up.' : '.') + ((fu && !addFu) ? ' (Follow-up text only applies to pre-1989 / 1989 scenarios.)' : '');
 }
 
 // ===== RADON WRITE-UPS (v97) — per AZ-RI Radon SOP + HUD Notice CPD-23-103 =====
@@ -4900,43 +4941,57 @@ AUTHORITIES.forEach(a => {
       </div>
 
       <div style="margin-bottom:14px;">
-        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Lead-Based Paint <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— 24 CFR Part 35 (Lead Safe Housing Rule): applies to residential structures built before 1978; evaluation/notification/reduction requirements vary by program and rehab amount.</span></div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
-          <div style="min-width:280px;flex:0 0 auto;">
-            <label style="font-size:11px;">LBP applicability / status</label>
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Lead-Based Paint <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— 24 CFR Part 35 (Lead Safe Housing Rule); target housing = residential built before 1978. <b>Exemptions (24 CFR 35.115):</b> no buildings · built after 1978 · unoccupied &amp; slated for demolition (remains unoccupied until demolition) · exclusively for the elderly or persons with disabilities with no child under 6 residing/expected · zero-bedroom dwellings with no child under 6 · non-residential. Determine if exempt, then insert the correct write-up.</span></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;align-items:flex-end;">
+          <div style="min-width:300px;flex:1;">
+            <label style="font-size:11px;">LBP scenario (selects the write-up)</label>
             <select data-field="contamLbpStatus" style="width:100%;">
               <option value="">— select —</option>
-              <option value="na_age">N/A — built 1978 or later</option>
-              <option value="na_nonres">N/A — non-residential / not target housing</option>
-              <option value="na_scope">N/A — no paint-disturbing work or acquisition-only per program rules</option>
-              <option value="eval_req">Applicable — pre-1978 residential: evaluation required (risk assessment / paint testing per 24 CFR Part 35 subpart)</option>
-              <option value="complete">Evaluation complete — see notes (attach report)</option>
+              <option value="no_struct">Write Up 1 — No structures on the Subject Property</option>
+              <option value="post1978">Write Up 2 — Built after 1978 (assumed no LBP)</option>
+              <option value="pre1978_demo">Write Up 3 — Pre-1978, unoccupied &amp; slated for demolition (exempt)</option>
+              <option value="pre1978_elderly">Write Up 4 — Pre-1978, exclusively elderly/disabled, no child under 6 (exempt)</option>
+              <option value="pre1978_zerobed">Write Up 5 — Pre-1978, zero-bedroom units, no child under 6 (exempt)</option>
+              <option value="pre1978">Write Up 6 — Pre-1978, LBP assumed (requirements apply)</option>
+              <option value="pre1978_comm">Write Up 7 — Pre-1978, commercial/non-residential (OSHA + TCLP note)</option>
+              <option value="pre1978_followup">Write Up 8 — Pre-1978, LBP assumed + Recommended Follow up (OSHA + waste characterization)</option>
             </select>
           </div>
-          <div style="flex:1;min-width:280px;">
-            <label style="font-size:11px;">LBP findings / requirements (ERR text)</label>
-            <textarea data-field="contamLbpNotes" style="min-height:54px;margin-top:2px;" placeholder="e.g., Structure built [year]. Pre-1978 residential — 24 CFR Part 35 applies: [risk assessment/paint testing date + results; interim controls/abatement; clearance; notification]. OR: Built [year ≥1978]; Part 35 not applicable."></textarea>
+          <div class="no-print" style="flex:0 0 auto;">
+            <button type="button" onclick="insertLbpWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert LBP Write-Up</button>
           </div>
+        </div>
+        <div id="lbpWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
+        <div style="margin-top:6px;">
+          <label style="font-size:11px;">LBP findings / requirements (ERR text)</label>
+          <textarea data-field="contamLbpNotes" style="min-height:54px;margin-top:2px;" placeholder="Select the LBP scenario above and click Insert LBP Write-Up."></textarea>
         </div>
       </div>
 
       <div>
-        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Asbestos <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— NESHAP (40 CFR Part 61 Subpart M) + state/local regs: an asbestos survey is required before renovation or demolition of structures that may contain ACM (typically pre-1981 construction or suspect materials).</span></div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
-          <div style="min-width:280px;flex:0 0 auto;">
-            <label style="font-size:11px;">Asbestos applicability / status</label>
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Asbestos <span style="font-weight:400;font-size:11.5px;color:#4a5568;"><b>Exemptions (AZ-RI screening):</b> no buildings · built after 1989 · built IN 1989 → consider roofing only. Determine if exempt or pre-/on-1989, then insert the correct write-up. <i>Note: the 1989 EPA asbestos ban was largely vacated (1991), so post-1989 is a screening assumption — NESHAP (40 CFR 61 Subpart M) still requires a thorough inspection before any demolition (and renovations above threshold amounts) regardless of construction date.</i></span></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;align-items:flex-end;">
+          <div style="min-width:300px;flex:1;">
+            <label style="font-size:11px;">Asbestos scenario (selects the write-up)</label>
             <select data-field="contamAsbestosStatus" style="width:100%;">
               <option value="">— select —</option>
-              <option value="na_nostruct">N/A — no existing structures</option>
-              <option value="na_scope">N/A — no renovation/demolition (acquisition or non-disturbing work only)</option>
-              <option value="survey_req">Survey required — renovation/demolition of structure with potential ACM</option>
-              <option value="complete">Survey complete — see notes (attach report)</option>
+              <option value="no_struct">Write Up 1 — No structures on the Subject Property</option>
+              <option value="post1989">Write Up 2 — Built after 1989 (assumed no ACM)</option>
+              <option value="pre1989">Write Up 3 — Built before 1989 (may contain ACMs)</option>
+              <option value="y1989">Write Up 4 — Built in 1989 (roofing materials only)</option>
             </select>
           </div>
-          <div style="flex:1;min-width:280px;">
-            <label style="font-size:11px;">Asbestos findings / abatement (ERR text)</label>
-            <textarea data-field="contamAsbestosNotes" style="min-height:54px;margin-top:2px;" placeholder="e.g., Pre-renovation asbestos survey conducted [date] by [firm]: [no ACM identified / ACM identified in (materials) — abatement by licensed contractor with proper notification and disposal prior to disturbance (NESHAP; state regs)]."></textarea>
+          <div style="flex:0 0 auto;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;text-transform:none;letter-spacing:0;font-weight:400;color:#2d3748;cursor:pointer;"><input type="checkbox" data-field="contamAsbFollowup">Add Recommended Follow up (work/demolition may impact ACMs)</label>
           </div>
+          <div class="no-print" style="flex:0 0 auto;">
+            <button type="button" onclick="insertAsbestosWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Asbestos Write-Up</button>
+          </div>
+        </div>
+        <div id="asbWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
+        <div style="margin-top:6px;">
+          <label style="font-size:11px;">Asbestos findings / abatement (ERR text)</label>
+          <textarea data-field="contamAsbestosNotes" style="min-height:54px;margin-top:2px;" placeholder="Select the asbestos scenario above and click Insert Asbestos Write-Up."></textarea>
         </div>
       </div>
     `;
