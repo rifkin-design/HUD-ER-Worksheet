@@ -483,7 +483,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v94 — (1) Any radio button can now be cleared by clicking it again (mirrored 1310 ↔ 2005 question groups clear together). (2) Removed duplicate questions: the 1310 Review Questions now ask only Air Quality, Endangered Species, Explosive &amp; Flammable, and Noise; Farmland, Wetlands, Sole Source Aquifers, and the Section 106 Historic triggers are derived automatically from Activity Questions 1, 3, 6 &amp; 9. (3) Fixed wrong flow-through write-ups: scope-exempt determinations now insert the correct base "Write Up 1" exemption text (state overrides like MD's ESA "No Effect — IPaC" or Wetlands "NWI shows no wetlands" were shifting the indices). Prior (v93): Review Questions are part of the 1310 Level of Review flow: the block sits above the "Determine Level of Review" button, the button considers the answers, applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, write-up inserted), and folds the results into the level rationale. Prior (v92): Removed the "Additional AZ-RI fields" block from 1125 (Project Type / Year Built / Level of Review / Preparer Attestation — hidden mirrors kept for logic + back-compat). Field Resources trimmed to Subject-Property location map links only. Renamed "✔ Determine if Exempt" → "✔ Review Questions" and added a consolidated Review Questions block to Screen 1310 (answers sync both ways with the Section 2005 panels; "Apply All Determinations" button) including new Section 106 screening questions (50+ yr structure, ground disturbance → tribal consultation) that sync to the level-of-review questions. Historic SOP: added HistoryQuest DC GIS link + DC HPO 5-point letter requirements. New DC HPO and VA DHR (ePIX) Section 106 letter formats + cover email templates (📄/✉ buttons on the Historic card). Prior (v91): added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v95 — (1) Review Questions moved OUT of Screen 1310 and into each authority section (Section 2005), shown open so the reviewer sees per-section which authorities may be exempt and why; the ✔ Review Questions button now hides/shows the panel; saved answers restore on load. "Determine Level of Review" reads the per-section answers (plus the Farmland/Wetlands/Aquifer/§106 answers derived from Activity Questions 1, 3, 6 &amp; 9 — derived answers display in the section, overridable) and applies determinations. (2) NEW Radon · Lead-Based Paint · Asbestos subsection under Contamination &amp; Toxic Substances, consistent with HUD HEROS (Radon: Notice CPD-23-103 "considered" standard + EPA Radon Zone; LBP: 24 CFR Part 35 pre-1978 housing; Asbestos: NESHAP 40 CFR 61 Subpart M pre-renovation/demolition survey); entries append to the Contamination notes in the ERR preview and Client Report. Prior (v94): (1) Any radio button can be cleared by clicking it again. (3) Fixed wrong flow-through write-ups: scope-exempt determinations insert the correct base "Write Up 1" exemption text. Prior (v93): Review Questions are part of the 1310 Level of Review flow: the block sits above the "Determine Level of Review" button, the button considers the answers, applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, write-up inserted), and folds the results into the level rationale. Prior (v92): Removed the "Additional AZ-RI fields" block from 1125 (Project Type / Year Built / Level of Review / Preparer Attestation — hidden mirrors kept for logic + back-compat). Field Resources trimmed to Subject-Property location map links only. Renamed "✔ Determine if Exempt" → "✔ Review Questions" and added a consolidated Review Questions block to Screen 1310 (answers sync both ways with the Section 2005 panels; "Apply All Determinations" button) including new Section 106 screening questions (50+ yr structure, ground disturbance → tribal consultation) that sync to the level-of-review questions. Historic SOP: added HistoryQuest DC GIS link + DC HPO 5-point letter requirements. New DC HPO and VA DHR (ePIX) Section 106 letter formats + cover email templates (📄/✉ buttons on the Historic card). Prior (v91): added an AZ-RI branded icon (use Chrome → ⋮ → Cast/Save/Share → "Install page as app" to pin a Dock icon with this favicon). Prior (v90): added "Exempt" as a 4th determination status (Follow-Up / Compliant / Not Applicable / Exempt) on the scope-exemption authorities, and the Compliance Summary now tracks all four. Added a Client Questions tool: flag any authority you're unsure of ("❓ Not sure — flag for client") and compile the open scope questions into a copyable list (📋 Client Questions). Prior (v89): completed all §2005 authority SOPs (Historic, Noise, Sole Source Aquifers, Wetlands, Wild &amp; Scenic Rivers, Environmental Justice). Critical regulatory review: corrected the §58.5 subsection letters (Wetlands (b), CZM (c), Sole Source Aquifer (d), Wild &amp; Scenic (f), Air (g)) and rebuilt the Part 50 §50.4 citations; verified federal/state contacts. EA review: replaced the rescinded CEQ regs (40 CFR 1500–1508, eff. 4/11/2025) with HUD's 24 CFR 58.40 framework, set the EJ factor to Not Applicable (EO 12898 revoked), and added soil/slope/employment auto-fill. Added the "Determine if Exempt" question flow; removed the Auto-Determine and outreach-letter buttons (reviewer-driven).</div>
   </div>
 </header>
 
@@ -800,19 +800,14 @@
         <label><input type="radio" name="loraSignificant" value="yes"> Yes</label>
       </div>
     </div>
-    <!-- 1310 REVIEW QUESTIONS (v93) — part of the Level of Review determination. Answered here,
-         considered by "Determine Level of Review", and the determinations flow through to the
-         matching Related Laws & Authorities sections (Section 2005). Section 106 answers also
-         sync to Activity Questions 6 & 9 above. -->
-    <div id="reviewQuestions1310" style="margin-top:18px;padding:14px 18px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;">
-      <h3 style="margin:0 0 6px;color:var(--azri-navy);font-size:15px;">Review Questions <span style="font-weight:400;color:var(--gray);font-size:12px;">— only what Activity Questions 1–10 don't already cover (Air Quality, Endangered Species, Explosive &amp; Flammable, Noise). Clicking <b>Determine Level of Review</b> below considers these answers AND applies each determination to its Related Laws &amp; Authorities section (e.g., Air Quality "no new construction / no conversion" → scope-exempt, no further air analysis). Farmland, Wetlands, Sole Source Aquifers, and Section 106 triggers are derived from your activity answers automatically. Click a selected radio button again to clear it.</span></h3>
-      <div id="rq1310Body"></div>
-      <div id="rq1310Status" style="font-size:11.5px;color:#4a5568;margin-top:6px;"></div>
-    </div>
-
+    <!-- (v95) The consolidated 1310 Review Questions block was removed — each authority's scope
+         questions now sit OPEN inside its own Related Laws & Authorities section (Section 2005),
+         so the reviewer sees per-section which authorities may be exempt and why. "Determine
+         Level of Review" reads those per-section answers (plus the answers derived from Activity
+         Questions 1, 3, 6 & 9) and applies the determinations. -->
     <div style="margin-top:14px;" class="no-print">
       <button onclick="determineLevel()" style="background:var(--azri-navy);color:white;border:none;padding:10px 18px;border-radius:5px;font-size:14px;cursor:pointer;font-weight:600;">Determine Level of Review</button>
-      <span style="font-size:12px;color:var(--gray);margin-left:10px;">Considers Activity Questions 1–10 + Review Questions, and applies the Review Question determinations to Section 2005.</span>
+      <span style="font-size:12px;color:var(--gray);margin-left:10px;">Considers Activity Questions 1–10 plus the Review Questions answered in each Section 2005 authority (Farmland, Wetlands, Sole Source Aquifers &amp; Section 106 triggers derive automatically from Questions 1, 3, 6 &amp; 9), and applies the determinations to the sections below.</span>
     </div>
     <div id="levelResult" class="level-result"></div>
 
@@ -1054,7 +1049,7 @@
   </div>
   <div style="background:var(--azri-sand);padding:12px 22px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:14px;" class="no-print">
     <button onclick="buildClientQuestionsList()" style="background:var(--azri-teal);color:white;border:none;padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-weight:600;">📋 Client Questions</button>
-    <span style="font-size:12px;color:var(--gray);flex:1;min-width:200px;">Work each authority below: use its <b>✔ Review Questions</b> button (scope questions) for the §58.5 authorities — or answer them all up front in the <b>Review Questions</b> block on Screen 1310 (answers pull down here). If you’re unsure of a scope answer, click <b>❓ Not sure — flag for client</b> in that panel; flagged items collect under <b>📋 Client Questions</b> as a list you can copy and send.</span>
+    <span style="font-size:12px;color:var(--gray);flex:1;min-width:200px;">Work each authority below: its <b>Review Questions</b> are shown open in its row (the <b>✔ Review Questions</b> button hides/shows them). Answer them per section, or click <b>Determine Level of Review</b> on Screen 1310 to apply everything at once (Farmland, Wetlands, Sole Source Aquifers &amp; Section 106 triggers derive from the Activity Questions). If you’re unsure of a scope answer, click <b>❓ Not sure — flag for client</b> in that panel; flagged items collect under <b>📋 Client Questions</b> as a list you can copy and send.</span>
     <span id="autoRunStatus" style="font-size:12px;color:var(--azri-navy);font-weight:600;"></span>
   </div>
   <div id="authorities-container"></div>
@@ -3741,7 +3736,7 @@ function generateAllRequiredLetters() {
     }
   });
   if (!generated.length) {
-    alert('No authorities are currently marked Follow-Up. Set determinations first using the per-authority "✔ Review Questions" buttons (or the Screen 1310 Review Questions block), or generate letters individually using the per-authority "📄 Letter" buttons.');
+    alert('No authorities are currently marked Follow-Up. Set determinations first by answering the Review Questions in each authority section (or click Determine Level of Review on Screen 1310 to apply them all), or generate letters individually using the per-authority "📄 Letter" buttons.');
   } else {
     setTimeout(() => alert(`Generated ${generated.length} letter(s): ${generated.join(', ')}.\nFiles downloaded to your default download location.`), 500);
   }
@@ -4388,54 +4383,9 @@ const RQ_DERIVED = {
   }}
 };
 
-function rq1310Block(id, title, cfg) {
-  let h = '<details style="margin:8px 0;border:1px solid var(--border);border-radius:5px;background:white;" open>'
-    + '<summary style="cursor:pointer;padding:7px 12px;font-weight:700;font-size:12.5px;color:var(--azri-navy);list-style:none;">' + title + '</summary>'
-    + '<div style="padding:2px 14px 10px;">'
-    + (cfg.intro ? '<div style="font-size:11.5px;color:#4a5568;margin-bottom:6px;line-height:1.5;">' + cfg.intro + '</div>' : '');
-  cfg.questions.forEach(q => {
-    h += '<div style="margin-bottom:8px;"><div style="font-weight:600;font-size:12px;margin-bottom:3px;text-transform:none;letter-spacing:0;color:#2d3748;">' + q.label + '</div>';
-    q.options.forEach(o => {
-      h += '<label style="display:block;font-size:12px;line-height:1.4;margin:2px 0;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;color:#2d3748;"><input type="radio" name="rq1310_' + id + '_' + q.id + '" value="' + o.v + '" onchange="onRQ1310Change(\'' + id + '\',\'' + q.id + '\',this.value)" style="margin-right:6px;">' + o.t + '</label>';
-    });
-    h += '</div>';
-  });
-  return h + '</div></details>';
-}
-
-function buildReviewQuestions1310() {
-  const host = document.getElementById('rq1310Body');
-  if (!host) return;
-  let html = '';
-  AUTHORITIES.forEach(a => {
-    if (EXEMPTION_CHECKS[a.id] && !RQ_DERIVED[a.id]) html += rq1310Block(a.id, a.name.replace(/&amp;/g, '&'), EXEMPTION_CHECKS[a.id]);
-  });
-  html += '<div style="font-size:11.5px;color:#4a5568;margin-top:4px;font-style:italic;">Farmland Protection, Wetlands Protection, Sole Source Aquifers, and the Section 106 Historic Preservation triggers (SHPO consultation, Tribal/THPO notification) are derived automatically from Activity Questions 1, 3, 6 &amp; 9 above — they are not asked again here.</div>';
-  host.innerHTML = html;
-}
-
-// 1310 answer → pull down into the authority's panel (if built)
-function onRQ1310Change(id, qid, v) {
-  const down = document.querySelector('input[name="exq_' + id + '_' + qid + '"][value="' + v + '"]');
-  if (down && !down.checked) down.checked = true;
-}
-
-// Reverse sync: answering in a Section 2005 panel (exq_*) updates the 1310 Review Questions
-document.addEventListener('change', e => {
-  const t = e.target;
-  if (!t || !t.name || t.type !== 'radio' || !t.checked) return;
-  if (/^exq_/.test(t.name)) {
-    const parts = t.name.split('_'); // exq, authorityId, questionId
-    if (parts.length === 3) {
-      const up = document.querySelector('input[name="rq1310_' + parts[1] + '_' + parts[2] + '"][value="' + t.value + '"]');
-      if (up && !up.checked) up.checked = true;
-    }
-  }
-});
-
 // ===== RADIO UNCHECK (v94) — clicking an already-selected radio button clears it =====
 // mousedown captures the pre-click checked state (works for clicks on the radio OR its label);
-// the click handler then unchecks if it was already selected, keeping mirrored groups in sync.
+// the click handler then unchecks if it was already selected.
 document.addEventListener('mousedown', e => {
   let inp = null;
   if (e.target && e.target.type === 'radio') inp = e.target;
@@ -4451,16 +4401,22 @@ document.addEventListener('click', e => {
   if (t.dataset.rwas === '1') {
     t.checked = false;
     t.dataset.rwas = '0';
-    // Clear the mirrored question group too (1310 Review Questions ↔ Section 2005 panels)
-    let parts = null;
-    if (/^rq1310_/.test(t.name)) parts = ['exq', t.name.split('_')[1], t.name.split('_')[2]];
-    else if (/^exq_/.test(t.name)) parts = ['rq1310', t.name.split('_')[1], t.name.split('_')[2]];
-    if (parts && parts[1] && parts[2]) {
-      document.querySelectorAll('input[name="' + parts[0] + '_' + parts[1] + '_' + parts[2] + '"]').forEach(r => { r.checked = false; r.dataset.rwas = '0'; });
-    }
     t.dispatchEvent(new Event('change', { bubbles: true }));
   }
 });
+
+// (v95) Compose the Radon / LBP / Asbestos subsection text appended to the Contamination &
+// Toxic Substances notes in the ERR preview and Client Report exports.
+function contamSubsectionText(f) {
+  const radonZone = { zone1: 'EPA Radon Zone 1 — highest potential (predicted indoor avg ≥ 4 pCi/L)', zone2: 'EPA Radon Zone 2 — moderate potential (2–4 pCi/L)', zone3: 'EPA Radon Zone 3 — low potential (< 2 pCi/L)' }[f.contamRadonZone] || '';
+  const lbpStatus = { na_age: 'Not applicable — built 1978 or later', na_nonres: 'Not applicable — non-residential / not target housing', na_scope: 'Not applicable — no paint-disturbing work per program rules', eval_req: 'Applicable — pre-1978 residential; evaluation required per 24 CFR Part 35', complete: 'Evaluation complete' }[f.contamLbpStatus] || '';
+  const asbStatus = { na_nostruct: 'Not applicable — no existing structures', na_scope: 'Not applicable — no renovation/demolition', survey_req: 'Survey required prior to renovation/demolition', complete: 'Survey complete' }[f.contamAsbestosStatus] || '';
+  const parts = [];
+  if (radonZone || f.contamRadonNotes) parts.push('RADON (HUD Notice CPD-23-103): ' + [radonZone, f.contamRadonNotes].filter(Boolean).join('. '));
+  if (lbpStatus || f.contamLbpNotes) parts.push('LEAD-BASED PAINT (24 CFR Part 35): ' + [lbpStatus, f.contamLbpNotes].filter(Boolean).join('. '));
+  if (asbStatus || f.contamAsbestosNotes) parts.push('ASBESTOS (NESHAP, 40 CFR 61 Subpart M): ' + [asbStatus, f.contamAsbestosNotes].filter(Boolean).join('. '));
+  return parts.join('\n\n');
+}
 
 // Insert a write-up from the BASE (national) BOILERPLATE list by index, REPLACING the notes.
 // The Review Questions writeUpIdx values index the national list; the state boilerplateOverrides
@@ -4486,18 +4442,30 @@ function applyAllReviewQuestions() {
   const summary = [], applied = [], incomplete = [];
   Object.keys(EXEMPTION_CHECKS).forEach(id => {
     const cfg = EXEMPTION_CHECKS[id];
-    let ans, derivedNote = '';
-    if (RQ_DERIVED[id]) {
-      ans = RQ_DERIVED[id].get();
-      derivedNote = ' — derived from ' + RQ_DERIVED[id].from;
-      if (!ans) { incomplete.push(authName(id) + ' (answer ' + RQ_DERIVED[id].from + ')'); return; }
-    } else {
-      ans = {};
-      cfg.questions.forEach(q => {
-        const sel = document.querySelector('input[name="rq1310_' + id + '_' + q.id + '"]:checked');
-        ans[q.id] = sel ? sel.value : null;
-      });
-      if (!ans[cfg.questions[0].id]) { incomplete.push(authName(id)); return; }
+    let derivedNote = '';
+    // (v95) Primary source: the authority's own Review Questions panel in its Section 2005 row.
+    const ans = {};
+    cfg.questions.forEach(q => {
+      const sel = document.querySelector('input[name="exq_' + id + '_' + q.id + '"]:checked');
+      ans[q.id] = sel ? sel.value : null;
+    });
+    if (!ans[cfg.questions[0].id]) {
+      // Unanswered in-section: derive from Activity Questions where possible, and reflect the
+      // derived answers INTO the panel radios so the reviewer can see (and override) them.
+      const d = RQ_DERIVED[id] ? RQ_DERIVED[id].get() : null;
+      if (d) {
+        derivedNote = ' — derived from ' + RQ_DERIVED[id].from + ' (shown in the section; override there if needed)';
+        cfg.questions.forEach(q => {
+          if (d[q.id] != null) {
+            ans[q.id] = d[q.id];
+            const mine = document.querySelector('input[name="exq_' + id + '_' + q.id + '"][value="' + d[q.id] + '"]');
+            if (mine) mine.checked = true;
+          }
+        });
+      } else {
+        incomplete.push(authName(id) + (RQ_DERIVED[id] ? ' (answer ' + RQ_DERIVED[id].from + ')' : ' (answer its Review Questions in Section 2005)'));
+        return;
+      }
     }
     const res = cfg.evaluate(ans);
     if (res.status) {
@@ -4534,17 +4502,20 @@ function applyAllReviewQuestions() {
   return { summary: summary, incomplete: incomplete };
 }
 
-function toggleExemptionCheck(id) {
+// (v95) Panels are built OPEN inside each authority section at startup, so the reviewer sees
+// per-section which authorities may be exempt and why. The ✔ Review Questions button now just
+// shows/hides the panel (answers are preserved). Because the radios exist from startup, saved
+// JSON answers restore into them automatically.
+function buildExemptionPanel(id) {
   const panel = document.getElementById('exemptPanel_' + id);
-  if (!panel) return;
-  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
   const cfg = EXEMPTION_CHECKS[id];
-  if (!cfg) return;
-  let html = '<div style="font-size:12px;color:#2d3748;margin-bottom:8px;line-height:1.5;">' + cfg.intro + '</div>';
+  if (!panel || !cfg || panel.dataset.built === '1') return;
+  let html = '<div style="font-size:12px;color:#2d3748;margin-bottom:8px;line-height:1.5;">' + cfg.intro
+    + (RQ_DERIVED[id] ? ' <em style="color:#4a5568;">(Pre-answered automatically from ' + RQ_DERIVED[id].from + ' on Screen 1310 when you run Determine Level of Review — override here if needed.)</em>' : '') + '</div>';
   cfg.questions.forEach(q => {
-    html += '<div style="margin-bottom:10px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;">' + q.label + '</div>';
+    html += '<div style="margin-bottom:10px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;text-transform:none;letter-spacing:0;color:#2d3748;">' + q.label + '</div>';
     q.options.forEach(o => {
-      html += '<label style="display:block;font-size:12px;line-height:1.4;margin:3px 0;cursor:pointer;"><input type="radio" name="exq_' + id + '_' + q.id + '" value="' + o.v + '" style="margin-right:6px;">' + o.t + '</label>';
+      html += '<label style="display:block;font-size:12px;line-height:1.4;margin:3px 0;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;color:#2d3748;"><input type="radio" name="exq_' + id + '_' + q.id + '" value="' + o.v + '" style="margin-right:6px;">' + o.t + '</label>';
     });
     html += '</div>';
   });
@@ -4553,22 +4524,15 @@ function toggleExemptionCheck(id) {
     + '<button type="button" id="flagBtn_' + id + '" onclick="flagForClient(\'' + id + '\')" style="background:white;border:1px solid #9b2c2c;color:#9b2c2c;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">' + ((typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[id]) ? '✓ Flagged for client (click to unflag)' : '❓ Not sure — flag for client') + '</button>'
     + '<span id="exemptResult_' + id + '" style="font-size:11.5px;color:#4a5568;flex-basis:100%;"></span></div>';
   panel.innerHTML = html;
+  panel.dataset.built = '1';
   panel.style.display = 'block';
-  // Pull down answers from the 1310 Review Questions block — asked answers for air/esa/explos/
-  // noise, derived-from-Activity-Question answers for farm/wetlands/aquifer (v94).
-  cfg.questions.forEach(q => {
-    let v = null;
-    const up = document.querySelector('input[name="rq1310_' + id + '_' + q.id + '"]:checked');
-    if (up) v = up.value;
-    else if (typeof RQ_DERIVED !== 'undefined' && RQ_DERIVED[id]) {
-      const d = RQ_DERIVED[id].get();
-      if (d) v = d[q.id];
-    }
-    if (v) {
-      const mine = panel.querySelector('input[name="exq_' + id + '_' + q.id + '"][value="' + v + '"]');
-      if (mine) mine.checked = true;
-    }
-  });
+}
+
+function toggleExemptionCheck(id) {
+  const panel = document.getElementById('exemptPanel_' + id);
+  if (!panel) return;
+  if (panel.dataset.built !== '1') { buildExemptionPanel(id); return; }
+  panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
 }
 
 function applyExemptionCheck(id) {
@@ -4772,10 +4736,88 @@ AUTHORITIES.forEach(a => {
     `;
     authContainer.appendChild(astPanel);
   }
+
+  // (v95) Inject the Radon / Lead-Based Paint / Asbestos subsection after the Contamination &
+  // Toxic Substances row — consistent with HUD HEROS contamination analysis. Radon: HUD Notice
+  // CPD-23-103 (radon must be CONSIDERED in the contamination analysis under 24 CFR Parts 50/58;
+  // testing is not mandated but testing/mitigation are program-eligible costs). LBP: 24 CFR
+  // Part 35 (pre-1978 residential). Asbestos: NESHAP 40 CFR 61 Subpart M + state regs.
+  if (a.id === 'contam') {
+    const sub = document.createElement('div');
+    sub.style.cssText = 'background:#f6f8fb;border:1px solid var(--azri-navy);border-left:4px solid var(--azri-navy);padding:14px 18px;margin:0 22px 14px 22px;border-radius:5px;';
+    sub.innerHTML = `
+      <div style="font-weight:700;font-size:13px;color:var(--azri-navy);margin-bottom:2px;">Site Contamination Subsections — Radon · Lead-Based Paint · Asbestos</div>
+      <div style="font-size:11.5px;color:#4a5568;margin-bottom:12px;">Consistent with HUD HEROS contamination analysis (24 CFR §58.5(i)(2) / §50.3(i)): radon, lead-based paint, and asbestos must be considered for existing structure(s). Complete each item below — the notes print with the ERR.</div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Radon <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— HUD Notice CPD-23-103: radon must be CONSIDERED in the contamination analysis (testing not mandated; testing/mitigation are eligible program costs). Look up the county on the <a href="https://www.epa.gov/radon/find-information-about-local-radon-zones-and-state-contact-information" target="_blank" rel="noopener">EPA Map of Radon Zones</a>.</span></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+          <div style="min-width:280px;flex:0 0 auto;">
+            <label style="font-size:11px;">EPA Radon Zone (county)</label>
+            <select data-field="contamRadonZone" style="width:100%;">
+              <option value="">— select —</option>
+              <option value="zone1">Zone 1 — Highest potential (predicted indoor avg ≥ 4 pCi/L)</option>
+              <option value="zone2">Zone 2 — Moderate potential (2–4 pCi/L)</option>
+              <option value="zone3">Zone 3 — Low potential (&lt; 2 pCi/L)</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:280px;">
+            <label style="font-size:11px;">Radon consideration / testing / mitigation (ERR text)</label>
+            <textarea data-field="contamRadonNotes" style="min-height:54px;margin-top:2px;" placeholder="e.g., [County] is EPA Radon Zone [1/2/3]. Per HUD Notice CPD-23-103, radon was considered in this review: [testing performed (results) / mitigation installed / basis for no testing]."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Lead-Based Paint <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— 24 CFR Part 35 (Lead Safe Housing Rule): applies to residential structures built before 1978; evaluation/notification/reduction requirements vary by program and rehab amount.</span></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+          <div style="min-width:280px;flex:0 0 auto;">
+            <label style="font-size:11px;">LBP applicability / status</label>
+            <select data-field="contamLbpStatus" style="width:100%;">
+              <option value="">— select —</option>
+              <option value="na_age">N/A — built 1978 or later</option>
+              <option value="na_nonres">N/A — non-residential / not target housing</option>
+              <option value="na_scope">N/A — no paint-disturbing work or acquisition-only per program rules</option>
+              <option value="eval_req">Applicable — pre-1978 residential: evaluation required (risk assessment / paint testing per 24 CFR Part 35 subpart)</option>
+              <option value="complete">Evaluation complete — see notes (attach report)</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:280px;">
+            <label style="font-size:11px;">LBP findings / requirements (ERR text)</label>
+            <textarea data-field="contamLbpNotes" style="min-height:54px;margin-top:2px;" placeholder="e.g., Structure built [year]. Pre-1978 residential — 24 CFR Part 35 applies: [risk assessment/paint testing date + results; interim controls/abatement; clearance; notification]. OR: Built [year ≥1978]; Part 35 not applicable."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Asbestos <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— NESHAP (40 CFR Part 61 Subpart M) + state/local regs: an asbestos survey is required before renovation or demolition of structures that may contain ACM (typically pre-1981 construction or suspect materials).</span></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+          <div style="min-width:280px;flex:0 0 auto;">
+            <label style="font-size:11px;">Asbestos applicability / status</label>
+            <select data-field="contamAsbestosStatus" style="width:100%;">
+              <option value="">— select —</option>
+              <option value="na_nostruct">N/A — no existing structures</option>
+              <option value="na_scope">N/A — no renovation/demolition (acquisition or non-disturbing work only)</option>
+              <option value="survey_req">Survey required — renovation/demolition of structure with potential ACM</option>
+              <option value="complete">Survey complete — see notes (attach report)</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:280px;">
+            <label style="font-size:11px;">Asbestos findings / abatement (ERR text)</label>
+            <textarea data-field="contamAsbestosNotes" style="min-height:54px;margin-top:2px;" placeholder="e.g., Pre-renovation asbestos survey conducted [date] by [firm]: [no ACM identified / ACM identified in (materials) — abatement by licensed contractor with proper notification and disposal prior to disturbance (NESHAP; state regs)]."></textarea>
+          </div>
+        </div>
+      </div>
+    `;
+    authContainer.appendChild(sub);
+  }
 });
 
-// Build the consolidated 1310 Review Questions block (v92) now that AUTHORITIES + EXEMPTION_CHECKS exist
-try { buildReviewQuestions1310(); } catch (e) { console.warn('buildReviewQuestions1310 failed:', e); }
+// (v95) Build every authority's Review Questions panel OPEN inside its section so the reviewer
+// sees per-section which authorities may be exempt and why (and saved answers restore on load).
+try {
+  Object.keys(EXEMPTION_CHECKS).forEach(id => buildExemptionPanel(id));
+} catch (e) { console.warn('buildExemptionPanel init failed:', e); }
 
 // ===== AST WORKSHEET ROW MANAGEMENT =====
 let astRows = [];
@@ -5607,13 +5649,14 @@ function exportWord() {
     const checked = document.querySelector(`input[name="${a.id}_status"]:checked`);
     const status = checked ? checked.value : 'unset';
     counts[status]++;
+    const notesText = (f[a.id+'_notes']||'') + (a.id === 'contam' ? (function(){ const t = contamSubsectionText(f); return t ? (f.contam_notes ? '\n\n' : '') + t : ''; })() : '');
     authorityRows += `
       <tr><td colspan="2" style="background:#0f2a44;color:white;padding:6px 10px;font-weight:bold;">${a.name.replace(/&amp;/g,'&')}</td></tr>
       <tr><td style="width:30%;font-weight:bold;">Citation</td><td>${a.cite}</td></tr>
       <tr><td style="font-weight:bold;">Determination</td><td>${statusLabel[status]}</td></tr>
       <tr><td style="font-weight:bold;">Source / Document</td><td>${(f[a.id+'_source']||'').replace(/</g,'&lt;')}</td></tr>
       <tr><td style="font-weight:bold;">Reference / Date</td><td>${(f[a.id+'_ref']||'').replace(/</g,'&lt;')}</td></tr>
-      <tr><td style="font-weight:bold;">Notes / Mitigation</td><td>${(f[a.id+'_notes']||'').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</td></tr>
+      <tr><td style="font-weight:bold;">Notes / Mitigation</td><td>${notesText.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</td></tr>
       <tr><td colspan="2" style="height:8px;border:none;"></td></tr>
     `;
   });
@@ -5717,7 +5760,8 @@ function generateClientReport() {
     counts[status] = (counts[status] || 0) + 1;
     const flagged = (typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[a.id]);
     if (flagged) flaggedList.push(a.name.replace(/&amp;/g, '&'));
-    const body = (f[a.id + '_notes'] ? nl(f[a.id + '_notes']) : '')
+    const fullNotes = (f[a.id + '_notes'] || '') + (a.id === 'contam' ? (function(){ const t = contamSubsectionText(f); return t ? (f.contam_notes ? '\n\n' : '') + t : ''; })() : '');
+    const body = (fullNotes ? nl(fullNotes) : '')
       || '<span style="color:#a0aec0;font-style:italic;">Not yet assessed</span>';
     cards += `<div class="auth">
       <div class="auth-head">
