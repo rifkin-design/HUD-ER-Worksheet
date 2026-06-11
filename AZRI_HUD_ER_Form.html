@@ -5902,7 +5902,6 @@ function exportWord() {
       <tr><td style="width:30%;font-weight:bold;background:#f7f3ec;">Project Name</td><td>${f.projectName||''}</td></tr>
       <tr><td style="font-weight:bold;background:#f7f3ec;">HEROS Number</td><td>${f.herosNumber||''}</td></tr>
       <tr><td style="font-weight:bold;background:#f7f3ec;">Responsible Entity</td><td>${f.responsibleEntity||''}</td></tr>
-      <tr><td style="font-weight:bold;background:#f7f3ec;">Funding Program(s)</td><td>${f.fundingProgram||''}</td></tr>
       <tr><td style="font-weight:bold;background:#f7f3ec;">Total HUD Funding</td><td>${f.funding||''}</td></tr>
       <tr><td style="font-weight:bold;background:#f7f3ec;">Project Type</td><td>${f.projectType||''}</td></tr>
       <tr><td style="font-weight:bold;background:#f7f3ec;">Site Address</td><td>${f.siteAddress||''}</td></tr>
@@ -6032,7 +6031,7 @@ function generateClientReport() {
   const initInner = wrapInfo(rowsHtml([
     ['Review Framework', frameworkLabel], ['Project Name', f.projectName], ['HEROS Review ID', f.herosNumber],
     ['Start Date', f.startDate], ['HUD Program', f.hudProgram], ['Program Name', f.programName],
-    ['Funding Program(s)', f.fundingProgram], ['Grant ID', f.grantId], ['Grant Amount', f.grantAmount]
+    ['Grant ID', f.grantId]
   ]) + fundingHtml + rowsHtml([
     ['Total HUD-Funded / Assisted / Insured Amount', f.totalHudAmount || f.funding], ['Total Project Cost', f.totalProjectCost],
     ['Other Federal Agency Involved?', f.otherFedAgency], ['Other Federal Agency — Explain', f.otherFedAgencyExplain],
@@ -6181,7 +6180,7 @@ function generateClientReport() {
       <div class="date">24 CFR Part 58 &middot; ${today}</div>
     </div>
   </div>
-  <p class="intro">This report compiles, section by section, the information being entered into HUD's HEROS system for your project. Please review each section for accuracy; once you confirm, AZ-RI will finalize and submit the review through HEROS. Sections appear in HEROS order; any section left blank has no information entered yet.</p>
+  <p class="intro">This report compiles, section by section, the information being entered into HUD's HEROS system for your project. Please review each section for accuracy; once you confirm, AZ-RI will finalize and submit the review through HEROS. Sections appear in HEROS order; any section left blank has no information entered yet. The official HEROS submission will include all applicable supporting documents (e.g., the Phase I ESA, maps and figures, regulatory database reports, and agency correspondence) referenced in this review.</p>
 
   ${bodySections}
 
