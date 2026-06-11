@@ -6071,7 +6071,7 @@ function generateClientReport() {
         ['Field Inspection By', f.fieldInspectionBy], ['Inspector Title', f.fieldInspectionTitle], ['Date of Inspection', f.fieldInspectionDate],
         ['Project Activities', parseList(f.herosActivities, ACT_LABELS)], ['Change in Land Use?', f.landUseChange],
         ['Planned Use After Completion', parseList(f.plannedUse, USE_LABELS)], ['Additional Studies Performed', f.additionalStudies],
-        ['Project Type', f.projectType], ['Year Built', f.yearBuilt], ['Recommended Level of Review', f.reviewLevel]
+        ['Project Type', f.projectType], ['Year Built', f.yearBuilt], ['Level of Review', f.reviewLevel]
       ]))
     + (levelHTML ? `<div class="level-wrap" style="margin-top:10px;">${levelHTML}</div>` : '')
     + (function(){
