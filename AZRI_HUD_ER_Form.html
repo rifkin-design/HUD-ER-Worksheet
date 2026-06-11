@@ -4595,6 +4595,15 @@ function applyAllReviewQuestions() {
       }
     }
     const res = cfg.evaluate(ans);
+    // (v102) Never overwrite a determination the reviewer has already set. Auto-derivation only
+    // fills authorities that are still "Not Yet Assessed" — this stops "Determine Level of Review"
+    // (including a re-run after loading saved work) from clobbering a manual Compliant / N-A / etc.
+    // and its write-up. To re-derive, clear the authority's status first (click its selected radio).
+    const existing = document.querySelector('input[name="' + id + '_status"]:checked');
+    if (existing) {
+      summary.push(authName(id) + ' → left as set by reviewer (' + existing.value + '); auto-determination not applied.' + derivedNote);
+      return;
+    }
     if (res.status) {
       const radio = document.querySelector('input[name="' + id + '_status"][value="' + res.status + '"]');
       if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -6000,7 +6009,8 @@ function generateClientReport() {
         d.textContent = 'Level of Review';
     });
     tmp.querySelectorAll('li').forEach(li => {
-      if (/^\s*REVIEW QUESTIONS/i.test(li.textContent || '')) li.remove();
+      const t = li.textContent || '';
+      if (/^\s*REVIEW QUESTIONS/i.test(t) || /^\s*NOTE\b/i.test(t)) li.remove();
     });
     Array.from(tmp.querySelectorAll('div')).forEach(d => {
       const t = d.textContent || '';
@@ -6053,8 +6063,7 @@ function generateClientReport() {
   // HEROS 1105 — Initial Screen / Project Setup
   const initInner = wrapInfo(rowsHtml([
     ['Review Framework', frameworkLabel], ['Project Name', f.projectName], ['HEROS Review ID', f.herosNumber],
-    ['Start Date', f.startDate], ['HUD Program', f.hudProgram], ['Program Name', f.programName],
-    ['Grant ID', f.grantId]
+    ['Start Date', f.startDate], ['HUD Program', f.hudProgram], ['Program Name', f.programName]
   ]) + fundingHtml + rowsHtml([
     ['Total HUD-Funded / Assisted / Insured Amount', f.totalHudAmount || f.funding], ['Total Project Cost', f.totalProjectCost],
     ['Other Federal Agency Involved?', f.otherFedAgency], ['Other Federal Agency — Explain', f.otherFedAgencyExplain],
@@ -6152,8 +6161,11 @@ function generateClientReport() {
     .header .title .date { font-size:10px; color:#8a96a3; margin-top:3px; }
     .intro { font-size:10.5px; color:#6b7785; line-height:1.55; margin:0 0 10px; }
 
-    /* Section headers — navy band with olive accent, kept with the content that follows */
-    h2.sec { background:#0f2a44; color:#fff; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:8px 13px; margin:24px 0 11px; border-radius:4px; border-left:5px solid #6b8e23; page-break-after:avoid; break-after:avoid; }
+    /* Section headers — navy band with olive accent, kept with the content that follows.
+       (v102) Each HEROS section starts on its own page: Initial Screen p1, Project Summary p2,
+       Related Laws p3, and so on. The first section stays on page 1 with the masthead. */
+    h2.sec { background:#0f2a44; color:#fff; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:8px 13px; margin:0 0 11px; border-radius:4px; border-left:5px solid #6b8e23; page-break-after:avoid; break-after:avoid; page-break-before:always; break-before:page; }
+    h2.sec:first-of-type { page-break-before:auto; break-before:auto; margin-top:18px; }
 
     /* Label / value info tables */
     .info { border:1px solid #dde4ec; border-radius:5px; overflow:hidden; }
