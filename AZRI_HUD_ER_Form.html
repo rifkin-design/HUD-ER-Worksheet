@@ -5494,9 +5494,20 @@ function updateMatrix() {
     const notes = notesEl ? notesEl.value : '';
     const flagged = (typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[a.id])
       ? '<div style="font-size:11px;color:#9b2c2c;font-weight:600;">❓ Flagged — question for client</div>' : '';
+    // (v99) For Contamination, also surface the Radon / LBP / Asbestos subsection write-ups in
+    // the on-screen Compliance Summary, matching the Word and Client Report exports. Newlines in
+    // the appended subsection are converted to <br> for readability (the matrix cell collapses
+    // raw newlines). The main Notes / Mitigation field keeps its existing rendering.
+    let subExtra = '';
+    if (a.id === 'contam' && typeof contamSubsectionText === 'function') {
+      const f = {};
+      document.querySelectorAll('[data-field]').forEach(el => { f[el.dataset.field] = el.value || ''; });
+      const t = contamSubsectionText(f);
+      if (t) subExtra = (notes ? '<br><br>' : '') + t.replace(/\n/g, '<br>');
+    }
     // Show only the write-up (Notes / Mitigation). The short "source" tag (e.g.
     // "AZ-RI exemption (not new construction)") is intentionally excluded.
-    const display = (notes || '') + flagged;
+    const display = (notes || '') + subExtra + flagged;
     const pillLabel = { compliant: 'Compliant', followup: 'Follow-Up', na: 'N/A', exempt: 'Exempt', unset: 'Not Set' }[status];
     const tr = document.createElement('tr');
     tr.innerHTML = `
