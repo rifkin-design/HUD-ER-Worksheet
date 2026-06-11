@@ -5985,7 +5985,30 @@ function generateClientReport() {
     descBlock = `<div class="desc"><div class="desc-label">Project Description</div><div class="desc-body">${nl(f.projectDescription)}</div></div>`;
   }
 
-  const levelHTML = (document.getElementById('levelResult') || {}).innerHTML || '';
+  // (v101) For the client-facing report the level of review is a determination, not a working
+  // recommendation: relabel "Recommended Level of Review" -> "Level of Review", drop the internal
+  // "REVIEW QUESTIONS" rationale lines, and remove the "Next steps" workflow box and the advisory
+  // disclaimer. The on-screen worksheet box is left unchanged.
+  let levelHTML = '';
+  (function () {
+    const src = document.getElementById('levelResult');
+    if (!src || !src.innerHTML.trim()) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = src.innerHTML;
+    tmp.querySelectorAll('div').forEach(d => {
+      if (d.children.length === 0 && /^\s*Recommended Level of Review\s*$/i.test(d.textContent || ''))
+        d.textContent = 'Level of Review';
+    });
+    tmp.querySelectorAll('li').forEach(li => {
+      if (/^\s*REVIEW QUESTIONS/i.test(li.textContent || '')) li.remove();
+    });
+    Array.from(tmp.querySelectorAll('div')).forEach(d => {
+      const t = d.textContent || '';
+      if (/^\s*Next steps:/i.test(t)) d.remove();
+      else if (d.children.length === 0 && /advisory recommendation/i.test(t)) d.remove();
+    });
+    levelHTML = tmp.innerHTML;
+  })();
   const recommendation = f.overallRecommendation && f.overallRecommendation.trim()
     ? nl(f.overallRecommendation)
     : '<span style="color:#a0aec0;font-style:italic;">To be finalized.</span>';
