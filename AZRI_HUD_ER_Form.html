@@ -1062,6 +1062,30 @@
   </div>
 </section>
 
+<!-- ===== HEROS SCREEN 1344 — LEVEL OF REVIEW CONFIRMATION (flows from Screen 1311) ===== -->
+<section class="card" id="screen-1344">
+  <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
+    <span>1344. Level of Review Confirmation<span id="lor1344-title-suffix" class="citation"> (58)</span></span>
+    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1344" style="color:white;">—</strong></span>
+  </h2>
+  <div class="card-body">
+    <div id="lor1344-intro" style="font-size:12.5px;color:#2d3748;line-height:1.6;margin-bottom:14px;">Select a Level of Review on Screen 1311 to populate this confirmation.</div>
+
+    <label style="font-weight:600;font-size:12px;color:var(--azri-navy);">Selected citation(s):</label>
+    <textarea data-field="lorConfirmCitations" id="lorConfirmCitations" style="margin-top:4px;min-height:60px;" placeholder="Auto-filled from the citations checked on Screen 1311 — editable."></textarea>
+
+    <div id="lor1344-confirm-prompt" style="font-weight:600;font-size:13px;color:#2d3748;margin-top:14px;"><span style="color:#c00;">*</span> Check the citation(s) above and confirm that this project should be reviewed as <span class="lor1344-level">the level indicated</span>.</div>
+    <div style="margin-top:8px;">
+      <label style="display:block;font-weight:400;padding:3px 0;color:#2d3748;"><input type="radio" name="lorConfirm" value="yes" style="margin-right:8px;">Yes, this project falls into the category indicated above.</label>
+      <div style="margin:6px 0 6px 26px;">
+        <div style="font-weight:600;font-size:12px;color:#2d3748;">If appropriate, describe any calculations or analysis made to determine that the project may be reviewed as <span class="lor1344-level">the level indicated</span>:</div>
+        <textarea data-field="lorConfirmAnalysis" style="margin-top:4px;min-height:70px;" placeholder="describe any calculations or analysis"></textarea>
+      </div>
+      <label style="display:block;font-weight:400;padding:3px 0;color:#2d3748;"><input type="radio" name="lorConfirm" value="no" style="margin-right:8px;">No</label>
+    </div>
+  </div>
+</section>
+
 
 <!-- Hidden legacy fundingProgram + funding mirrors (back-compat with downstream save/load and exports) -->
 <input type="hidden" data-field="fundingProgram">
@@ -5453,7 +5477,7 @@ document.addEventListener('change', e => {
 // Live update Project Name context indicators on HEROS-style headers
 function syncProjectNameContext() {
   const pn = (document.querySelector('input[data-field="projectName"]') || {}).value || '—';
-  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1311', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000', 'proj-name-context-6205'].forEach(id => {
+  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1311', 'proj-name-context-1344', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000', 'proj-name-context-6205'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = pn;
   });
 }
@@ -6217,6 +6241,19 @@ function generateClientReport() {
         return textBlock('Preparer Attestation', f.preparerAttestation);
       })();
 
+  // HEROS 1344 — Level of Review Confirmation
+  const lorConfInner = (function () {
+    const m = { exempt: 'Exempt', censt: 'CENST', cest: 'CEST', ea: 'EA', eis: 'EIS' };
+    const lvl = m[(document.querySelector('input[name="levelOfReview"]:checked') || {}).value] || f.reviewLevel || '';
+    const conf = (document.querySelector('input[name="lorConfirm"]:checked') || {}).value;
+    const confLabel = conf === 'yes' ? 'Yes — confirmed' : (conf === 'no' ? 'No' : '');
+    return wrapInfo(rowsHtml([
+      ['Confirmed Level of Review', lvl],
+      ['Citation(s)', f.lorConfirmCitations],
+      ['Confirmed as correct?', confLabel]
+    ])) + (f.lorConfirmAnalysis ? textBlock('Calculations / Analysis', f.lorConfirmAnalysis) : '');
+  })();
+
   // HEROS 1340 — Cooperating Agency Agreement (EA only)
   const caInner = eaOn ? (wrapInfo(rowsHtml([['Cooperating Agency Required?', f.coopAgencyRequired]])) + textBlock('Cooperating Agency — Name(s) & Scope', f.coopAgencyDetails)) : '';
 
@@ -6261,6 +6298,7 @@ function generateClientReport() {
     section('Initial Screen & Project Setup (HEROS 1105)', initInner),
     section('Sensitive Information (HEROS 1120)', sensitiveInner),
     section('Project Summary (HEROS 1125)', psInner),
+    section('Level of Review Confirmation (HEROS 1344)', lorConfInner),
     section('Cooperating Agency Agreement (HEROS 1340)', caInner),
     section('Project Justification (HEROS 1366)', pjInner),
     section('Related Federal Laws & Authorities (HEROS 2005)', sh + cards),
@@ -7273,7 +7311,54 @@ function setLevelOfReview(value) {
   const rl = document.querySelector('[data-field="reviewLevel"]');
   if (rl) { rl.value = lvl; rl.dispatchEvent(new Event('change', { bubbles: true })); }
   if (typeof toggleEA === 'function') toggleEA();
+  refreshLORConfirmation();
 }
+
+// ===== HEROS 1344 — Level of Review Confirmation (flows from the 1311 selection) =====
+const LOR_INTRO = {
+  exempt: 'Based on your responses in the Level of Review Determination Section, this project falls under the category of <strong>exempt activities</strong> under 24 CFR 58.34(a). Exempt activities are not subject to the §58.5 and §58.6 authorities. If the activity or its scope changes, select “Go Back” to revise the determination on Screen 1311.',
+  censt: 'Based on your responses in the Level of Review Determination Section, this project falls under the category of <strong>categorically excluded not subject to §58.5 (CENST)</strong>. If the activity or its scope changes such that it no longer qualifies, select “Go Back” to revise the determination on Screen 1311.',
+  cest: 'Based on your responses in the Level of Review Determination Section, this project falls under the category of <strong>categorically excluded subject to §58.5 (CEST)</strong>. Note: if extraordinary circumstances apply, the level of review should be elevated to an environmental assessment or an environmental impact statement. In that case, select “Go Back” to change your answer.',
+  ea: 'Based on your responses in the Level of Review Determination Section, this project requires an <strong>Environmental Assessment (EA)</strong> under 24 CFR 58.36. If no categorical exclusion or exemption applies, or if extraordinary circumstances are present, an EA is required.',
+  eis: 'Based on your responses in the Level of Review Determination Section, this project requires an <strong>Environmental Impact Statement (EIS)</strong> under 24 CFR 58.37 — a major federal action significantly affecting the quality of the human environment.',
+  notsure: 'A level of review has not yet been determined on Screen 1311. Select a level there to populate this confirmation.'
+};
+function collectLevelCitations(sel) {
+  if (sel === 'ea') return '§58.36';
+  if (sel === 'eis') return '§58.37';
+  const grp = { exempt: 'exempt_cite', censt: 'censt_cite', cest: 'cest_cite' }[sel];
+  if (!grp) return '';
+  const out = [];
+  document.querySelectorAll('input[name="' + grp + '"]:checked').forEach(cb => {
+    const lbl = cb.closest('label');
+    const txt = lbl ? lbl.textContent : '';
+    const m = txt.match(/58\.\d+(?:\([^)]*\))+/);
+    if (m) out.push('§' + m[0]);
+    else if (cb.value.indexOf('adopted') > -1) out.push('Adopted CE (Section 109 of NEPA)');
+  });
+  return out.join('\n');
+}
+function refreshLORConfirmation() {
+  const sel = (document.querySelector('input[name="levelOfReview"]:checked') || {}).value || '';
+  const LABEL = { exempt: 'Exempt', censt: 'CENST', cest: 'CEST', ea: 'EA', eis: 'EIS', notsure: '' };
+  const lvl = LABEL[sel] || '';
+  const suf = document.getElementById('lor1344-title-suffix');
+  if (suf) suf.textContent = lvl ? (': ' + lvl + ' (58)') : ' (58)';
+  document.querySelectorAll('.lor1344-level').forEach(el => { el.textContent = lvl || 'the level indicated'; });
+  const intro = document.getElementById('lor1344-intro');
+  if (intro) intro.innerHTML = LOR_INTRO[sel] || 'Select a Level of Review on Screen 1311 to populate this confirmation.';
+  // Auto-fill citations from 1311 only when a level is selected (don't wipe a restored value otherwise).
+  if (sel) {
+    const ta = document.getElementById('lorConfirmCitations');
+    if (ta) ta.value = collectLevelCitations(sel);
+  }
+}
+// Re-flow the 1344 confirmation when the 1311 citation checkboxes change.
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t && t.type === 'checkbox' && /^(exempt|censt|cest)_cite$/.test(t.name || '')) refreshLORConfirmation();
+});
+setTimeout(refreshLORConfirmation, 500);
 
 // ===== HEROS 1311 — Section 2: mirror each authority's Review Questions =====
 // Renders the same EXEMPTION_CHECKS questions shown in each authority's Section 2005 row, using
