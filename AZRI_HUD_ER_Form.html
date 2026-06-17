@@ -1302,42 +1302,6 @@
   </div>
 </section>
 
-<!-- ===== HEROS SCREEN 6205 — PREPARER NOTIFICATION SCREEN / FINAL SCREEN ===== -->
-<section class="card" id="screen-6205">
-  <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
-    <span>6205. Preparer Notification — Final Screen <span class="citation">(50/58)</span></span>
-    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-6205" style="color:white;">—</strong></span>
-  </h2>
-  <div class="card-body">
-    <div style="background:#fff5f5;border-left:4px solid #c00;color:#9b2c2c;padding:10px 14px;border-radius:4px;font-size:12px;margin-bottom:14px;line-height:1.5;">
-      <strong>As a Partner User, you cannot proceed past this point in the environmental review.</strong> Please assign this review to the Responsible Entity (if Part 58) or HUD (if Part 50) Preparer to complete this review.
-    </div>
-    <div style="font-size:13px;color:#2d3748;margin-bottom:14px;line-height:1.55;">
-      Before assigning the review, you are encouraged to preview the environmental review record and ensure that you have completed all required steps. Generate and review the preview of the environmental review record using the buttons below, taking special care to ensure that all questions have complete and accurate responses and all supporting documentation. If necessary, scroll up to edit any of the previous screens.
-    </div>
-    <div class="no-print" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;">
-      <button onclick="window.print()" style="background:var(--azri-navy);color:white;border:none;padding:9px 16px;border-radius:5px;font-size:13px;cursor:pointer;font-weight:600;">📄 Generate Preview of Environmental Review Record</button>
-      <button onclick="exportWord()" style="background:var(--azri-teal);color:white;border:none;padding:9px 16px;border-radius:5px;font-size:13px;cursor:pointer;font-weight:600;">📝 Export Word (HEROS ERR)</button>
-      <button onclick="saveJSON()" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:9px 16px;border-radius:5px;font-size:13px;cursor:pointer;font-weight:600;">💾 Save Review (JSON)</button>
-    </div>
-    <div style="font-size:13px;color:#2d3748;margin-bottom:14px;line-height:1.55;">
-      When you are satisfied with the review up to this point, reassign the environmental review to the Responsible Entity or HUD Preparer. <strong>You are strongly encouraged to call the RE or HUD staff person to ensure availability and awareness of the environmental review record.</strong>
-    </div>
-    <div class="field-grid">
-      <div><label>Reassignment Target</label>
-        <select data-field="reassignTarget">
-          <option value="">— select —</option>
-          <option value="re">Responsible Entity (Part 58)</option>
-          <option value="hud">HUD Preparer (Part 50)</option>
-          <option value="co">Certifying Officer for sign-off</option>
-        </select>
-      </div>
-      <div><label>Date Reassigned</label><input type="date" data-field="reassignDate"></div>
-      <div class="full"><label>Reassignment Notes</label><textarea data-field="reassignNotes" placeholder="Name of person notified, method (call/email), date, any next steps"></textarea></div>
-    </div>
-  </div>
-</section>
-
 <footer class="site-footer">
   AZ-RI Consultants &middot; HUD Environmental Review Worksheet (24 CFR Part 58) &middot; Quick-Triage Format<br>
   This worksheet is a working document and does not replace the official Environmental Review Record (ERR) or HEROS submission.
@@ -5488,7 +5452,7 @@ document.addEventListener('change', e => {
 // Live update Project Name context indicators on HEROS-style headers
 function syncProjectNameContext() {
   const pn = (document.querySelector('input[data-field="projectName"]') || {}).value || '—';
-  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1311', 'proj-name-context-1344', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000', 'proj-name-context-6205'].forEach(id => {
+  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1311', 'proj-name-context-1344', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = pn;
   });
 }
@@ -7493,9 +7457,10 @@ function updateMitigationRow(idx, field, val) {
 function renderMitigationRows() {
   const tbody = document.getElementById('mitigationBody');
   if (!tbody) return;
+  // Always keep at least one editable entry row available (consistent with the HEROS screen,
+  // which shows a blank row ready to fill). Saved empty rows are filtered out of the report.
   if (!mitigationRows.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="padding:10px;color:var(--gray);font-style:italic;text-align:center;">No records found.</td></tr>';
-    return;
+    mitigationRows.push({ authority: '', measure: '', comments: '', plan: '', complete: false });
   }
   // Authority/Factor dropdown options — all §58.5/58.6 authorities + EA factors
   const authOpts = AUTHORITIES.map(a => `<option value="${a.name.replace(/&amp;/g, '&').replace(/"/g, '&quot;')}">${a.name.replace(/&amp;/g, '&')}</option>`).join('');
