@@ -1281,20 +1281,18 @@
     <table style="width:100%;border-collapse:collapse;font-size:12px;background:white;border:1px solid var(--border);border-radius:4px;overflow:hidden;">
       <thead style="background:var(--gray-bg);">
         <tr>
-          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);width:18%;">Law, Authority, or Factor</th>
-          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);width:30%;">Mitigation Measure or Condition</th>
-          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);width:20%;">Comments on Completed Measures</th>
-          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);width:20%;">Mitigation Plan / Owner</th>
-          <th style="padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);width:8%;">Complete</th>
-          <th class="no-print" style="padding:6px 8px;border-bottom:1px solid var(--border);width:4%;"></th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);width:25%;">Law, Authority, or Factor</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);width:37%;">Mitigation Measure or Condition</th>
+          <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);width:33%;">Mitigation Plan</th>
+          <th class="no-print" style="padding:6px 8px;border-bottom:1px solid var(--border);width:5%;"></th>
         </tr>
       </thead>
       <tbody id="mitigationBody"></tbody>
     </table>
-    <button class="no-print" onclick="addMitigationRow()" style="margin-top:8px;background:var(--azri-navy);color:white;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">+ Add Mitigation Measure</button>
+    <button class="no-print" onclick="addMitigationRow()" style="margin-top:8px;background:var(--azri-navy);color:white;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Add Mitigation Measure or Condition Factor</button>
     <button class="no-print" onclick="clearMitigationRows()" style="margin-top:8px;margin-left:6px;background:white;color:var(--red);border:1px solid var(--red);padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Clear All</button>
     <div style="font-size:12px;color:#2d3748;margin-top:14px;line-height:1.5;">
-      To insert additional mitigation measures or conditions not listed here, click the "+ Add Mitigation Measure" button above. If no mitigation measures are required, you may continue to the Final Screen below. Otherwise, describe the Mitigation Plan in the box below.
+      To insert additional mitigation measures or conditions not listed here, click the "Add Mitigation Measure or Condition Factor" button above. If no mitigation measures are required, you may continue to the next page. Otherwise, describe the Mitigation Plan below.
     </div>
     <div style="margin-top:12px;">
       <label style="font-weight:600;font-size:13px;">Project Mitigation Plan</label>
@@ -1536,17 +1534,16 @@ const AUTHORITIES = [
   { id: 'flood_ins', name: 'Flood Insurance', cite: 'Flood Disaster Protection Act, §58.6(a)', help: 'If in SFHA (Zone A/V), community must participate in NFIP and flood insurance is required.' },
   { id: 'air', name: 'Air Quality', cite: 'Clean Air Act §176(c), §58.5(g)', help: 'Check EPA Green Book attainment status. General Conformity if in nonattainment/maintenance area.' },
   { id: 'czm', name: 'Coastal Zone Management', cite: 'CZMA §307(c), §58.5(c)', help: 'If in coastal state with approved CZMP, project must be consistent. Federal consistency determination from state agency.' },
-  { id: 'contam', name: 'Contamination & Toxic Substances', cite: '24 CFR §58.5(i)(2)', help: 'Phase I ESA, regulatory database review (EDR/ASTM E1527). Free of hazardous materials, contamination, toxics, radioactive substances.' },
+  { id: 'contam', name: 'Contamination and Toxic Substances - Multifamily and Nonresidential Properties', cite: '24 CFR 50.3(i) &amp; §58.5(i)(2)', help: 'Phase I ESA, regulatory database review (EDR/ASTM E1527). Free of hazardous materials, contamination, toxics, radioactive substances.' },
   { id: 'esa', name: 'Endangered Species', cite: 'ESA §7, §58.5(e)', help: 'USFWS IPaC official species list, NMFS if applicable. Effect determination (No Effect / NLAA / LAA).' },
   { id: 'explos', name: 'Explosive & Flammable Hazards', cite: '24 CFR Part 51 Subpart C', help: 'AST, pipeline, propane, gasoline storage near site. Calculate Acceptable Separation Distance (ASD) per Appendix I.' },
-  { id: 'farm', name: 'Farmland Protection', cite: 'FPPA, 7 CFR Part 658, §58.5(h)', help: 'NRCS soil survey. If prime, unique, or statewide/locally important farmland is converted, complete AD-1006 with NRCS.' },
+  { id: 'farm', name: 'Farmlands Protection', cite: 'FPPA, 7 CFR Part 658, §58.5(h)', help: 'NRCS soil survey. If prime, unique, or statewide/locally important farmland is converted, complete AD-1006 with NRCS.' },
   { id: 'flood_mgt', name: 'Floodplain Management', cite: 'EO 11988, 24 CFR Part 55, §58.5(b)', help: 'FIRM panel review. If in floodplain, complete 8-step decision-making process per §55.20.' },
   { id: 'historic', name: 'Historic Preservation', cite: 'NHPA §106, 36 CFR Part 800, §58.5(a)', help: 'SHPO/THPO consultation. Define APE. Identify historic properties (50+ yr buildings, archaeological). Tribal notification.' },
-  { id: 'noise', name: 'Noise Abatement &amp; Control', cite: '24 CFR Part 51 Subpart B, §58.5(i)', help: 'Calc DNL from roads (1,000 ft), rail (3,000 ft), airports (15 mi). Acceptable ≤65 dB / Normally Unacceptable 65–75 / Unacceptable >75.' },
+  { id: 'noise', name: 'Noise Abatement and Control', cite: '24 CFR Part 51 Subpart B, §58.5(i)', help: 'Calc DNL from roads (1,000 ft), rail (3,000 ft), airports (15 mi). Acceptable ≤65 dB / Normally Unacceptable 65–75 / Unacceptable >75.' },
   { id: 'aquifer', name: 'Sole Source Aquifers', cite: 'Safe Drinking Water Act §1424(e), §58.5(d)', help: 'EPA SSA designation map. If over SSA and federally funded, EPA Region consultation may be required.' },
   { id: 'wetlands', name: 'Wetlands Protection', cite: 'EO 11990, 24 CFR Part 55, §58.5(b)', help: 'NWI map review. On-site delineation if indicated. 8-step process if wetlands affected.' },
-  { id: 'wsr', name: 'Wild &amp; Scenic Rivers', cite: 'WSRA, §58.5(f)', help: 'NPS Wild and Scenic Rivers map. NRI rivers also covered. Consult agency if proximate.' },
-  { id: 'ej', name: 'Environmental Justice', cite: 'EO 12898, §58.5(j)', help: 'EJScreen demographic pull. Identify disproportionate adverse impacts on minority and low-income populations.' }
+  { id: 'wsr', name: 'Wild and Scenic Rivers', cite: 'WSRA, §58.5(f)', help: 'NPS Wild and Scenic Rivers map. NRI rivers also covered. Consult agency if proximate.' }
 ];
 
 // ===== PER-AUTHORITY SOP (always-visible step-by-step guidance on each card) =====
@@ -4911,6 +4908,15 @@ function closeClientQuestions() { document.getElementById('clientQuestionsModal'
 // ===== RENDER AUTHORITIES =====
 const authContainer = document.getElementById('authorities-container');
 AUTHORITIES.forEach(a => {
+  // HEROS 2005 group headers — §50.4 & 58.6 (airport→) and §50.4 & 58.5 (air→)
+  if (a.id === 'airport' || a.id === 'air') {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'background:var(--gray-bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 22px;font-weight:700;font-size:12px;color:var(--azri-navy);text-align:center;letter-spacing:0.3px;';
+    hdr.textContent = (a.id === 'airport')
+      ? 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR §50.4 & 58.6'
+      : 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR §50.4 & 58.5';
+    authContainer.appendChild(hdr);
+  }
   const div = document.createElement('div');
   div.className = 'authority';
   div.dataset.authId = a.id;
@@ -4941,6 +4947,11 @@ AUTHORITIES.forEach(a => {
         <div class="authority-help">${a.help}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <div style="font-size:11px;color:#2d3748;text-align:right;">
+          <div style="font-weight:600;margin-bottom:2px;">Are formal compliance steps or mitigation required?</div>
+          <label style="font-weight:400;margin-right:10px;"><input type="radio" name="${a.id}_mitreq" value="yes"> Yes</label>
+          <label style="font-weight:400;"><input type="radio" name="${a.id}_mitreq" value="no"> No</label>
+        </div>
         <div class="determination">
           <label><input type="radio" name="${a.id}_status" value="compliant" data-auth="${a.id}"><span>Compliant</span></label>
           <label><input type="radio" name="${a.id}_status" value="followup" data-auth="${a.id}"><span>Follow-Up</span></label>
@@ -4963,7 +4974,7 @@ AUTHORITIES.forEach(a => {
       <input type="hidden" data-field="${a.id}_ref">
       <div class="full">
         <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span>Notes / Mitigation (ERR text)</span>
+          <span>Compliance Determinations</span>
           ${BOILERPLATE[a.id] ? `<span class="no-print" style="display:flex;gap:6px;align-items:center;">
             <select class="boilerplate-select" data-auth="${a.id}" onchange="if(this.value!=='')insertBoilerplateByIdx('${a.id}', parseInt(this.value)); this.value='';" style="font-size:12px;padding:4px 8px;border:1px solid var(--azri-teal);border-radius:4px;background:var(--azri-sand);color:var(--azri-teal);font-weight:600;cursor:pointer;max-width:340px;"><option value="">⤓ Insert pre-loaded Write-Up</option></select>
             <button type="button" onclick="openBoilerplate('${a.id}','${a.name.replace(/'/g,"\\'")}')" title="View full Write-Up text before inserting" style="background:white;border:1px solid var(--azri-teal);color:var(--azri-teal);padding:3px 8px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;">View</button>
@@ -7483,7 +7494,7 @@ function renderMitigationRows() {
   const tbody = document.getElementById('mitigationBody');
   if (!tbody) return;
   if (!mitigationRows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="padding:10px;color:var(--gray);font-style:italic;text-align:center;">No mitigation measures yet. Click "+ Add Mitigation Measure" to track one.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:10px;color:var(--gray);font-style:italic;text-align:center;">No records found.</td></tr>';
     return;
   }
   // Authority/Factor dropdown options — all §58.5/58.6 authorities + EA factors
@@ -7501,9 +7512,7 @@ function renderMitigationRows() {
         </select>
       </td>
       <td style="padding:4px 6px;"><textarea oninput="updateMitigationRow(${i}, 'measure', this.value)" style="width:100%;min-height:48px;padding:4px;border:1px solid var(--border);border-radius:3px;font-size:12px;font-family:inherit;">${(r.measure || '').replace(/</g, '&lt;')}</textarea></td>
-      <td style="padding:4px 6px;"><textarea oninput="updateMitigationRow(${i}, 'comments', this.value)" style="width:100%;min-height:48px;padding:4px;border:1px solid var(--border);border-radius:3px;font-size:12px;font-family:inherit;">${(r.comments || '').replace(/</g, '&lt;')}</textarea></td>
       <td style="padding:4px 6px;"><textarea oninput="updateMitigationRow(${i}, 'plan', this.value)" style="width:100%;min-height:48px;padding:4px;border:1px solid var(--border);border-radius:3px;font-size:12px;font-family:inherit;">${(r.plan || '').replace(/</g, '&lt;')}</textarea></td>
-      <td style="padding:4px 6px;text-align:center;"><input type="checkbox" ${r.complete ? 'checked' : ''} onchange="updateMitigationRow(${i}, 'complete', this.checked)"></td>
       <td class="no-print" style="padding:4px 6px;text-align:center;"><button onclick="removeMitigationRow(${i})" style="background:white;color:var(--red);border:1px solid var(--red);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer;">×</button></td>
     </tr>
   `).join('');
