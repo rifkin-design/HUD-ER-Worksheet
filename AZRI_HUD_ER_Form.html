@@ -582,9 +582,10 @@
     <!-- PROJECT NAME -->
     <div class="field-grid">
       <div class="full"><label><span style="color:#c00;">*</span> Project Name</label><input type="text" data-field="projectName"></div>
-      <div><label>HEROS Review ID</label><input type="text" data-field="herosNumber" placeholder="e.g., 900000123456"></div>
-      <div><label>Start Date</label><input type="date" data-field="startDate"></div>
     </div>
+    <!-- HEROS Review ID is system-generated and does NOT appear on the HEROS 1105 screen; kept as hidden fields for reports & save/load -->
+    <input type="hidden" data-field="herosNumber">
+    <input type="hidden" data-field="startDate">
 
     <!-- HUD FUNDING SOURCE -->
     <div style="margin-top:20px;">
@@ -604,7 +605,7 @@
           <tbody id="fundingSourceBody"></tbody>
         </table>
       </div>
-      <button type="button" onclick="addFundingSource()" class="no-print" style="margin-top:8px;background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">+ Add Another Funding Source</button>
+      <button type="button" onclick="addFundingSource()" class="no-print" style="margin-top:8px;background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Add Another Funding Source</button>
       <!-- Hidden legacy mirrors for save/load back-compat -->
       <input type="hidden" data-field="grantId">
       <input type="hidden" data-field="hudProgram">
@@ -634,71 +635,100 @@
       <input type="hidden" data-field="otherFedAgency">
     </div>
 
-    <!-- OVER 200 -->
+    <!-- STATE / LOCAL IDENTIFIER -->
     <div style="margin-top:20px;">
-      <label style="font-weight:600;font-size:13px;color:var(--azri-navy);"><span style="color:#c00;">*</span> Does this project involve over 200 lots, dwelling units, or beds?</label>
-      <div style="margin-top:6px;">
-        <label style="display:block;font-weight:400;margin-bottom:3px;"><input type="radio" name="over200Radio" value="no" onchange="setOver200(this.value)"> No</label>
-        <label style="display:block;font-weight:400;line-height:1.4;"><input type="radio" name="over200Radio" value="yes" onchange="setOver200(this.value)"> Yes (Consult early with the Environmental Clearance Officer (ECO), who is required to sign off on this project if it requires an Environmental Assessment).</label>
+      <label style="font-weight:600;font-size:13px;color:var(--azri-navy);">State / Local Identifier [optional]</label>
+      <div class="field-grid" style="margin-top:6px;">
+        <div><input type="text" data-field="stateLocalIdentifier"></div>
       </div>
-      <input type="hidden" data-field="over200">
     </div>
 
-    <!-- APPLICANT / GRANT RECIPIENT -->
-    <div style="margin-top:20px;">
-      <label style="font-weight:600;font-size:13px;color:var(--azri-navy);"><span style="color:#c00;">*</span> Applicant/Grant Recipient Information</label>
-      <div style="margin-top:6px;">
-        <label style="display:inline-block;font-weight:400;margin-right:18px;"><input type="radio" name="applicantMode" value="search" onchange="document.getElementById('applicantFields').style.opacity='0.5'"> Search</label>
-        <label style="display:inline-block;font-weight:400;"><input type="radio" name="applicantMode" value="other" checked onchange="document.getElementById('applicantFields').style.opacity='1'"> Other</label>
+    <!-- The "over 200 lots, dwelling units, or beds" question no longer appears on the HUD Part 58 1105 screen
+         (legacy gate tied to the now-rescinded CEQ NEPA regulations / ECO sign-off). Kept hidden for back-compat. -->
+    <input type="hidden" data-field="over200">
+
+    <!-- ===== PART 58 — RESPONSIBLE ENTITY BLOCK ===== -->
+    <div data-framework-block="58">
+      <!-- RESPONSIBLE ENTITY (RE) INFORMATION -->
+      <div style="margin-top:20px;">
+        <label style="font-weight:600;font-size:13px;color:var(--azri-navy);">Responsible Entity (RE) Information</label>
+        <div class="field-grid" style="margin-top:10px;">
+          <div class="full"><label>Organization Name</label><input type="text" data-field="responsibleEntity" placeholder="e.g., Cumberland County"></div>
+          <div class="full"><label>Address</label><input type="text" data-field="reAddress" placeholder="Street address"></div>
+          <div><label>City</label><input type="text" data-field="reCity"></div>
+          <div><label>State</label><input type="text" data-field="reState"></div>
+          <div><label>ZIP</label><input type="text" data-field="reZip"></div>
+        </div>
       </div>
-      <div class="field-grid" id="applicantFields" style="margin-top:10px;">
-        <div><label>Name of Organization</label><input type="text" data-field="applicant" placeholder="e.g., The Pearlstone Center"></div>
+
+      <!-- RE PREPARER INFORMATION -->
+      <div style="margin-top:20px;">
+        <label style="font-weight:600;font-size:13px;color:var(--azri-navy);"><span style="color:#c00;">*</span> RE Preparer Information</label>
+        <div class="field-grid" style="margin-top:10px;">
+          <div><label>Name</label><input type="text" data-field="hudPreparer"></div>
+        </div>
+      </div>
+
+      <!-- CERTIFYING OFFICER INFORMATION -->
+      <div style="margin-top:20px;">
+        <label style="font-weight:600;font-size:13px;color:var(--azri-navy);">Certifying Officer Information <span style="font-weight:400;color:#4a5568;">(not required for exempt or CENST projects)</span></label>
+        <div class="field-grid" style="margin-top:10px;">
+          <div><label>Name</label><input type="text" data-field="certifyingOfficer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PART 50 — HUD OFFICE BLOCK (placeholder; Part 50 1105 to be built next) ===== -->
+    <div data-framework-block="50" style="display:none;">
+      <div style="margin-top:20px;">
+        <label style="font-weight:600;font-size:13px;color:var(--azri-navy);">HUD Office Details (Part 50)</label>
+        <div class="field-grid" style="margin-top:10px;">
+          <div><label>HUD Field Office</label><input type="text" data-field="hudFieldOffice" placeholder="e.g., Baltimore Field Office"></div>
+          <div><label>HUD Approving Official</label><input type="text" data-field="hudApprovingOfficial" placeholder="Name, title"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRANT RECIPIENT INFORMATION -->
+    <div style="margin-top:20px;">
+      <label style="font-weight:600;font-size:13px;color:var(--azri-navy);">Grant Recipient Information <span style="font-weight:400;color:#4a5568;">(if different from Responsible Entity)</span></label>
+      <div style="font-size:11px;color:#4a5568;margin:4px 0 8px 0;">Complete this section only if the grant recipient is not acting as the Responsible Entity.</div>
+      <div style="margin-top:6px;">
+        <label style="display:inline-block;font-weight:400;margin-right:18px;"><input type="radio" name="grantRecipientMode" value="search" onchange="setGrantRecipientMode(this.value)"> Search</label>
+        <label style="display:inline-block;font-weight:400;margin-right:18px;"><input type="radio" name="grantRecipientMode" value="other" checked onchange="setGrantRecipientMode(this.value)"> Other</label>
+        <label style="display:inline-block;font-weight:400;"><input type="radio" name="grantRecipientMode" value="none" onchange="setGrantRecipientMode(this.value)"> None</label>
+      </div>
+      <div class="field-grid" id="grantRecipientFields" style="margin-top:10px;">
+        <div><label>Name of Organization</label><input type="text" data-field="applicant" placeholder="e.g., Hope House of Cumberland Valley"></div>
         <div><label>Name of Point of Contact</label><input type="text" data-field="applicantPOC"></div>
       </div>
     </div>
 
-    <!-- HUD PREPARER -->
-    <div style="margin-top:20px;">
-      <label style="font-weight:600;font-size:13px;color:var(--azri-navy);"><span style="color:#c00;">*</span> HUD Preparer Information</label>
-      <div class="field-grid" style="margin-top:10px;">
-        <div><label>Name</label><input type="text" data-field="hudPreparer" placeholder="HUD staff name (or RE staff name for Part 58 RE-prepared reviews)"></div>
-      </div>
-    </div>
-
-    <!-- CONSULTANT -->
+    <!-- CONSULTANT INFORMATION -->
     <div style="margin-top:20px;">
       <label style="font-weight:600;font-size:13px;color:var(--azri-navy);">Consultant Information</label>
       <div style="font-size:11px;color:#4a5568;margin:4px 0 8px 0;">Complete this section only if you represent a consultant firm or other contractor assisting with the environmental review.</div>
-      <div class="field-grid">
-        <div><label>Name of Consulting Firm</label><input type="text" data-field="consultant" value="AZ-RI Consultants"></div>
-        <div><label>Name of Point of Contact</label><input type="text" data-field="consultantPOC"></div>
+      <div style="margin-top:6px;">
+        <label style="display:inline-block;font-weight:400;margin-right:18px;"><input type="radio" name="consultantMode" value="search" checked onchange="setConsultantMode(this.value)"> Search</label>
+        <label style="display:inline-block;font-weight:400;margin-right:18px;"><input type="radio" name="consultantMode" value="other" onchange="setConsultantMode(this.value)"> Other</label>
+        <label style="display:inline-block;font-weight:400;"><input type="radio" name="consultantMode" value="none" onchange="setConsultantMode(this.value)"> None</label>
       </div>
-      <div style="margin-top:10px;font-size:11px;color:#4a5568;font-style:italic;line-height:1.4;">Per HUD ERR practice (formerly 40 CFR 1506.5(b)(4), rescinded eff. April 11, 2025): The lead agency or, where appropriate, a cooperating agency shall prepare a disclosure statement for the contractor's execution specifying that the contractor has no financial or other interest in the outcome of the action. Such statement need not include privileged or confidential trade secrets or other confidential business information.</div>
+      <div class="field-grid" id="consultantFields" style="margin-top:10px;">
+        <div><label>Name of Firm</label>
+          <select data-field="consultant">
+            <option value="AZ-RI Consultants" selected>AZ-RI Consultants</option>
+            <option value=""></option>
+          </select>
+        </div>
+        <div><label>Name of Preparer</label><input type="text" data-field="consultantPOC"></div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#4a5568;line-height:1.4;">40 CFR 1506.5(b)(4): The lead agency or, where appropriate, a cooperating agency shall prepare a disclosure statement for the contractor's execution specifying that the contractor has no financial or other interest in the outcome of the action. Such statement need not include privileged or confidential trade secrets or other confidential business information.</div>
       <label style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;font-size:13px;font-weight:400;line-height:1.4;"><input type="checkbox" data-field="consultantAttest" style="margin-top:3px;flex-shrink:0;"> By checking this box, I attest that as a consultant, I have no financial or other interest in the outcome of the undertaking assessed in this environmental review.</label>
     </div>
 
-    <!-- Part 58 / Part 50 contact blocks (AZ-RI addition — not in HEROS 1105 directly, but useful) -->
-    <div data-framework-block="58" style="margin-top:20px;">
-      <div style="padding:10px 12px;background:var(--azri-sand);border-left:3px solid var(--azri-navy);border-radius:4px;"><strong style="font-size:13px;color:var(--azri-navy);">Responsible Entity Details (Part 58)</strong></div>
-      <div class="field-grid" style="margin-top:10px;">
-        <div><label>Responsible Entity Name</label><input type="text" data-field="responsibleEntity" placeholder="e.g., Baltimore County DHCD"></div>
-        <div><label>RE Certifying Officer (Name &amp; Title)</label><input type="text" data-field="certifyingOfficer"></div>
-        <div><label>RE Point of Contact</label><input type="text" data-field="rePOC" placeholder="Name, email, phone"></div>
-      </div>
-    </div>
-    <div data-framework-block="50" style="margin-top:20px;display:none;">
-      <div style="padding:10px 12px;background:var(--azri-sand);border-left:3px solid var(--azri-navy);border-radius:4px;"><strong style="font-size:13px;color:var(--azri-navy);">HUD Office Details (Part 50)</strong></div>
-      <div class="field-grid" style="margin-top:10px;">
-        <div><label>HUD Field Office</label><input type="text" data-field="hudFieldOffice" placeholder="e.g., Baltimore Field Office"></div>
-        <div><label>HUD Approving Official</label><input type="text" data-field="hudApprovingOfficial" placeholder="Name, title"></div>
-      </div>
-    </div>
-
-    <!-- Reviewer -->
-    <div class="field-grid" style="margin-top:20px;">
-      <div><label>Reviewer</label><input type="text" data-field="reviewer"></div>
-      <div><label>Review Date</label><input type="date" data-field="reviewDate"></div>
-    </div>
+    <!-- Reviewer / Review Date are not part of the HEROS 1105 screen; kept hidden for reports & save/load -->
+    <input type="hidden" data-field="reviewer">
+    <input type="hidden" data-field="reviewDate">
   </div>
 </section>
 
@@ -6067,9 +6097,12 @@ function generateClientReport() {
   ]) + fundingHtml + rowsHtml([
     ['Total HUD-Funded / Assisted / Insured Amount', f.totalHudAmount || f.funding], ['Total Project Cost', f.totalProjectCost],
     ['Other Federal Agency Involved?', f.otherFedAgency], ['Other Federal Agency — Explain', f.otherFedAgencyExplain],
-    ['Over 200 Lots / Units / Beds?', f.over200], ['Applicant / Grant Recipient', f.applicant], ['Applicant Point of Contact', f.applicantPOC],
-    ['HUD Preparer', f.hudPreparer], ['Consulting Firm', f.consultant], ['Consultant Point of Contact', f.consultantPOC],
-    ['Responsible Entity', f.responsibleEntity], ['RE Certifying Officer', f.certifyingOfficer], ['RE Point of Contact', f.rePOC],
+    ['State / Local Identifier', f.stateLocalIdentifier],
+    ['Responsible Entity', f.responsibleEntity],
+    ['RE Address', [f.reAddress, f.reCity, [f.reState, f.reZip].filter(Boolean).join(' ')].filter(Boolean).join(', ')],
+    ['RE Preparer', f.hudPreparer], ['Certifying Officer', f.certifyingOfficer],
+    ['Grant Recipient', f.applicant], ['Grant Recipient Point of Contact', f.applicantPOC],
+    ['Consulting Firm', f.consultant], ['Consultant Preparer', f.consultantPOC],
     ['HUD Field Office', f.hudFieldOffice], ['HUD Approving Official', f.hudApprovingOfficial], ['Reviewer', f.reviewer], ['Review Date', f.reviewDate]
   ]));
 
@@ -7121,6 +7154,16 @@ function setOtherFedAgency(value) {
 function setOver200(value) {
   const hidden = document.querySelector('input[type="hidden"][data-field="over200"]');
   if (hidden) hidden.value = value || '';
+}
+// Grant Recipient / Consultant Search–Other–None toggles (HEROS 1105).
+// "None" hides the entry fields; "Search" and "Other" both reveal them.
+function setGrantRecipientMode(value) {
+  const fields = document.getElementById('grantRecipientFields');
+  if (fields) fields.style.display = (value === 'none') ? 'none' : '';
+}
+function setConsultantMode(value) {
+  const fields = document.getElementById('consultantFields');
+  if (fields) fields.style.display = (value === 'none') ? 'none' : '';
 }
 
 // ===== HEROS Screen 1105 — ER creation record header =====
