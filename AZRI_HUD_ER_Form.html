@@ -886,14 +886,17 @@
   </div>
 </section>
 
-<!-- ===== LEVEL OF REVIEW DETERMINATION (HEROS 1310 / 1315) — relocated below Screen 1125 ===== -->
-<section class="card" id="screen-1310">
+<!-- ===== HEROS SCREEN 1311 — LEVEL OF REVIEW (58) — relocated below Screen 1125 ===== -->
+<section class="card" id="screen-1311">
   <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
-    <span>Level of Review Determination <span class="citation">(HEROS 1310 / 1315)</span></span>
-    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1310" style="color:white;">—</strong></span>
+    <span>1311. Level of Review <span class="citation">(58)</span></span>
+    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1311" style="color:white;">—</strong></span>
   </h2>
   <div class="card-body">
-    <h3 style="margin-top:24px;color:var(--azri-navy);font-size:15px;">1310. Project Activities <span style="font-weight:400;color:var(--gray);font-size:12px;">— Activity Questions / Level of Review Determination</span></h3>
+    <!-- ===== SECTION 1 — QUESTIONS TO DETERMINE THE LEVEL OF REVIEW ===== -->
+    <div style="padding:8px 12px;background:var(--azri-navy);color:white;border-radius:5px 5px 0 0;font-weight:600;font-size:13px;">Section 1 — Questions to determine the level of review</div>
+    <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:14px 16px;margin-bottom:22px;">
+    <h3 style="margin-top:0;color:var(--azri-navy);font-size:15px;">Project Activities <span style="font-weight:400;color:var(--gray);font-size:12px;">— scope questions that inform the level of review</span></h3>
     <div class="lora-grid">
       <div class="lora-q full">
         <div class="qtext">1. Primary activity type (select the dominant activity)</div>
@@ -963,24 +966,98 @@
         <label><input type="radio" name="loraSignificant" value="yes"> Yes</label>
       </div>
     </div>
-    <!-- (v95) The consolidated 1310 Review Questions block was removed — each authority's scope
-         questions now sit OPEN inside its own Related Laws & Authorities section (Section 2005),
-         so the reviewer sees per-section which authorities may be exempt and why. "Determine
-         Level of Review" reads those per-section answers (plus the answers derived from Activity
-         Questions 1, 3, 6 & 9) and applies the determinations. -->
-    <div style="margin-top:14px;" class="no-print">
-      <button onclick="determineLevel()" style="background:var(--azri-navy);color:white;border:none;padding:10px 18px;border-radius:5px;font-size:14px;cursor:pointer;font-weight:600;">Determine Level of Review</button>
-      <span style="font-size:12px;color:var(--gray);margin-left:10px;">Considers Activity Questions 1–10 plus the Review Questions answered in each Section 2005 authority (Farmland, Wetlands, Sole Source Aquifers &amp; Section 106 triggers derive automatically from Questions 1, 3, 6 &amp; 9), and applies the determinations to the sections below.</span>
-    </div>
-    <div id="levelResult" class="level-result"></div>
+    </div><!-- /Section 1 -->
 
-    <!-- HEROS-style Level of Review Citations (Screen 1310 / 1315) -->
-    <div id="herosCitationsBlock" style="margin-top:18px;padding:14px 18px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-        <h3 style="margin:0;color:var(--azri-navy);font-size:15px;">1315. Level of Review <span style="font-weight:400;color:var(--gray);font-size:12px;">— HEROS-aligned citations. Pre-checked based on SOW; review and adjust.</span></h3>
-        <button class="no-print" onclick="renderHerosCitations()" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;">↻ Refresh from SOW</button>
+    <!-- ===== SECTION 2 — REVIEW QUESTIONS: HOW EACH AUTHORITY/SECTION IS HANDLED ===== -->
+    <div style="padding:8px 12px;background:var(--azri-navy);color:white;border-radius:5px 5px 0 0;font-weight:600;font-size:13px;">Section 2 — Review Questions: how each related law &amp; authority is handled</div>
+    <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:14px 16px;margin-bottom:22px;">
+      <div style="font-size:12px;color:#2d3748;line-height:1.5;margin-bottom:12px;">Answer the Review Questions for each related law &amp; authority below. <strong>These mirror the same questions in each authority's Section 2005 row — answering or editing here updates there, and vice-versa.</strong> Use <em>Apply Determination</em> to mark a section Exempt / Follow-Up and insert its write-up, or flag it for the client.</div>
+      <div id="rqMirror1311"><em style="font-size:12px;color:var(--gray);">Loading review questions…</em></div>
+    </div>
+
+    <!-- ===== SECTION 3 — HEROS 1311 LEVEL OF REVIEW SELECTION (manual) ===== -->
+    <div style="padding:8px 12px;background:var(--azri-navy);color:white;border-radius:5px 5px 0 0;font-weight:600;font-size:13px;">Level of Review</div>
+    <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:14px 16px;">
+      <div style="font-weight:600;font-size:14px;color:#2d3748;margin-bottom:6px;">What level of review is required by the scope of the project?</div>
+      <div style="font-size:12px;color:#2d3748;margin-bottom:6px;">For more information on determining the appropriate level of review, go to <a href="https://www.hudexchange.info/programs/environmental-review/orientation-to-environmental-reviews/#level-of-review" target="_blank" rel="noopener" style="color:#2c5282;text-decoration:underline;">https://www.hudexchange.info/programs/environmental-review/orientation-to-environmental-reviews/#level-of-review</a></div>
+      <div style="font-size:12px;color:#9b2c2c;font-weight:600;line-height:1.5;margin-bottom:14px;">Only the Responsible Entity (RE) may determine the level of review. Your selection on this screen is only advisory. The RE may want to confirm the level of review before you proceed with the environmental review. Consult with the RE for questions about processing this review.</div>
+
+      <!-- EXEMPT -->
+      <label style="display:block;font-weight:600;font-size:13px;color:#2d3748;margin-top:6px;"><input type="radio" name="levelOfReview" value="exempt" onchange="setLevelOfReview(this.value)" style="margin-right:8px;">Exempt</label>
+      <div style="margin:6px 0 8px 26px;">
+        <div style="font-size:12px;color:#2d3748;margin-bottom:6px;">Select appropriate citation(s) from <a href="https://www.ecfr.gov/current/title-24/section-58.34" target="_blank" rel="noopener" style="color:#2c5282;text-decoration:underline;">24 CFR 58.34(a)</a>: (Check all that apply)</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a1" style="margin-right:6px;">Environmental and other studies, resource identification and the development of plans and strategies. 24 CFR 58.34(a)(1)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a2" style="margin-right:6px;">Information and financial services. 24 CFR 58.34(a)(2)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a3" style="margin-right:6px;">Administrative and management activities. 24 CFR 58.34(a)(3)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a4" style="margin-right:6px;">Public services that will not have a physical impact or result in any physical changes, including but not limited to services concerned with employment, crime prevention, child care, health, drug abuse, education, counseling, energy conservation and welfare or recreational needs. 24 CFR 58.34(a)(4)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a5" style="margin-right:6px;">Inspections and testing of properties for hazards or defects. 24 CFR 58.34(a)(5)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a6" style="margin-right:6px;">Purchase of insurance. 24 CFR 58.34(a)(6)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a7" style="margin-right:6px;">Purchase of tools. 24 CFR 58.34(a)(7)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a8" style="margin-right:6px;">Engineering or design costs. 24 CFR 58.34(a)(8)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a9" style="margin-right:6px;">Technical assistance and training. 24 CFR 58.34(a)(9)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a10" style="margin-right:6px;">Assistance for temporary or permanent improvements that do not alter environmental conditions and are limited to protection, repair, or restoration activities necessary only to control or arrest the effects from disasters or imminent threats to public safety including those resulting from physical deterioration. 24 CFR 58.34(a)(10)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="exempt_cite" value="58_34a11" style="margin-right:6px;">Payment of principal and interest on loans made or obligations guaranteed by HUD. 24 CFR 58.34(a)(11)</label>
       </div>
-      <div id="herosCitations"></div>
+
+      <!-- CENST -->
+      <label style="display:block;font-weight:600;font-size:13px;color:#2d3748;margin-top:10px;"><input type="radio" name="levelOfReview" value="censt" onchange="setLevelOfReview(this.value)" style="margin-right:8px;">Categorical exclusion not subject to the Federal laws and authorities cited in §58.5 (CENST)</label>
+      <div style="margin:6px 0 8px 26px;">
+        <div style="font-size:12px;color:#2d3748;margin-bottom:6px;">Select appropriate citation(s) from <a href="https://www.ecfr.gov/current/title-24/section-58.35" target="_blank" rel="noopener" style="color:#2c5282;text-decoration:underline;">24 CFR 58.35(b)</a>: (Check all that apply)</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b1" style="margin-right:6px;">Tenant-based rental assistance. 24 CFR 58.35(b)(1)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b2" style="margin-right:6px;">Supportive services including, but not limited to, health care, housing services, permanent housing placement, day care, nutritional services, short-term payments for rent/mortgage/utility costs, and assistance in gaining access to local, State, and Federal government benefits and services. 24 CFR 58.35(b)(2)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b3" style="margin-right:6px;">Operating costs including maintenance, security, operation, utilities, furnishings, equipment, supplies, staff training and recruitment and other incidental costs. 24 CFR 58.35(b)(3)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b4" style="margin-right:6px;">Economic development activities, including but not limited to, equipment purchase, inventory financing, interest subsidy, operating expenses and similar costs not associated with construction or expansion of existing operations. 24 CFR 58.35(b)(4)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b5" style="margin-right:6px;">Activities to assist homebuyers to purchase existing dwelling units or dwelling units under construction, including closing costs and down payment assistance, interest buydowns, and similar activities that result in the transfer of title. 24 CFR 58.35(b)(5)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b6" style="margin-right:6px;">Affordable housing pre-development costs including legal, consulting, developer and other costs related to obtaining site options, project financing, administrative costs and fees for loan commitments, zoning approvals, and other related activities which do not have a physical impact. 24 CFR 58.35(b)(6)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b7" style="margin-right:6px;">Approval of supplemental assistance 24 CFR 58.35(b)(7)<br><span style="margin-left:22px;display:block;color:#4a5568;">This activity is CENST Supplemental Assistance if the approval is made by the same responsible entity that conducted the environmental review on the original project and reevaluation of the environmental findings is not required under Sec. 58.47.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:6px 0 3px 0;color:#2d3748;"><input type="checkbox" name="censt_cite" value="58_35b_adopted" style="margin-right:6px;">Adopted CE from another Federal agency, per Section 109 of NEPA:</label>
+        <select data-field="adoptedCE_censt" style="margin-left:22px;max-width:520px;"><option value="">Select Categorical Exclusion</option></select>
+      </div>
+
+      <!-- CEST -->
+      <label style="display:block;font-weight:600;font-size:13px;color:#2d3748;margin-top:10px;"><input type="radio" name="levelOfReview" value="cest" onchange="setLevelOfReview(this.value)" style="margin-right:8px;">Categorical exclusion subject to the Federal laws and authorities cited in §58.5 (CEST)</label>
+      <div style="margin:6px 0 8px 26px;">
+        <div style="font-size:12px;color:#2d3748;margin-bottom:6px;">Select appropriate citation(s) from <a href="https://www.ecfr.gov/current/title-24/section-58.35" target="_blank" rel="noopener" style="color:#2c5282;text-decoration:underline;">24 CFR 58.35(a)</a>: (Check all that apply)</div>
+
+        <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin:8px 0 2px 0;">Acquisition or leasing</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a1_acq_pub" style="margin-right:6px;">Acquisition of public facilities 24 CFR 58.35(a)(1)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a5_acq_land" style="margin-right:6px;">Acquisition of vacant land provided that the acquired land will be retained for the same use. 24 CFR 58.35(a)(5)</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a5_acq_struct" style="margin-right:6px;">Acquisition (including leasing) of an existing structure provided that the acquired structure will be retained for the same use. 24 CFR 58.35(a)(5)</label>
+
+        <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin:8px 0 2px 0;">ADA Compliance</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a2" style="margin-right:6px;">Special projects directed to the removal of material and architectural barriers that restrict the mobility of and accessibility to elderly and handicapped persons. 24 CFR 58.35(a)(2)</label>
+
+        <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin:8px 0 2px 0;">Repair, improvement, reconstruction, or rehabilitation</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a1_rehab_pub" style="margin-right:6px;">Rehabilitation of public facilities and improvements other than buildings 24 CFR 58.35(a)(1)<br><span style="margin-left:22px;display:block;color:#4a5568;">This activity is CEST if the facilities and improvements are in place and retained in the same use without change in size or capacity of more than 20 percent. Acceptable activities include replacement of water or sewer lines, reconstruction of curbs and sidewalks, and repaving of streets.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a3i" style="margin-right:6px;">Rehabilitation of residential buildings with one to four units 24 CFR 58.35(a)(3)(i)<br><span style="margin-left:22px;display:block;color:#4a5568;">This activity is CEST if the density is not increased beyond four units, the land use is not changed, and the footprint of the building is not increased in a floodplain or wetland.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a3ii" style="margin-right:6px;">Rehabilitation of multifamily (5 or more units) residential buildings 24 CFR 58.35(a)(3)(ii)<br><span style="margin-left:22px;display:block;color:#4a5568;">This activity is CEST if unit density is not changed more than 20 percent; the project does not involve changes in land use from residential to non-residential; and the estimated cost of rehabilitation is less than 75 percent of the total estimated cost of replacement after rehabilitation.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a3iii" style="margin-right:6px;">Rehabilitation of non-residential structures including commercial, industrial, and public buildings 24 CFR 58.35(a)(3)(iii)<br><span style="margin-left:22px;display:block;color:#4a5568;">This activity is CEST if the facilities and improvements are in place and will not be changed in size or capacity by more than 20 percent; and the activity does not involve a change in land use, such as from non-residential to residential, commercial to industrial, or from one industrial use to another.</span></label>
+
+        <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin:8px 0 2px 0;">Individual Actions</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a4i" style="margin-right:6px;">An individual action on up to four dwelling units. 24 CFR 58.35(a)(4)(i)<br><span style="margin-left:22px;display:block;color:#4a5568;">This activity is CEST where there is a maximum of four units on any one site. The units can be four one-unit buildings or one four-unit building or any combination in between.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a4ii" style="margin-right:6px;">An individual action on a project of five or more housing units. 24 CFR 58.35(a)(4)(ii)<br><span style="margin-left:22px;display:block;color:#4a5568;">This activity is CEST when the housing units are developed on scattered sites, the site are more than 2,000 feet apart, and there are not more than four housing units on any one site.</span></label>
+
+        <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin:8px 0 2px 0;">Disposition</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a5_dispo" style="margin-right:6px;">Disposition of an existing structure provided that the disposed of structure will be retained for the same use. 24 CFR 58.35(a)(5)</label>
+
+        <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin:8px 0 2px 0;">Equity Loans</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a5_equity" style="margin-right:6px;">Equity loans on an existing structure provided that the financed structure will be retained for the same use. 24 CFR 58.35(a)(5)</label>
+
+        <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin:8px 0 2px 0;">Section 109 of NEPA</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:3px 0;color:#2d3748;"><input type="checkbox" name="cest_cite" value="58_35a_adopted" style="margin-right:6px;">Adopted CE from another Federal agency, per Section 109 of NEPA:</label>
+        <select data-field="adoptedCE_cest" style="margin-left:22px;max-width:520px;"><option value="">Select Categorical Exclusion</option></select>
+      </div>
+
+      <!-- EA -->
+      <label style="display:block;font-weight:600;font-size:13px;color:#2d3748;margin-top:10px;"><input type="radio" name="levelOfReview" value="ea" onchange="setLevelOfReview(this.value)" style="margin-right:8px;">Environmental Assessment (EA)</label>
+      <div style="margin:4px 0 8px 26px;font-size:12px;color:#2d3748;">This activity requires an EA if no categorical exclusions or exemptions apply. An EA may also be required if extraordinary circumstances apply.</div>
+
+      <!-- EIS -->
+      <label style="display:block;font-weight:600;font-size:13px;color:#2d3748;margin-top:10px;"><input type="radio" name="levelOfReview" value="eis" onchange="setLevelOfReview(this.value)" style="margin-right:8px;">Environmental Impact Statement (EIS)</label>
+
+      <!-- NOT SURE -->
+      <label style="display:block;font-weight:600;font-size:13px;color:#2d3748;margin-top:10px;"><input type="radio" name="levelOfReview" value="notsure" onchange="setLevelOfReview(this.value)" style="margin-right:8px;">Not sure</label>
+      <div style="margin:4px 0 4px 26px;font-size:12px;color:#2d3748;">If the level of review is not known select this option to go to the Level of Review Determination Assistant.</div>
     </div>
   </div>
 </section>
@@ -4696,7 +4773,7 @@ function buildExemptionPanel(id) {
   const cfg = EXEMPTION_CHECKS[id];
   if (!panel || !cfg || panel.dataset.built === '1') return;
   let html = '<div style="font-size:12px;color:#2d3748;margin-bottom:8px;line-height:1.5;">' + cfg.intro
-    + (RQ_DERIVED[id] ? ' <em style="color:#4a5568;">(Pre-answered automatically from ' + RQ_DERIVED[id].from + ' on Screen 1310 when you run Determine Level of Review — override here if needed.)</em>' : '') + '</div>';
+    + (RQ_DERIVED[id] ? ' <em style="color:#4a5568;">(Also answerable in the 1311 Level of Review section — answers sync between both places.)</em>' : '') + '</div>';
   cfg.questions.forEach(q => {
     html += '<div style="margin-bottom:10px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;text-transform:none;letter-spacing:0;color:#2d3748;">' + q.label + '</div>';
     q.options.forEach(o => {
@@ -5376,7 +5453,7 @@ document.addEventListener('change', e => {
 // Live update Project Name context indicators on HEROS-style headers
 function syncProjectNameContext() {
   const pn = (document.querySelector('input[data-field="projectName"]') || {}).value || '—';
-  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1310', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000', 'proj-name-context-6205'].forEach(id => {
+  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1311', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000', 'proj-name-context-6205'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = pn;
   });
 }
@@ -5735,8 +5812,8 @@ function loadJSON(event) {
         } catch (e) {}
         updateParcelInfo();
       }
-      // Level result restore
-      if (data.levelResultHTML) document.getElementById('levelResult').innerHTML = data.levelResultHTML;
+      // Level result restore (legacy field; #levelResult was removed when 1310/1315 became the manual 1311 screen)
+      if (data.levelResultHTML) { const _lr = document.getElementById('levelResult'); if (_lr) _lr.innerHTML = data.levelResultHTML; }
       // State pack restore
       if (data.state && STATE_PACKS[data.state]) {
         const sel = document.getElementById('stateSelector');
@@ -5782,7 +5859,7 @@ function resetForm() {
   document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
   document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
   document.getElementById('eaToggle').checked = false;
-  document.getElementById('levelResult').innerHTML = '';
+  { const _lr = document.getElementById('levelResult'); if (_lr) _lr.innerHTML = ''; }
   if (typeof drawnItems !== 'undefined' && drawnItems) {
     drawnItems.clearLayers();
     parcelFeatures = [];
@@ -5967,8 +6044,8 @@ function exportWord() {
     </table>
 
     <h2 style="background:#0f2a44;color:white;padding:8px 12px;margin-top:16px;">Site Selection &amp; Level of Review</h2>
-    <p>${document.getElementById('parcelInfo').innerHTML.replace(/<em>.*?<\/em>/, '<em>No parcel boundary captured.</em>')}</p>
-    ${document.getElementById('levelResult').innerHTML || '<p><em>Level of review not yet determined.</em></p>'}
+    <p>${(document.getElementById('parcelInfo')||{}).innerHTML ? document.getElementById('parcelInfo').innerHTML.replace(/<em>.*?<\/em>/, '<em>No parcel boundary captured.</em>') : '<em>No parcel boundary captured.</em>'}</p>
+    ${(document.getElementById('levelResult')||{}).innerHTML || '<p><em>Level of review: ' + (((document.querySelector('input[name="levelOfReview"]:checked')||{}).value || (document.querySelector('[data-field="reviewLevel"]')||{}).value || 'not yet determined')) + '</em></p>'}
 
     <h2 style="background:#0f2a44;color:white;padding:8px 12px;margin-top:16px;">Compliance Summary</h2>
     <p><strong>Follow-Up Required:</strong> ${counts.followup} &nbsp;|&nbsp; <strong>Compliant:</strong> ${counts.compliant} &nbsp;|&nbsp; <strong>Not Applicable:</strong> ${counts.na} &nbsp;|&nbsp; <strong>Exempt:</strong> ${counts.exempt} &nbsp;|&nbsp; <strong>Not Yet Assessed:</strong> ${counts.unset}</p>
@@ -6042,26 +6119,22 @@ function generateClientReport() {
   // recommendation: relabel "Recommended Level of Review" -> "Level of Review", drop the internal
   // "REVIEW QUESTIONS" rationale lines, and remove the "Next steps" workflow box and the advisory
   // disclaimer. The on-screen worksheet box is left unchanged.
+  // (v102) Level of Review now comes from the manual HEROS 1311 selection (radio + checked
+  // citations), not the retired auto-determination engine.
   let levelHTML = '';
   (function () {
-    const src = document.getElementById('levelResult');
-    if (!src || !src.innerHTML.trim()) return;
-    const tmp = document.createElement('div');
-    tmp.innerHTML = src.innerHTML;
-    tmp.querySelectorAll('div').forEach(d => {
-      if (d.children.length === 0 && /^\s*Recommended Level of Review\s*$/i.test(d.textContent || ''))
-        d.textContent = 'Level of Review';
+    const sel = (document.querySelector('input[name="levelOfReview"]:checked') || {}).value || '';
+    const LABELS = { exempt: 'Exempt', censt: 'Categorical Exclusion NOT Subject to §58.5 (CENST)', cest: 'Categorical Exclusion Subject to §58.5 (CEST)', ea: 'Environmental Assessment (EA)', eis: 'Environmental Impact Statement (EIS)', notsure: 'Not yet determined' };
+    const levelLabel = LABELS[sel] || (f.reviewLevel || '');
+    if (!levelLabel) return;
+    const cites = [];
+    document.querySelectorAll('input[name="exempt_cite"]:checked, input[name="censt_cite"]:checked, input[name="cest_cite"]:checked').forEach(cb => {
+      const lbl = cb.closest('label');
+      if (lbl) cites.push(lbl.textContent.replace(/\s+/g, ' ').trim());
     });
-    tmp.querySelectorAll('li').forEach(li => {
-      const t = li.textContent || '';
-      if (/^\s*REVIEW QUESTIONS/i.test(t) || /^\s*NOTE\b/i.test(t)) li.remove();
-    });
-    Array.from(tmp.querySelectorAll('div')).forEach(d => {
-      const t = d.textContent || '';
-      if (/^\s*Next steps:/i.test(t)) d.remove();
-      else if (d.children.length === 0 && /advisory recommendation/i.test(t)) d.remove();
-    });
-    levelHTML = tmp.innerHTML;
+    let h = '<div class="info"><div class="info-row"><div class="k">Level of Review</div><div class="v">' + esc(levelLabel) + '</div></div></div>';
+    if (cites.length) h += '<div class="desc-label" style="margin-top:8px;">Selected Citation(s)</div><ul class="items">' + cites.map(c => '<li style="margin-bottom:3px;">' + esc(c) + '</li>').join('') + '</ul>';
+    levelHTML = h;
   })();
   const recommendation = f.overallRecommendation && f.overallRecommendation.trim()
     ? nl(f.overallRecommendation)
@@ -7192,6 +7265,81 @@ function setSensitiveInfo(value) {
   if (hidden) hidden.value = value || '';
 }
 
+// ===== HEROS 1311 — Level of Review (manual selection) =====
+// Manual radio selection drives the hidden reviewLevel field so the EA/EIS sections still auto-show.
+function setLevelOfReview(value) {
+  const map = { exempt: 'Exempt', censt: 'CENST', cest: 'CEST', ea: 'EA', eis: 'EIS', notsure: '' };
+  const lvl = (map[value] != null) ? map[value] : '';
+  const rl = document.querySelector('[data-field="reviewLevel"]');
+  if (rl) { rl.value = lvl; rl.dispatchEvent(new Event('change', { bubbles: true })); }
+  if (typeof toggleEA === 'function') toggleEA();
+}
+
+// ===== HEROS 1311 — Section 2: mirror each authority's Review Questions =====
+// Renders the same EXEMPTION_CHECKS questions shown in each authority's Section 2005 row, using
+// distinct radio names (exqM_*) that two-way sync with the canonical exq_* radios. The Apply / flag
+// buttons reuse the existing per-authority handlers (which read the canonical exq_* radios).
+function buildMirrorPanels() {
+  const host = document.getElementById('rqMirror1311');
+  if (!host || typeof EXEMPTION_CHECKS === 'undefined') return;
+  let html = '';
+  Object.keys(EXEMPTION_CHECKS).forEach(id => {
+    const cfg = EXEMPTION_CHECKS[id];
+    const name = (typeof authName === 'function') ? authName(id) : id;
+    html += '<div style="border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:10px;">';
+    html += '<div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);margin-bottom:4px;">' + name + '</div>';
+    html += '<div style="font-size:11.5px;color:#4a5568;margin-bottom:8px;line-height:1.5;">' + cfg.intro
+      + ' <em>(Mirrored with this authority’s Section 2005 Review Questions — editable in either place.)</em></div>';
+    cfg.questions.forEach(q => {
+      html += '<div style="margin-bottom:8px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#2d3748;">' + q.label + '</div>';
+      q.options.forEach(o => {
+        html += '<label style="display:block;font-size:12px;line-height:1.4;margin:3px 0;cursor:pointer;font-weight:400;color:#2d3748;"><input type="radio" name="exqM_' + id + '_' + q.id + '" value="' + o.v + '" style="margin-right:6px;">' + o.t + '</label>';
+      });
+      html += '</div>';
+    });
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;">'
+      + '<button type="button" onclick="applyExemptionCheckM(\'' + id + '\')" style="background:var(--azri-navy);color:white;border:none;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Apply Determination</button>'
+      + '<button type="button" id="flagBtnM_' + id + '" onclick="flagForClientM(\'' + id + '\')" style="background:white;border:1px solid #9b2c2c;color:#9b2c2c;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">' + ((typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[id]) ? '✓ Flagged for client (click to unflag)' : '❓ Not sure — flag for client') + '</button>'
+      + '<span id="exemptResultM_' + id + '" style="font-size:11.5px;color:#4a5568;flex-basis:100%;"></span></div>';
+    html += '</div>';
+  });
+  host.innerHTML = html;
+}
+
+// Mirror-side Apply / flag wrappers: run the canonical handler, then copy its result/label back
+// to the mirror so the reviewer sees feedback in the 1311 section too.
+function applyExemptionCheckM(id) {
+  if (typeof applyExemptionCheck === 'function') applyExemptionCheck(id);
+  const src = document.getElementById('exemptResult_' + id);
+  const dst = document.getElementById('exemptResultM_' + id);
+  if (src && dst) { dst.textContent = src.textContent; dst.style.color = src.style.color; }
+}
+function flagForClientM(id) {
+  if (typeof flagForClient === 'function') flagForClient(id);
+  const btnM = document.getElementById('flagBtnM_' + id);
+  if (btnM) btnM.textContent = (CLIENT_QUESTION_FLAGS[id] ? '✓ Flagged for client (click to unflag)' : '❓ Not sure — flag for client');
+  const src = document.getElementById('exemptResult_' + id);
+  const dst = document.getElementById('exemptResultM_' + id);
+  if (src && dst) { dst.textContent = src.textContent; dst.style.color = src.style.color; }
+}
+
+// Two-way sync between mirror (exqM_*) and canonical (exq_*) Review-Question radios.
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (!t || t.type !== 'radio' || !t.name) return;
+  let m;
+  if ((m = /^exq_(.+)$/.exec(t.name))) {
+    const mir = document.querySelector('input[name="exqM_' + m[1] + '"][value="' + t.value + '"]');
+    if (mir && !mir.checked) mir.checked = true;
+  } else if ((m = /^exqM_(.+)$/.exec(t.name))) {
+    const can = document.querySelector('input[name="exq_' + m[1] + '"][value="' + t.value + '"]');
+    if (can && !can.checked) { can.checked = true; can.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+});
+
+// Build the 1311 mirror once the authority panels have been rendered.
+setTimeout(buildMirrorPanels, 450);
+
 // ===== HEROS Screen 1105 — ER creation record header =====
 function refreshErCreationRecord() {
   const recEl = document.getElementById('er-creation-record');
@@ -8230,7 +8378,7 @@ function showLevelResult(level, cite, reasons) {
       <div style="margin-top:10px;font-size:11px;color:var(--gray);font-style:italic;">This is an advisory recommendation. Final level determination is the Responsible Entity's responsibility under 24 CFR §58.4.</div>
     </div>
   `;
-  document.getElementById('levelResult').innerHTML = html;
+  { const _lr = document.getElementById('levelResult'); if (_lr) _lr.innerHTML = html; }
   // Refresh the HEROS-style citation checklist
   renderHerosCitations();
 }
