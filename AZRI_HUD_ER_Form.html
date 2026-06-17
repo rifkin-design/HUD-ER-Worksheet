@@ -732,10 +732,71 @@
   </div>
 </section>
 
-<!-- SITE SELECTION & LEVEL DETERMINATION -->
-<section class="card" id="site-selection-card">
-  <h2>1120. Project Location <span class="citation">— Site Selection &amp; Map</span></h2>
+<!-- ===== HEROS SCREEN 1120 — SENSITIVE INFORMATION (50/58 - Non-Tiered) ===== -->
+<section class="card" id="screen-1120">
+  <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
+    <span>1120. Sensitive Information <span class="citation">(50/58)</span></span>
+    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1120" style="color:white;">—</strong></span>
+  </h2>
   <div class="card-body">
+    <div style="font-size:12.5px;color:#2d3748;line-height:1.6;margin-bottom:14px;">While it is important that HUD assistance undergo the requisite environmental review and transparency requirements, it is equally important that information that may endanger certain types of projects, such as domestic violence shelters, is not publicly disclosed. To reduce the risk of violence or other harm at sensitive sites undergoing environmental review compliance for the use of HUD assistance, HUD has implemented certain preventative measures.<br>If the nature of this project should be kept confidential, indicate that fact here.</div>
+    <div>
+      <label style="display:block;font-weight:400;padding:4px 0;color:#2d3748;"><input type="radio" name="sensitiveInfoRadio" value="not_sensitive" checked onchange="setSensitiveInfo(this.value)" style="margin-right:8px;">This project type is not sensitive and need not be kept confidential.</label>
+      <label style="display:block;font-weight:400;padding:4px 0;color:#2d3748;"><input type="radio" name="sensitiveInfoRadio" value="sensitive" onchange="setSensitiveInfo(this.value)" style="margin-right:8px;">This project type is sensitive and must be kept confidential.</label>
+    </div>
+    <input type="hidden" data-field="sensitiveInfo" value="not_sensitive">
+  </div>
+</section>
+
+<!-- ===== HEROS SCREEN 1125 — PROJECT SUMMARY (50/58 - Non-Tiered) ===== -->
+<section class="card" id="screen-1125">
+  <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
+    <span>1125. Project Summary <span class="citation">(50/58)</span></span>
+    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1125" style="color:white;">—</strong></span>
+  </h2>
+  <div class="card-body">
+    <div style="font-size:11px;color:#c00;margin-bottom:10px;"><strong>*</strong> Indicates that field is required</div>
+
+    <!-- DESCRIPTION OF THE PROPOSED PROJECT -->
+    <div style="margin-bottom:18px;">
+      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> Description of the Proposed Project <a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-58/subpart-E/section-58.32" target="_blank" style="color:#2c5282;text-decoration:underline;">[24 CFR 50.12; 24 CFR 58.32]</a>:</label>
+      <div style="font-size:12px;color:#2d3748;margin:6px 0 6px 0;line-height:1.5;">Provide a project description that captures the maximum anticipated scope of the proposal. It should include all contemplated actions which logically are, either geographically or functionally, a composite part of the project, regardless of the source of funding. Describe all physical aspects of the project, such as plans for multiple phases of development, size and number of buildings, and activities to be undertaken. Include details of the physical impacts of the project, including whether there will be ground disturbance. If applicable, indicate whether the project site will require acquisition or if the sponsor already has ownership. If there is not enough space below, or if there are additional documents required to supplement this review, upload them below.</div>
+      <textarea data-field="projectDescription" style="min-height:140px;"></textarea>
+    </div>
+
+    <!-- PROJECT LOCATION -->
+    <div style="margin-bottom:18px;">
+      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> Project Location:</label>
+      <div style="font-size:12px;color:#2d3748;margin:6px 0;line-height:1.5;">Provide a street address for your project and validate the address using the button below. If the project location is sensitive, you may provide an alternative address, such as the address of your city hall or nonprofit in lieu of the exact location of the project. <strong>If you cannot validate the address now, be sure to do so before completing the review.</strong></div>
+      <div style="font-size:12px;color:#2d3748;margin:6px 0 10px 0;line-height:1.5;">If the project affects a large area, such as an infrastructure or community services project, select a representative address and describe the project location in a narrative in the provided textbox.</div>
+      <div style="font-size:11px;color:var(--azri-navy);font-style:italic;margin-bottom:8px;">📍 Auto-prefilled from the parcel map below. You can override these fields.</div>
+      <div class="field-grid">
+        <div class="full"><label>Street</label><input type="text" data-field="siteAddress" placeholder="e.g., 3427 Woodberry Ave"></div>
+        <div><label>City</label><input type="text" data-field="siteCity"></div>
+        <div><label><span style="color:#c00;">*</span> State</label>
+          <select data-field="siteState">
+            <option value="">— select —</option>
+            <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option selected>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
+          </select>
+        </div>
+        <div><label>Zip</label><input type="text" data-field="siteZip" placeholder="e.g., 21211" maxlength="10"></div>
+        <div><label>APN / Parcel</label><input type="text" data-field="apn"></div>
+        <div><label>Lat / Long</label><input type="text" data-field="latlong"></div>
+      </div>
+      <div style="margin-top:10px;" class="no-print">
+        <button type="button" onclick="validateAddress()" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Validate Address</button>
+        <span id="validateAddressStatus" style="font-size:12px;margin-left:10px;color:var(--gray);"></span>
+      </div>
+      <div style="margin-top:12px;">
+        <label style="font-weight:600;font-size:13px;">Location Information:</label>
+        <textarea data-field="additionalLocation" style="margin-top:4px;min-height:80px;" placeholder="Narrative description of the project location — e.g., 'located within the ~180-acre Pearlstone Center Campus'"></textarea>
+      </div>
+      <div style="margin-top:8px;" class="no-print">
+        <button type="button" onclick="document.getElementById('locationUploadInput').click()" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;">Upload</button>
+        <input type="file" id="locationUploadInput" multiple style="display:none;" onchange="handleLocationUpload(event)">
+        <span id="locationUploadList" style="font-size:11px;color:var(--gray);margin-left:10px;"></span>
+      </div>
+      <!-- PROJECT LOCATION MAP (relocated from former Screen 1120) -->
     <div class="map-toolbar no-print">
       <div class="addr-search-wrap">
         <input type="text" id="addrSearch" placeholder="Type an address to fly the map there — then click the parcel(s)" autocomplete="off" oninput="onAddrInput()" onkeydown="onAddrKeydown(event)" onblur="setTimeout(hideSuggestions, 200)" style="width:100%;">
@@ -759,7 +820,85 @@
       <button onclick="pushSiteToForm()" style="background:var(--azri-teal);color:white;border:none;padding:8px 14px;border-radius:5px;font-size:13px;cursor:pointer;">Push site address &amp; coordinates to Project Info</button>
       <button class="secondary" onclick="copyParcelGeoJSON()" style="background:var(--gray-bg);color:#2d3748;border:none;padding:8px 14px;border-radius:5px;font-size:13px;cursor:pointer;">Copy parcel GeoJSON</button>
     </div>
+    </div>
 
+    <!-- FIELD INSPECTION -->
+    <div style="margin-bottom:18px;padding:14px 16px;background:var(--gray-bg);border-radius:5px;">
+      <div style="font-weight:600;font-size:14px;color:var(--azri-navy);">Field Inspection</div>
+      <div style="font-size:12px;color:#2d3748;margin:4px 0 12px 0;">If a site visit was conducted, complete the following section.</div>
+      <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin-bottom:6px;">Inspector Information:</div>
+      <div class="field-grid">
+        <div><label>Name</label><input type="text" data-field="fieldInspectionBy" placeholder="Inspector name"></div>
+        <div><label>Title</label><input type="text" data-field="fieldInspectionTitle" placeholder="e.g., Environmental Scientist"></div>
+        <div><label>Date of Inspection</label><input type="date" data-field="fieldInspectionDate"></div>
+      </div>
+      <div style="margin-top:10px;" class="no-print">
+        <button type="button" onclick="document.getElementById('inspectionPhotosInput').click()" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;">Upload any photographs or other documentation here</button>
+        <input type="file" id="inspectionPhotosInput" multiple accept="image/*,application/pdf" style="display:none;" onchange="handleInspectionUpload(event)">
+        <span id="inspectionPhotosList" style="font-size:11px;color:var(--gray);margin-left:10px;"></span>
+      </div>
+      <div style="margin-top:14px;">
+        <label style="font-weight:600;font-size:12px;color:var(--azri-navy);">Additional Studies Performed</label>
+        <textarea data-field="additionalStudies" style="margin-top:4px;" placeholder="e.g., Phase I ESA (date, consultant); Wetlands delineation (date); Noise Assessment (date); etc."></textarea>
+      </div>
+    </div>
+
+    <!-- WHAT ACTIVITIES -->
+    <div style="margin-bottom:18px;">
+      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> What activities are involved in the project? (Check all that apply.)</label>
+      <div id="activitiesCheckboxes" style="margin-top:8px;padding:12px 16px;background:var(--gray-bg);border-radius:5px;font-size:13px;">
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="acq" onchange="syncActivitiesToLora()" style="margin-right:8px;">Acquisition (including refinance) of real property</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="lease" onchange="syncActivitiesToLora()" style="margin-right:8px;">Leasing</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="maint" onchange="syncActivitiesToLora()" style="margin-right:8px;">Maintenance</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="rehab" onchange="syncActivitiesToLora()" style="margin-right:8px;">Repair/Improvement/Rehabilitation</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="newconst" onchange="syncActivitiesToLora()" style="margin-right:8px;">New construction/Reconstruction</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="demo" onchange="syncActivitiesToLora()" style="margin-right:8px;">Demolition</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="dispo" onchange="syncActivitiesToLora()" style="margin-right:8px;">Disposition</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="arch_barriers" onchange="syncActivitiesToLora()" style="margin-right:8px;">Removal of architectural barriers</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="soft" onchange="syncActivitiesToLora()" style="margin-right:8px;">Soft Costs or other non-physical activities (e.g. planning, services, administration, predevelopment costs)</label>
+      </div>
+      <input type="hidden" data-field="herosActivities">
+    </div>
+
+    <!-- LAND USE CHANGE -->
+    <div style="margin-bottom:18px;">
+      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> Will the project require or lead to a change in land use of the affected property (e.g. from non-residential to residential, commercial to industrial, or from one industrial use to another)?</label>
+      <div style="margin-top:8px;padding:12px 16px;background:var(--gray-bg);border-radius:5px;">
+        <label style="display:block;font-weight:400;padding:3px 0;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="radio" name="herosLandUseChange" value="yes" onchange="syncLandUseToLora(this.value)" style="margin-right:8px;">Yes</label>
+        <label style="display:block;font-weight:400;padding:3px 0;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="radio" name="herosLandUseChange" value="no" onchange="syncLandUseToLora(this.value)" style="margin-right:8px;">No</label>
+      </div>
+      <input type="hidden" data-field="landUseChange">
+    </div>
+
+    <!-- PLANNED USE -->
+    <div style="margin-bottom:18px;">
+      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> What is the planned use of the affected property (after completion of the project)?</label>
+      <div style="margin-top:8px;padding:12px 16px;background:var(--gray-bg);border-radius:5px;font-size:13px;">
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="vacant" onchange="syncPlannedUse()" style="margin-right:8px;">Vacant land</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="public" onchange="syncPlannedUse()" style="margin-right:8px;">Public facility</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="nonres" onchange="syncPlannedUse()" style="margin-right:8px;">Nonresidential building(s)</label>
+        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="res" onchange="syncPlannedUse()" style="margin-right:8px;">Residential building(s)</label>
+      </div>
+      <input type="hidden" data-field="plannedUse">
+    </div>
+
+    <!-- AZ-RI ADDITIONS — UI removed (v92); hidden mirrors kept because downstream logic
+         (auto-determine checks, EA auto-show via reviewLevel, save/load, report export)
+         still reads these data-fields. determineLevel() writes reviewLevel programmatically. -->
+    <input type="hidden" data-field="projectType">
+    <input type="hidden" data-field="yearBuilt">
+    <input type="hidden" data-field="reviewLevel" value="CEST">
+    <input type="hidden" data-field="preparerAttestation">
+  </div>
+</section>
+
+<!-- ===== LEVEL OF REVIEW DETERMINATION (HEROS 1310 / 1315) — relocated below Screen 1125 ===== -->
+<section class="card" id="screen-1310">
+  <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
+    <span>Level of Review Determination <span class="citation">(HEROS 1310 / 1315)</span></span>
+    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1310" style="color:white;">—</strong></span>
+  </h2>
+  <div class="card-body">
     <h3 style="margin-top:24px;color:var(--azri-navy);font-size:15px;">1310. Project Activities <span style="font-weight:400;color:var(--gray);font-size:12px;">— Activity Questions / Level of Review Determination</span></h3>
     <div class="lora-grid">
       <div class="lora-q full">
@@ -852,125 +991,6 @@
   </div>
 </section>
 
-<!-- ===== HEROS SCREEN 1125 — PROJECT SUMMARY (50/58 - Non-Tiered) ===== -->
-<section class="card" id="screen-1125">
-  <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
-    <span>1125. Project Summary <span class="citation">(50/58)</span></span>
-    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1125" style="color:white;">—</strong></span>
-  </h2>
-  <div class="card-body">
-    <div style="font-size:11px;color:#c00;margin-bottom:10px;"><strong>*</strong> Indicates that field is required</div>
-
-    <!-- DESCRIPTION OF THE PROPOSED PROJECT -->
-    <div style="margin-bottom:18px;">
-      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> Description of the Proposed Project <a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-58/subpart-E/section-58.32" target="_blank" style="color:#2c5282;text-decoration:underline;">[24 CFR 50.12; 24 CFR 58.32]</a>:</label>
-      <div style="font-size:12px;color:#2d3748;margin:6px 0 6px 0;line-height:1.5;">Provide a project description that captures the maximum anticipated scope of the proposal. It should include all contemplated actions which logically are, either geographically or functionally, a composite part of the project, regardless of the source of funding. Describe all physical aspects of the project, such as plans for multiple phases of development, size and number of buildings, and activities to be undertaken. Include details of the physical impacts of the project, including whether there will be ground disturbance. If applicable, indicate whether the project site will require acquisition or if the sponsor already has ownership. If there is not enough space below, or if there are additional documents required to supplement this review, upload them below.</div>
-      <textarea data-field="projectDescription" style="min-height:140px;"></textarea>
-    </div>
-
-    <!-- PROJECT LOCATION -->
-    <div style="margin-bottom:18px;">
-      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> Project Location:</label>
-      <div style="font-size:12px;color:#2d3748;margin:6px 0;line-height:1.5;">Provide a street address for your project and validate the address using the button below. If the project location is sensitive, you may provide an alternative address, such as the address of your city hall or nonprofit in lieu of the exact location of the project. <strong>If you cannot validate the address now, be sure to do so before completing the review.</strong></div>
-      <div style="font-size:12px;color:#2d3748;margin:6px 0 10px 0;line-height:1.5;">If the project affects a large area, such as an infrastructure or community services project, select a representative address and describe the project location in a narrative in the provided textbox.</div>
-      <div style="font-size:11px;color:var(--azri-navy);font-style:italic;margin-bottom:8px;">📍 Auto-prefilled from parcels selected on Screen 1120 (Project Location map). You can override below.</div>
-      <div class="field-grid">
-        <div class="full"><label>Street</label><input type="text" data-field="siteAddress" placeholder="e.g., 3427 Woodberry Ave"></div>
-        <div><label>City</label><input type="text" data-field="siteCity"></div>
-        <div><label><span style="color:#c00;">*</span> State</label>
-          <select data-field="siteState">
-            <option value="">— select —</option>
-            <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>District of Columbia</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option selected>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
-          </select>
-        </div>
-        <div><label>Zip</label><input type="text" data-field="siteZip" placeholder="e.g., 21211" maxlength="10"></div>
-        <div><label>APN / Parcel</label><input type="text" data-field="apn"></div>
-        <div><label>Lat / Long</label><input type="text" data-field="latlong"></div>
-      </div>
-      <div style="margin-top:10px;" class="no-print">
-        <button type="button" onclick="validateAddress()" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Validate Address</button>
-        <span id="validateAddressStatus" style="font-size:12px;margin-left:10px;color:var(--gray);"></span>
-      </div>
-      <div style="margin-top:12px;">
-        <label style="font-weight:600;font-size:13px;">Location Information:</label>
-        <textarea data-field="additionalLocation" style="margin-top:4px;min-height:80px;" placeholder="Narrative description of the project location — e.g., 'located within the ~180-acre Pearlstone Center Campus'"></textarea>
-      </div>
-      <div style="margin-top:8px;" class="no-print">
-        <button type="button" onclick="document.getElementById('locationUploadInput').click()" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;">Upload</button>
-        <input type="file" id="locationUploadInput" multiple style="display:none;" onchange="handleLocationUpload(event)">
-        <span id="locationUploadList" style="font-size:11px;color:var(--gray);margin-left:10px;"></span>
-      </div>
-    </div>
-
-    <!-- FIELD INSPECTION -->
-    <div style="margin-bottom:18px;padding:14px 16px;background:var(--gray-bg);border-radius:5px;">
-      <div style="font-weight:600;font-size:14px;color:var(--azri-navy);">Field Inspection</div>
-      <div style="font-size:12px;color:#2d3748;margin:4px 0 12px 0;">If a site visit was conducted, complete the following section.</div>
-      <div style="font-weight:600;font-size:12px;color:var(--azri-navy);margin-bottom:6px;">Inspector Information:</div>
-      <div class="field-grid">
-        <div><label>Name</label><input type="text" data-field="fieldInspectionBy" placeholder="Inspector name"></div>
-        <div><label>Title</label><input type="text" data-field="fieldInspectionTitle" placeholder="e.g., Environmental Scientist"></div>
-        <div><label>Date of Inspection</label><input type="date" data-field="fieldInspectionDate"></div>
-      </div>
-      <div style="margin-top:10px;" class="no-print">
-        <button type="button" onclick="document.getElementById('inspectionPhotosInput').click()" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;">Upload any photographs or other documentation here</button>
-        <input type="file" id="inspectionPhotosInput" multiple accept="image/*,application/pdf" style="display:none;" onchange="handleInspectionUpload(event)">
-        <span id="inspectionPhotosList" style="font-size:11px;color:var(--gray);margin-left:10px;"></span>
-      </div>
-      <div style="margin-top:14px;">
-        <label style="font-weight:600;font-size:12px;color:var(--azri-navy);">Additional Studies Performed</label>
-        <textarea data-field="additionalStudies" style="margin-top:4px;" placeholder="e.g., Phase I ESA (date, consultant); Wetlands delineation (date); Noise Assessment (date); etc."></textarea>
-      </div>
-    </div>
-
-    <!-- WHAT ACTIVITIES -->
-    <div style="margin-bottom:18px;">
-      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> What activities are involved in the project? (Check all that apply.)</label>
-      <div id="activitiesCheckboxes" style="margin-top:8px;padding:12px 16px;background:var(--gray-bg);border-radius:5px;font-size:13px;">
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="acq" onchange="syncActivitiesToLora()" style="margin-right:8px;">Acquisition (including refinance) of real property</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="lease" onchange="syncActivitiesToLora()" style="margin-right:8px;">Leasing</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="maint" onchange="syncActivitiesToLora()" style="margin-right:8px;">Maintenance</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="rehab" onchange="syncActivitiesToLora()" style="margin-right:8px;">Repair/Improvement/Rehabilitation</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="newconst" onchange="syncActivitiesToLora()" style="margin-right:8px;">New construction/Reconstruction</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="demo" onchange="syncActivitiesToLora()" style="margin-right:8px;">Demolition</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="dispo" onchange="syncActivitiesToLora()" style="margin-right:8px;">Disposition</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="arch_barriers" onchange="syncActivitiesToLora()" style="margin-right:8px;">Removal of architectural barriers</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosActivity" value="soft" onchange="syncActivitiesToLora()" style="margin-right:8px;">Soft Costs or other non-physical activities (e.g. planning, services, administration, predevelopment costs)</label>
-      </div>
-      <input type="hidden" data-field="herosActivities">
-    </div>
-
-    <!-- LAND USE CHANGE -->
-    <div style="margin-bottom:18px;">
-      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> Will the project require or lead to a change in land use of the affected property (e.g. from non-residential to residential, commercial to industrial, or from one industrial use to another)?</label>
-      <div style="margin-top:8px;padding:12px 16px;background:var(--gray-bg);border-radius:5px;">
-        <label style="display:block;font-weight:400;padding:3px 0;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="radio" name="herosLandUseChange" value="yes" onchange="syncLandUseToLora(this.value)" style="margin-right:8px;">Yes</label>
-        <label style="display:block;font-weight:400;padding:3px 0;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="radio" name="herosLandUseChange" value="no" onchange="syncLandUseToLora(this.value)" style="margin-right:8px;">No</label>
-      </div>
-      <input type="hidden" data-field="landUseChange">
-    </div>
-
-    <!-- PLANNED USE -->
-    <div style="margin-bottom:18px;">
-      <label style="font-weight:600;font-size:13px;"><span style="color:#c00;">*</span> What is the planned use of the affected property (after completion of the project)?</label>
-      <div style="margin-top:8px;padding:12px 16px;background:var(--gray-bg);border-radius:5px;font-size:13px;">
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="vacant" onchange="syncPlannedUse()" style="margin-right:8px;">Vacant land</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="public" onchange="syncPlannedUse()" style="margin-right:8px;">Public facility</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="nonres" onchange="syncPlannedUse()" style="margin-right:8px;">Nonresidential building(s)</label>
-        <label style="display:block;padding:3px 0;font-weight:400;text-transform:none;letter-spacing:0;color:#2d3748;"><input type="checkbox" name="herosPlannedUse" value="res" onchange="syncPlannedUse()" style="margin-right:8px;">Residential building(s)</label>
-      </div>
-      <input type="hidden" data-field="plannedUse">
-    </div>
-
-    <!-- AZ-RI ADDITIONS — UI removed (v92); hidden mirrors kept because downstream logic
-         (auto-determine checks, EA auto-show via reviewLevel, save/load, report export)
-         still reads these data-fields. determineLevel() writes reviewLevel programmatically. -->
-    <input type="hidden" data-field="projectType">
-    <input type="hidden" data-field="yearBuilt">
-    <input type="hidden" data-field="reviewLevel" value="CEST">
-    <input type="hidden" data-field="preparerAttestation">
-  </div>
-</section>
 
 <!-- Hidden legacy fundingProgram + funding mirrors (back-compat with downstream save/load and exports) -->
 <input type="hidden" data-field="fundingProgram">
@@ -5362,7 +5382,7 @@ document.addEventListener('change', e => {
 // Live update Project Name context indicators on HEROS-style headers
 function syncProjectNameContext() {
   const pn = (document.querySelector('input[data-field="projectName"]') || {}).value || '—';
-  ['proj-name-context-1125', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000', 'proj-name-context-6205'].forEach(id => {
+  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1310', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000', 'proj-name-context-6205'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = pn;
   });
 }
@@ -6106,6 +6126,12 @@ function generateClientReport() {
     ['HUD Field Office', f.hudFieldOffice], ['HUD Approving Official', f.hudApprovingOfficial], ['Reviewer', f.reviewer], ['Review Date', f.reviewDate]
   ]));
 
+  // HEROS 1120 — Sensitive Information
+  const sensitiveLabel = (f.sensitiveInfo === 'sensitive')
+    ? 'This project type is sensitive and must be kept confidential.'
+    : (f.sensitiveInfo === 'not_sensitive' ? 'This project type is not sensitive and need not be kept confidential.' : '');
+  const sensitiveInner = wrapInfo(rowsHtml([['Sensitive Information', sensitiveLabel]]));
+
   // HEROS 1125 — Project Summary
   const psInner = textBlock('Project Description', f.projectDescription)
     + wrapInfo(rowsHtml([
@@ -6166,6 +6192,7 @@ function generateClientReport() {
 
   const bodySections = [
     section('Initial Screen & Project Setup (HEROS 1105)', initInner),
+    section('Sensitive Information (HEROS 1120)', sensitiveInner),
     section('Project Summary (HEROS 1125)', psInner),
     section('Cooperating Agency Agreement (HEROS 1340)', caInner),
     section('Project Justification (HEROS 1366)', pjInner),
@@ -7164,6 +7191,11 @@ function setGrantRecipientMode(value) {
 function setConsultantMode(value) {
   const fields = document.getElementById('consultantFields');
   if (fields) fields.style.display = (value === 'none') ? 'none' : '';
+}
+// Sensitive Information (HEROS 1120) — mirror radio choice into hidden field for report/save.
+function setSensitiveInfo(value) {
+  const hidden = document.querySelector('input[type="hidden"][data-field="sensitiveInfo"]');
+  if (hidden) hidden.value = value || '';
 }
 
 // ===== HEROS Screen 1105 — ER creation record header =====
