@@ -5994,10 +5994,11 @@ function exportWord() {
   if (eaOn) {
     eaSection += `<h2 style="background:#0f2a44;color:white;padding:8px 12px;">EA / NEPA Assessment Factors (24 CFR §58.40)</h2>`;
     EA_FACTORS.forEach(group => {
-      eaSection += `<h3 style="background:#f7f3ec;padding:6px 10px;border-left:4px solid #2c7a7b;">${group.group}</h3><table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:11pt;">`;
-      group.items.forEach((item, idx) => {
-        const slug = group.group.toLowerCase().replace(/[^a-z]/g,'') + '_' + idx;
-        eaSection += `<tr><td style="width:40%;font-weight:bold;">${item}</td><td style="width:20%;">${f[slug+'_impact']||''}</td><td>${(f[slug+'_notes']||'').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</td></tr>`;
+      eaSection += `<h3 style="background:#f7f3ec;padding:6px 10px;border-left:4px solid #2c7a7b;">${group.group}</h3><table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:11pt;"><tr><td style="width:40%;font-weight:bold;background:#f7f3ec;">Factor</td><td style="width:22%;font-weight:bold;background:#f7f3ec;">Impact Code</td><td style="font-weight:bold;background:#f7f3ec;">Impact Evaluation</td></tr>`;
+      group.items.forEach(item => {
+        const impact = f[item.id+'_impact']||'';
+        const codeObj = (typeof EA_IMPACT_CODES !== 'undefined') ? EA_IMPACT_CODES.find(x => x.value === impact) : null;
+        eaSection += `<tr><td style="width:40%;font-weight:bold;">${item.name}</td><td style="width:22%;">${codeObj ? codeObj.label : (impact||'')}</td><td>${(f[item.id+'_notes']||'').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</td></tr>`;
       });
       eaSection += `</table><br>`;
     });
@@ -6240,15 +6241,21 @@ function generateClientReport() {
   if (eaOn) {
     let eaFactorCards = '';
     if (typeof EA_FACTORS !== 'undefined') {
+      const eaCodeLabel = code => {
+        if (!code) return '';
+        const c = (typeof EA_IMPACT_CODES !== 'undefined') ? EA_IMPACT_CODES.find(x => x.value === code) : null;
+        return c ? c.label : code;
+      };
       EA_FACTORS.forEach(group => {
         let r = '';
-        group.items.forEach((item, idx) => {
-          const slug = group.group.toLowerCase().replace(/[^a-z]/g, '') + '_' + idx;
-          const impact = f[slug + '_impact'] || ''; const note = f[slug + '_notes'] || '';
-          if ((impact && impact.trim()) || (note && note.trim()))
-            r += `<div class="info-row"><div class="k">${esc(item)}${impact ? ` <span style="font-weight:400;color:#718096;">(${esc(impact)})</span>` : ''}</div><div class="v">${note ? nl(note) : '<span style="color:#a0aec0;">—</span>'}</div>`;
+        group.items.forEach(item => {
+          const impact = (f[item.id + '_impact'] || '').trim();
+          const note = (f[item.id + '_notes'] || '').trim();
+          if (!impact && !note) return;
+          const impactLine = impact ? `<div style="font-weight:400;color:#2c7a7b;font-size:10px;margin-top:3px;">Impact Code: ${esc(eaCodeLabel(impact))}</div>` : '';
+          r += `<div class="info-row"><div class="k">${esc(item.name)}${impactLine}</div><div class="v">${note ? nl(note) : '<span style="color:#a0aec0;">—</span>'}</div></div>`;
         });
-        if (r) eaFactorCards += `<div style="margin-bottom:10px;"><div class="desc-label">${esc(group.group)}</div><div class="info">${r}</div></div>`;
+        if (r) eaFactorCards += `<div style="margin-bottom:12px;"><div class="desc-label">${esc(group.group)}</div><div class="info">${r}</div></div>`;
       });
     }
     eaInner = eaFactorCards
@@ -7464,7 +7471,7 @@ function renderMitigationRows() {
   }
   // Authority/Factor dropdown options — all §58.5/58.6 authorities + EA factors
   const authOpts = AUTHORITIES.map(a => `<option value="${a.name.replace(/&amp;/g, '&').replace(/"/g, '&quot;')}">${a.name.replace(/&amp;/g, '&')}</option>`).join('');
-  const eaFactorOpts = EA_FACTORS.flatMap(g => g.items.map(it => `<option value="EA: ${it.replace(/"/g, '&quot;')}">EA: ${it}</option>`)).join('');
+  const eaFactorOpts = EA_FACTORS.flatMap(g => g.items.map(it => `<option value="EA: ${it.name.replace(/"/g, '&quot;')}">EA: ${it.name}</option>`)).join('');
   tbody.innerHTML = mitigationRows.map((r, i) => `
     <tr style="border-bottom:1px solid var(--border);">
       <td style="padding:4px 6px;">
