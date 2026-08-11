@@ -5786,14 +5786,40 @@ function gatherData() {
   return data;
 }
 
-function saveJSON() {
+async function saveJSON() {
   const data = gatherData();
   const projName = (data.fields.projectName || 'Untitled').replace(/[^a-z0-9]/gi,'_');
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const suggestedName = `AZRI_HUD_Review_${projName}.json`;
+  const json = JSON.stringify(data, null, 2);
+
+  // Preferred: open a "Save As" dialog so the user picks the folder + filename
+  // every time. File System Access API — supported in Chrome/Edge.
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: suggestedName,
+        types: [{ description: 'JSON Review File', accept: { 'application/json': ['.json'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      return;
+    } catch (err) {
+      // User clicked Cancel in the Save dialog — stop quietly, don't fall back.
+      if (err && err.name === 'AbortError') return;
+      // Any other failure: fall through to the plain-download fallback below.
+      console.warn('Save dialog unavailable, falling back to download:', err);
+    }
+  }
+
+  // Fallback for browsers without the Save As dialog (Safari, Firefox):
+  // downloads straight to the default Downloads folder.
+  const blob = new Blob([json], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `AZRI_HUD_Review_${projName}.json`;
+  a.download = suggestedName;
   a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function loadJSON(event) {
