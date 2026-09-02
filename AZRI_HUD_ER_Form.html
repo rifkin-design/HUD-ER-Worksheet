@@ -508,6 +508,60 @@
     font-style: italic;
     text-align: center;
   }
+
+  /* ===== (v105) INLINE COMMENT SYSTEM ===== */
+  .comment-anchor-wrap { display: flex; align-items: flex-start; gap: 6px; }
+  .comment-anchor-wrap > textarea { flex: 1 1 auto; min-width: 0; }
+  .comment-btn {
+    flex: 0 0 auto; align-self: flex-start; margin-top: 2px;
+    background: #fff; border: 1px solid #5a4fcf; color: #5a4fcf;
+    border-radius: 6px; font-size: 11px; padding: 4px 7px; line-height: 1.2;
+    cursor: pointer; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.12); font-weight: 600;
+  }
+  .comment-btn:hover { background: #f4f2ff; }
+  .comment-btn.has-comments { background: #5a4fcf; color: #fff; }
+  textarea.has-comments { border-color: #5a4fcf; box-shadow: 0 0 0 1px #5a4fcf inset; }
+  .comment-anchor-wrap.comment-flash { animation: commentFlash 1.6s ease; border-radius: 4px; }
+  @keyframes commentFlash {
+    0% { background: #fff3b0; }
+    100% { background: transparent; }
+  }
+  @media print { .comment-btn, #commentsPanel, #commentsPanelReopen, #commentModal { display: none !important; } }
+  #commentsPanel {
+    position: fixed; top: 84px; right: 12px; bottom: 16px; width: 290px; z-index: 1100;
+    background: #fff; border: 1px solid #dde4ec; border-radius: 8px;
+    box-shadow: 0 4px 18px rgba(15,42,68,0.14); display: flex; flex-direction: column;
+    overflow: hidden; font-size: 12.5px;
+  }
+  #commentsPanel .cp-head {
+    background: #5a4fcf; color: #fff; padding: 8px 12px; font-weight: 700;
+    font-size: 12px; letter-spacing: 0.4px; display: flex; justify-content: space-between; align-items: center;
+  }
+  #commentsPanel .cp-head button { background: none; border: none; color: #fff; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; }
+  #commentsPanel .cp-author { padding: 8px 12px; border-bottom: 1px solid var(--border); background: #faf9ff; }
+  #commentsPanel .cp-author input { width: 100%; font-size: 12px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 4px; text-transform: none; letter-spacing: 0; }
+  #commentsPanel .cp-list { overflow-y: auto; padding: 6px; flex: 1; }
+  #commentsPanel .cp-item { border: 1px solid var(--border); border-radius: 6px; padding: 8px 9px; margin-bottom: 7px; cursor: pointer; background: #fff; }
+  #commentsPanel .cp-item:hover { border-color: #5a4fcf; background: #faf9ff; }
+  #commentsPanel .cp-field { font-weight: 600; font-size: 11.5px; color: var(--azri-navy); margin-bottom: 3px; }
+  #commentsPanel .cp-snippet { font-size: 11.5px; color: #4a5568; line-height: 1.4; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  #commentsPanel .cp-meta { font-size: 10.5px; color: var(--gray); }
+  #commentsPanel .cp-empty { padding: 20px 14px; color: var(--gray); font-size: 12px; text-align: center; font-style: italic; }
+  #commentsPanelReopen {
+    position: fixed; top: 84px; right: 0; z-index: 1100; display: none;
+    background: #5a4fcf; color: #fff; border: none; border-radius: 8px 0 0 8px;
+    padding: 9px 8px; font-size: 15px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+  }
+  body:not(.comments-open) #commentsPanel { display: none; }
+  body:not(.comments-open) #commentsPanelReopen { display: block; }
+  .comment-thread-item { border: 1px solid var(--border); border-radius: 6px; padding: 9px 10px; margin-bottom: 8px; background: #fbfbfd; }
+  .comment-thread-item .ct-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .comment-thread-item .ct-author { font-weight: 700; font-size: 12px; color: var(--azri-navy); }
+  .comment-thread-item .ct-time { font-size: 10.5px; color: var(--gray); white-space: nowrap; }
+  .comment-thread-item .ct-text { font-size: 12.5px; color: #2d3748; line-height: 1.45; white-space: pre-wrap; }
+  .comment-thread-item .ct-actions { margin-top: 5px; display: flex; gap: 12px; }
+  .comment-thread-item .ct-actions a { font-size: 11px; color: #5a4fcf; cursor: pointer; text-decoration: underline; }
+  .comment-thread-item textarea.ct-edit { width: 100%; font-size: 12.5px; margin-top: 4px; min-height: 50px; }
 </style>
 </head>
 <body>
@@ -530,6 +584,17 @@
   <div class="nav-list" id="sideNavList"></div>
 </nav>
 <button type="button" id="sideNavReopen" class="no-print" onclick="toggleSideNav()" title="Show section navigation">☰</button>
+
+<!-- (v105) Comments panel — team review comments on any write-up field; jump to source, saved in JSON. -->
+<div id="commentsPanel" class="no-print" aria-label="Review comments">
+  <div class="cp-head"><span>💬 Comments <span id="cpCount"></span></span><button type="button" onclick="toggleCommentsPanel()" title="Hide comments">»</button></div>
+  <div class="cp-author">
+    <label>Commenting as</label>
+    <input type="text" id="commentAuthorInput" placeholder="Your name" oninput="setCommentAuthor(this.value)">
+  </div>
+  <div class="cp-list" id="commentsPanelList"></div>
+</div>
+<button type="button" id="commentsPanelReopen" class="no-print" onclick="toggleCommentsPanel()" title="Show comments">💬</button>
 
 <div class="toolbar no-print">
   <button onclick="window.print()">Generate PDF Summary</button>
@@ -565,6 +630,23 @@
       <button onclick="closeBoilerplate()" style="background:transparent;color:white;border:none;font-size:20px;cursor:pointer;">×</button>
     </div>
     <div id="bpModalBody" style="padding:18px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- (v105) Comment thread modal — opened from a field's 💬 button or from the Comments panel -->
+<div id="commentModal" class="no-print" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:210;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:8px;max-width:520px;width:92%;max-height:82vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div style="background:#5a4fcf;color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <strong id="commentModalTitle">Comments</strong>
+      <button onclick="closeCommentModal()" style="background:transparent;color:white;border:none;font-size:20px;cursor:pointer;">×</button>
+    </div>
+    <div id="commentModalBody" style="padding:16px;overflow-y:auto;"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);background:#fafafa;">
+      <textarea id="commentNewText" placeholder="Add a comment…" style="width:100%;min-height:56px;font-size:12.5px;"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+        <button type="button" onclick="postComment()" style="background:#5a4fcf;color:white;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Post</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -5789,6 +5871,8 @@ function gatherData() {
   if (typeof SOP_OVERRIDES !== 'undefined' && Object.keys(SOP_OVERRIDES).length) data.sopOverrides = SOP_OVERRIDES;
   // Client-question flags (sections flagged "not sure — ask client")
   if (typeof CLIENT_QUESTION_FLAGS !== 'undefined') data.clientQuestionFlags = CLIENT_QUESTION_FLAGS;
+  // Review comments (per-field threads) — embedded so colleagues loading this file see them too
+  if (typeof FIELD_COMMENTS !== 'undefined') data.comments = FIELD_COMMENTS;
   return data;
 }
 
@@ -5941,6 +6025,9 @@ function loadJSON(event) {
       if (data.clientQuestionFlags && typeof data.clientQuestionFlags === 'object') {
         CLIENT_QUESTION_FLAGS = data.clientQuestionFlags;
       }
+      // Review comments restore — so a colleague's comments travel with the file
+      FIELD_COMMENTS = (data.comments && typeof data.comments === 'object') ? data.comments : {};
+      if (typeof refreshAllCommentBadges === 'function') refreshAllCommentBadges();
       document.getElementById('eaToggle').checked = !!data.eaToggle;
       toggleEA();
       updateMatrix();
@@ -5961,6 +6048,8 @@ function resetForm() {
   document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
   document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
   document.getElementById('eaToggle').checked = false;
+  FIELD_COMMENTS = {};
+  if (typeof refreshAllCommentBadges === 'function') refreshAllCommentBadges();
   { const _lr = document.getElementById('levelResult'); if (_lr) _lr.innerHTML = ''; }
   if (typeof drawnItems !== 'undefined' && drawnItems) {
     drawnItems.clearLayers();
@@ -6062,6 +6151,8 @@ function loadSample() {
     if (radio) radio.checked = true;
   });
   document.getElementById('eaToggle').checked = SAMPLE.eaToggle;
+  FIELD_COMMENTS = {};
+  if (typeof refreshAllCommentBadges === 'function') refreshAllCommentBadges();
   toggleEA();
   updateMatrix();
   buildResourceLinks();
@@ -8787,6 +8878,247 @@ window.addEventListener('load', () => {
     if (a) { e.preventDefault(); window.open(a.href, '_blank', 'noopener'); }
   });
 });
+
+// ===== (v105) INLINE COMMENT SYSTEM =====
+// Per-field comment threads — one thread per editable text area, addressed by that field's
+// existing data-field key (the same key gatherData()/loadJSON() already use for everything
+// else). Threads are embedded in the saved/loaded JSON, so when one reviewer saves a Review
+// JSON and a colleague opens it, they see each other's comments and can reply, edit their own,
+// or delete their own. Purely client-side — no server involved.
+let FIELD_COMMENTS = {}; // { [fieldKey]: [ {id, author, text, ts, editedTs}, ... ] }  (index 0 = thread root)
+
+function getCommentAuthor() { return (localStorage.getItem('azri_commentAuthor') || '').trim(); }
+function setCommentAuthor(name) { try { localStorage.setItem('azri_commentAuthor', name || ''); } catch (e) {} }
+function newCommentId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function fmtCommentTime(ts) {
+  try { return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+  catch (e) { return ''; }
+}
+// escapeHtml() is already defined earlier in this file — reused here as-is.
+
+// Best-effort human-readable name for a field, used as the comment thread's title.
+function fieldDisplayName(fieldKey, el) {
+  if (el) {
+    const eaFactor = el.closest('.ea-factor');
+    if (eaFactor) {
+      const t = eaFactor.querySelector('.ea-factor-title');
+      if (t && t.textContent.trim()) return t.textContent.trim() + (fieldKey.endsWith('_internal') ? ' — Internal Notes' : '');
+    }
+    const authCard = el.closest('.authority');
+    if (authCard && authCard.dataset.authId && fieldKey === authCard.dataset.authId + '_notes') {
+      const t = authCard.querySelector('.authority-title');
+      if (t && t.textContent.trim()) return t.textContent.trim() + ' — Compliance Notes';
+    }
+    // Generic: walk up a few ancestor levels looking for the nearest <label>.
+    let node = el.closest('.comment-anchor-wrap');
+    node = node ? node.parentElement : el.parentElement;
+    for (let i = 0; i < 5 && node; i++) {
+      const lbl = node.querySelector('label');
+      if (lbl) {
+        const clone = lbl.cloneNode(true);
+        clone.querySelectorAll('button, select, a').forEach(n => n.remove());
+        const text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+        if (text) return text.length > 70 ? text.slice(0, 68) + '…' : text;
+      }
+      node = node.parentElement;
+    }
+  }
+  return fieldKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ---- Attach a small 💬 button beside every editable text area (idempotent — safe to re-run) ----
+function attachCommentUI(root) {
+  (root || document).querySelectorAll('textarea[data-field]').forEach(ta => {
+    if (ta.dataset.commentAttached === '1') return;
+    ta.dataset.commentAttached = '1';
+    const wrap = document.createElement('div');
+    wrap.className = 'comment-anchor-wrap';
+    ta.parentNode.insertBefore(wrap, ta);
+    wrap.appendChild(ta);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'comment-btn no-print';
+    btn.innerHTML = '💬';
+    btn.title = 'Add a comment on this field';
+    btn.onclick = (e) => { e.preventDefault(); openCommentModal(ta.dataset.field, ta); };
+    wrap.appendChild(btn);
+    refreshCommentBadge(ta.dataset.field);
+  });
+}
+function refreshCommentBadge(fieldKey) {
+  const ta = document.querySelector(`textarea[data-field="${fieldKey}"]`);
+  if (!ta) return;
+  const wrap = ta.closest('.comment-anchor-wrap');
+  const btn = wrap ? wrap.querySelector('.comment-btn') : null;
+  const n = (FIELD_COMMENTS[fieldKey] || []).length;
+  if (btn) {
+    btn.classList.toggle('has-comments', n > 0);
+    btn.innerHTML = n > 0 ? `💬 <span>${n}</span>` : '💬';
+    btn.title = n > 0 ? `${n} comment${n === 1 ? '' : 's'} on this field` : 'Add a comment on this field';
+  }
+  ta.classList.toggle('has-comments', n > 0);
+}
+function refreshAllCommentBadges() {
+  document.querySelectorAll('textarea[data-field].has-comments').forEach(ta => refreshCommentBadge(ta.dataset.field));
+  Object.keys(FIELD_COMMENTS).forEach(refreshCommentBadge);
+  renderCommentsPanel();
+}
+
+// ---- Comment thread modal (per field) ----
+let CURRENT_COMMENT_FIELD = null;
+function openCommentModal(fieldKey, el) {
+  CURRENT_COMMENT_FIELD = fieldKey;
+  document.getElementById('commentModalTitle').textContent = '💬 ' + fieldDisplayName(fieldKey, el || document.querySelector(`textarea[data-field="${fieldKey}"]`));
+  renderCommentThread();
+  document.getElementById('commentNewText').value = '';
+  document.getElementById('commentModal').style.display = 'flex';
+}
+function closeCommentModal() {
+  document.getElementById('commentModal').style.display = 'none';
+  CURRENT_COMMENT_FIELD = null;
+}
+function renderCommentThread() {
+  const body = document.getElementById('commentModalBody');
+  const items = FIELD_COMMENTS[CURRENT_COMMENT_FIELD] || [];
+  if (!items.length) {
+    body.innerHTML = '<div style="color:var(--gray);font-size:12.5px;font-style:italic;">No comments yet — be the first to leave one below.</div>';
+    return;
+  }
+  const me = getCommentAuthor();
+  body.innerHTML = items.map(c => `
+    <div class="comment-thread-item" id="ct-${c.id}">
+      <div class="ct-head">
+        <span class="ct-author">${escapeHtml(c.author || 'Anonymous')}</span>
+        <span class="ct-time">${fmtCommentTime(c.ts)}${c.editedTs ? ' (edited)' : ''}</span>
+      </div>
+      <div class="ct-text" id="ct-text-${c.id}">${escapeHtml(c.text)}</div>
+      ${(me && c.author === me) ? `<div class="ct-actions">
+        <a onclick="startEditComment('${c.id}')">Edit</a>
+        <a onclick="deleteComment('${c.id}')">Delete</a>
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+function postComment() {
+  const box = document.getElementById('commentNewText');
+  const text = box.value.trim();
+  if (!text || !CURRENT_COMMENT_FIELD) return;
+  const author = getCommentAuthor();
+  if (!author) {
+    alert('Please enter your name under "Commenting as" in the Comments panel (💬 tab on the right edge) before posting.');
+    toggleCommentsPanel(true);
+    const ai = document.getElementById('commentAuthorInput');
+    if (ai) ai.focus();
+    return;
+  }
+  if (!FIELD_COMMENTS[CURRENT_COMMENT_FIELD]) FIELD_COMMENTS[CURRENT_COMMENT_FIELD] = [];
+  FIELD_COMMENTS[CURRENT_COMMENT_FIELD].push({ id: newCommentId(), author, text, ts: Date.now(), editedTs: null });
+  box.value = '';
+  renderCommentThread();
+  refreshCommentBadge(CURRENT_COMMENT_FIELD);
+  renderCommentsPanel();
+}
+function findComment(id) {
+  for (const k in FIELD_COMMENTS) {
+    const idx = FIELD_COMMENTS[k].findIndex(c => c.id === id);
+    if (idx !== -1) return { field: k, idx, comment: FIELD_COMMENTS[k][idx] };
+  }
+  return null;
+}
+function startEditComment(id) {
+  const found = findComment(id);
+  if (!found) return;
+  const box = document.getElementById('ct-text-' + id);
+  if (!box) return;
+  box.innerHTML = `<textarea class="ct-edit" id="ct-edit-${id}">${escapeHtml(found.comment.text)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:5px;">
+      <button type="button" onclick="saveEditComment('${id}')" style="background:#5a4fcf;color:white;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;">Save</button>
+      <button type="button" onclick="renderCommentThread()" style="background:white;border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
+    </div>`;
+  const editBox = document.getElementById('ct-edit-' + id);
+  if (editBox) editBox.focus();
+}
+function saveEditComment(id) {
+  const found = findComment(id);
+  if (!found) return;
+  const box = document.getElementById('ct-edit-' + id);
+  if (!box) return;
+  const text = box.value.trim();
+  if (!text) return;
+  found.comment.text = text;
+  found.comment.editedTs = Date.now();
+  renderCommentThread();
+  renderCommentsPanel();
+}
+function deleteComment(id) {
+  const found = findComment(id);
+  if (!found) return;
+  if (!confirm('Delete this comment? This cannot be undone.')) return;
+  FIELD_COMMENTS[found.field].splice(found.idx, 1);
+  if (!FIELD_COMMENTS[found.field].length) delete FIELD_COMMENTS[found.field];
+  renderCommentThread();
+  refreshCommentBadge(found.field);
+  renderCommentsPanel();
+}
+
+// ---- Comments side panel (every thread in the report, click to jump) ----
+function toggleCommentsPanel(forceOpen) {
+  if (forceOpen === true) document.body.classList.add('comments-open');
+  else document.body.classList.toggle('comments-open');
+}
+function renderCommentsPanel() {
+  const list = document.getElementById('commentsPanelList');
+  if (!list) return;
+  const countEl = document.getElementById('cpCount');
+  const authorInput = document.getElementById('commentAuthorInput');
+  if (authorInput && document.activeElement !== authorInput) authorInput.value = getCommentAuthor();
+  const fields = Object.keys(FIELD_COMMENTS).filter(k => FIELD_COMMENTS[k] && FIELD_COMMENTS[k].length);
+  const total = fields.reduce((n, k) => n + FIELD_COMMENTS[k].length, 0);
+  if (countEl) countEl.textContent = total ? `(${total})` : '';
+  const reopenBtn = document.getElementById('commentsPanelReopen');
+  if (reopenBtn) reopenBtn.title = total ? `Show comments (${total})` : 'Show comments';
+  if (!fields.length) {
+    list.innerHTML = '<div class="cp-empty">No comments yet. Click 💬 next to any write-up field to start one.</div>';
+    return;
+  }
+  fields.sort((a, b) => {
+    const la = FIELD_COMMENTS[a][FIELD_COMMENTS[a].length - 1];
+    const lb = FIELD_COMMENTS[b][FIELD_COMMENTS[b].length - 1];
+    return (lb.editedTs || lb.ts) - (la.editedTs || la.ts);
+  });
+  list.innerHTML = fields.map(k => {
+    const items = FIELD_COMMENTS[k];
+    const last = items[items.length - 1];
+    const ta = document.querySelector(`textarea[data-field="${k}"]`);
+    const name = fieldDisplayName(k, ta);
+    return `<div class="cp-item" onclick="jumpToComment('${k}')">
+      <div class="cp-field">${escapeHtml(name)} <span style="font-weight:400;color:var(--gray);">(${items.length})</span></div>
+      <div class="cp-snippet">${escapeHtml(last.text)}</div>
+      <div class="cp-meta">${escapeHtml(last.author || 'Anonymous')} · ${fmtCommentTime(last.ts)}</div>
+    </div>`;
+  }).join('');
+}
+function jumpToComment(fieldKey) {
+  const ta = document.querySelector(`textarea[data-field="${fieldKey}"]`);
+  if (!ta) return;
+  const wrap = ta.closest('.comment-anchor-wrap') || ta;
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  wrap.classList.add('comment-flash');
+  setTimeout(() => wrap.classList.remove('comment-flash'), 1700);
+  openCommentModal(fieldKey, ta);
+}
+
+// Initial pass over the already-rendered form, then keep watching for any dynamically-added
+// text areas (state-pack changes, exemption panels, etc.) so new fields always get a 💬 button
+// without needing to track down every place the app builds DOM at runtime.
+attachCommentUI(document);
+renderCommentsPanel();
+const _commentObserver = new MutationObserver(muts => {
+  for (const m of muts) {
+    if (m.addedNodes && m.addedNodes.length) { attachCommentUI(document); break; }
+  }
+});
+_commentObserver.observe(document.body, { childList: true, subtree: true });
 </script>
 <!-- Auto version stamp: shows this file's last-modified (deploy) date so users can confirm they're on the latest. Hidden in print/exports. -->
 <style>@media print{#__verStamp{display:none!important;}}</style>
