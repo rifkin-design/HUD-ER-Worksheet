@@ -284,6 +284,8 @@
   .count-box .label-text { font-size: 12px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
   .ea-section { display: none; }
   .ea-section.visible { display: block; }
+  .map-section { display: none; }
+  .map-section.visible { display: block; }
   .ea-factor {
     border-bottom: 1px solid var(--border);
     padding: 14px 22px;
@@ -619,6 +621,10 @@
   <label class="ea-toggle" title="EA sections (1366, 1370, 1375) auto-show when Level of Review = EA or EIS. Check this to force-show them regardless.">
     <input type="checkbox" id="eaToggle" onchange="toggleEA()">
     Force-show EA Sections <span style="color:var(--gray);font-weight:400;font-size:11px;">(auto when Level = EA/EIS)</span>
+  </label>
+  <label class="ea-toggle" title="Shows the Housing Requirements compliance factor (MAP Guide, Chapter 9: Lead-Based Paint, Radon, Asbestos, and Additional Nuisances and Hazards) in Screen 2005. Check this for HUD MAP (Multifamily Accelerated Processing) and other FHA-insured multifamily projects.">
+    <input type="checkbox" id="mapToggle" onchange="toggleMapSection()">
+    HUD MAP Project <span style="color:var(--gray);font-weight:400;font-size:11px;">(shows Housing Requirements)</span>
   </label>
 </div>
 
@@ -1635,7 +1641,8 @@ const AUTHORITIES = [
   { id: 'noise', name: 'Noise Abatement and Control', cite: '24 CFR Part 51 Subpart B, §58.5(i)', help: 'Calc DNL from roads (1,000 ft), rail (3,000 ft), airports (15 mi). Acceptable ≤65 dB / Normally Unacceptable 65–75 / Unacceptable >75.' },
   { id: 'aquifer', name: 'Sole Source Aquifers', cite: 'Safe Drinking Water Act §1424(e), §58.5(d)', help: 'EPA SSA designation map. If over SSA and federally funded, EPA Region consultation may be required.' },
   { id: 'wetlands', name: 'Wetlands Protection', cite: 'EO 11990, 24 CFR Part 55, §58.5(b)', help: 'NWI map review. On-site delineation if indicated. 8-step process if wetlands affected.' },
-  { id: 'wsr', name: 'Wild and Scenic Rivers', cite: 'WSRA, §58.5(f)', help: 'NPS Wild and Scenic Rivers map. NRI rivers also covered. Consult agency if proximate.' }
+  { id: 'wsr', name: 'Wild and Scenic Rivers', cite: 'WSRA, §58.5(f)', help: 'NPS Wild and Scenic Rivers map. NRI rivers also covered. Consult agency if proximate.' },
+  { id: 'housing_map', name: 'Housing Requirements', cite: 'MAP Guide, Ch. 9; 24 CFR 50.3(i); 24 CFR Part 35', help: 'HUD MAP (Multifamily Accelerated Processing) / FHA-insured multifamily projects only — appears when the "HUD MAP Project" toggle above is checked. Covers Lead-Based Paint, Radon, Asbestos, and Additional Nuisances and Hazards (high pressure pipelines, fall hazards, oil/gas wells, development on filled ground).' }
 ];
 
 // ===== PER-AUTHORITY SOP (always-visible step-by-step guidance on each card) =====
@@ -4679,6 +4686,61 @@ function contamSubsectionText(f) {
   return parts.join('\n\n');
 }
 
+// (v109) Compose the Housing Requirements (MAP Guide Ch. 9) subsection text appended to the
+// Housing Requirements notes in the ERR preview and Client Report / Word exports. Mirrors
+// contamSubsectionText() above but is keyed off the separate housing_map fields, since Housing
+// Requirements is a distinct HEROS compliance factor from Contamination and Toxic Substances.
+function housingSubsectionText(f) {
+  const parts = [];
+  if (f.housingLbpNotes) parts.push('LEAD-BASED PAINT (MAP Guide Ch. 9 / 24 CFR Part 35): ' + f.housingLbpNotes);
+  if (f.housingRadonNotes) parts.push('RADON (MAP Guide Ch. 9): ' + f.housingRadonNotes);
+  if (f.housingAsbestosNotes) parts.push('ASBESTOS (MAP Guide Ch. 9): ' + f.housingAsbestosNotes);
+  if (f.housingNuisancesNotes) parts.push('ADDITIONAL NUISANCES AND HAZARDS: ' + f.housingNuisancesNotes);
+  if (f.housingMitigationNotes) parts.push('MITIGATION: ' + f.housingMitigationNotes);
+  return parts.join('\n\n');
+}
+
+// ===== HOUSING REQUIREMENTS WRITE-UPS (v109) — MAP Guide, Chapter 9 =====
+const MAP_LBP_WRITEUPS = {
+  inspected: 'A lead-based paint inspection/risk assessment was performed by an appropriate certified lead professional on [DATE] by [firm/inspector]. Findings: [summarize results — LBP present/absent, and by which component]. [If LBP is present: describe interim controls, abatement, or ongoing maintenance consistent with 24 CFR Part 35 and applicable program guidance.]',
+  lead_free: 'The project was previously deemed to be lead free. Lead-free certificate(s) are attached/uploaded to the ERR and referenced below.',
+  not_pre1978: 'The project does not involve any buildings constructed prior to 1978 and is therefore not subject to the Lead Safe Housing Rule (24 CFR Part 35) target housing requirements. Documentation of construction date(s): [source/date].',
+  not_required: 'Program guidance does not require lead-based paint testing for this project. [Cite the applicable exemption — e.g., housing designated exclusively for the elderly or persons with disabilities with no child under 6 residing or expected to reside, or 0-bedroom dwelling units, per 24 CFR Part 35.]'
+};
+const MAP_RADON_WRITEUPS = {
+  tested: 'Radon testing was performed following the appropriate and latest ANSI/AARST standard on [DATE] by [licensed radon professional/firm]. Results: [#] pCi/L. [Below 4.0 pCi/L — no mitigation required. / At or above 4.0 pCi/L — a radon mitigation plan is included in the ERR and post-mitigation testing will be performed.]',
+  not_required: 'Program guidance does not require radon testing for this type of project. Radon testing is nonetheless encouraged for all HUD projects, even where it is not required. [Explain why radon testing was not completed.]'
+};
+const MAP_ASBESTOS_WRITEUPS = {
+  surveyed: 'A comprehensive asbestos building survey was performed pursuant to the relevant requirements of the latest ASTM standard on [DATE] by [firm/inspector]. Findings: [summarize ACMs identified, locations, and recommended O&M/abatement measures].',
+  date_threshold: 'The project meets a date threshold in program guidance exempting it from an asbestos survey. Documentation of construction date(s) and how this fits program guidance: [source/date].',
+  not_required: 'Program guidance does not require an asbestos survey for this type of project. [Explain.]'
+};
+function insertMapLbpWriteUp() {
+  const sel = (document.querySelector('input[name="housingLbpQ"]:checked') || {}).value;
+  const ta = document.querySelector('[data-field="housingLbpNotes"]');
+  const st = document.getElementById('mapLbpWriteUpStatus');
+  if (!sel || !MAP_LBP_WRITEUPS[sel]) { if (st) st.textContent = 'Select an answer above first.'; return; }
+  if (ta) { ta.value = MAP_LBP_WRITEUPS[sel]; ta.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (st) st.textContent = 'Lead-based paint write-up inserted — edit the bracketed details.';
+}
+function insertMapRadonWriteUp() {
+  const sel = (document.querySelector('input[name="housingRadonQ"]:checked') || {}).value;
+  const ta = document.querySelector('[data-field="housingRadonNotes"]');
+  const st = document.getElementById('mapRadonWriteUpStatus');
+  if (!sel || !MAP_RADON_WRITEUPS[sel]) { if (st) st.textContent = 'Select an answer above first.'; return; }
+  if (ta) { ta.value = MAP_RADON_WRITEUPS[sel]; ta.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (st) st.textContent = 'Radon write-up inserted — edit the bracketed details.';
+}
+function insertMapAsbestosWriteUp() {
+  const sel = (document.querySelector('input[name="housingAsbestosQ"]:checked') || {}).value;
+  const ta = document.querySelector('[data-field="housingAsbestosNotes"]');
+  const st = document.getElementById('mapAsbestosWriteUpStatus');
+  if (!sel || !MAP_ASBESTOS_WRITEUPS[sel]) { if (st) st.textContent = 'Select an answer above first.'; return; }
+  if (ta) { ta.value = MAP_ASBESTOS_WRITEUPS[sel]; ta.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (st) st.textContent = 'Asbestos write-up inserted — edit the bracketed details.';
+}
+
 // ===== LBP & ASBESTOS WRITE-UPS (v98) — per AZ-RI SOP =====
 // LBP exemptions track 24 CFR 35.115 (Lead Safe Housing Rule; target housing = pre-1978
 // residential). The asbestos 1989 threshold is the firm's screening convention (the 1989 EPA
@@ -5002,17 +5064,21 @@ function closeClientQuestions() { document.getElementById('clientQuestionsModal'
 // ===== RENDER AUTHORITIES =====
 const authContainer = document.getElementById('authorities-container');
 AUTHORITIES.forEach(a => {
-  // HEROS 2005 group headers — §50.4 & 58.6 (airport→) and §50.4 & 58.5 (air→)
-  if (a.id === 'airport' || a.id === 'air') {
+  // HEROS 2005 group headers — §50.4 & 58.6 (airport→), §50.4 & 58.5 (air→), and the
+  // HUD Housing Environmental Standards group (housing_map→, MAP-toggle-gated).
+  if (a.id === 'airport' || a.id === 'air' || a.id === 'housing_map') {
     const hdr = document.createElement('div');
     hdr.style.cssText = 'background:var(--gray-bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 22px;font-weight:700;font-size:12px;color:var(--azri-navy);text-align:center;letter-spacing:0.3px;';
     hdr.textContent = (a.id === 'airport')
       ? 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR §50.4 & 58.6'
-      : 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR §50.4 & 58.5';
+      : (a.id === 'air')
+      ? 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR §50.4 & 58.5'
+      : 'HUD HOUSING ENVIRONMENTAL STANDARDS';
+    if (a.id === 'housing_map') hdr.classList.add('map-section');
     authContainer.appendChild(hdr);
   }
   const div = document.createElement('div');
-  div.className = 'authority';
+  div.className = (a.id === 'housing_map') ? 'authority map-section' : 'authority';
   div.dataset.authId = a.id;
   // Precompute the optional Map button so we don't need nested template literals inside the IIFE
   let mapBtnHtml = '';
@@ -5248,6 +5314,76 @@ AUTHORITIES.forEach(a => {
           <label style="font-size:11px;">Asbestos findings / abatement (ERR text)</label>
           <textarea data-field="contamAsbestosNotes" style="min-height:54px;margin-top:2px;" placeholder="Select the asbestos scenario above and click Insert Asbestos Write-Up."></textarea>
         </div>
+      </div>
+    `;
+    authContainer.appendChild(sub);
+  }
+
+  // (v109) Inject the Housing Requirements subsection — MAP Guide, Chapter 9 (Lead-Based Paint,
+  // Radon, Asbestos) plus Additional Nuisances and Hazards. Only relevant to HUD MAP / FHA-insured
+  // multifamily projects, so this whole block carries the map-section class and only shows when
+  // the "HUD MAP Project" toolbar toggle is checked (see toggleMapSection()).
+  if (a.id === 'housing_map') {
+    const sub = document.createElement('div');
+    sub.className = 'map-section';
+    sub.style.cssText = 'background:#f6f8fb;border:1px solid var(--azri-navy);border-left:4px solid var(--azri-navy);padding:14px 18px;margin:0 22px 14px 22px;border-radius:5px;';
+    sub.innerHTML = `
+      <div style="font-weight:700;font-size:13px;color:var(--azri-navy);margin-bottom:2px;">Housing Requirements — MAP Guide, Chapter 9</div>
+      <div style="font-size:11.5px;color:#4a5568;margin-bottom:12px;">Applies to HUD MAP (Multifamily Accelerated Processing) and other FHA-insured multifamily projects. Requirements for evaluating housing requirements vary by program — refer to the appropriate guidance for your program area (e.g., MAP Guide Chapter 9; Healthcare Mortgage Insurance Handbook Chapter 7) for specifics. Complete each item below — the notes print with the ERR.</div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Lead-Based Paint <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— Lead-based paint may be present in buildings built prior to 1978. Buildings constructed in 1978 or later do not require lead-based paint testing. Refer to specific program guidance for additional exemptions and requirements.</span></div>
+        <div style="font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;color:#2d3748;margin-top:8px;">Was a lead-based paint inspection or survey performed by the appropriate certified lead professional?</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpQ" value="inspected" style="margin-right:6px;">Yes</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpQ" value="lead_free" style="margin-right:6px;">No, because the project was previously deemed to be lead free.<br><span style="margin-left:22px;display:block;color:#4a5568;">Upload all lead-free certificates and reference them below.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpQ" value="not_pre1978" style="margin-right:6px;">No, because the project does not involve any buildings constructed prior to 1978.<br><span style="margin-left:22px;display:block;color:#4a5568;">Provide documentation of construction date(s) below.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpQ" value="not_required" style="margin-right:6px;">No, because program guidance does not require testing for this type of project.<br><span style="margin-left:22px;display:block;color:#4a5568;">For example, HUD's lead-based paint requirements at 24 CFR Part 35 do not apply to housing designated exclusively for the elderly or persons with disabilities, unless a child of less than 6 years of age resides or is expected to reside in such housing. In addition, the requirements do not apply to 0-bedroom dwelling units.</span></label>
+        <div class="no-print" style="margin-top:6px;"><button type="button" onclick="insertMapLbpWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Write-Up</button></div>
+        <div id="mapLbpWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
+        <div style="margin-top:6px;">
+          <label style="font-size:11px;">Describe how compliance or exemption was met (ERR text)</label>
+          <textarea data-field="housingLbpNotes" style="min-height:70px;margin-top:2px;" placeholder="Answer the question above and click Insert Write-Up, or describe compliance/exemption and upload/reference any relevant documents (reports, surveys, letters, certificates)."></textarea>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Radon <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— Many Housing Programs require radon testing and mitigation. Radon is a colorless, odorless gas that can enter the air inside of buildings. Refer to specific program guidance for exemptions and requirements.</span></div>
+        <div style="font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;color:#2d3748;margin-top:8px;">Was radon testing performed following the appropriate and latest ANSI-AARST standard?</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingRadonQ" value="tested" style="margin-right:6px;">Yes</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingRadonQ" value="not_required" style="margin-right:6px;">No, because program guidance does not require testing for this type of project.<br><span style="margin-left:22px;display:block;color:#4a5568;">Note that radon testing is encouraged for all HUD projects, even where it is not required. Explain why radon testing was not completed below.</span></label>
+        <div class="no-print" style="margin-top:6px;"><button type="button" onclick="insertMapRadonWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Write-Up</button></div>
+        <div id="mapRadonWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
+        <div style="margin-top:6px;">
+          <label style="font-size:11px;">Describe how compliance or exemption was met (ERR text)</label>
+          <textarea data-field="housingRadonNotes" style="min-height:70px;margin-top:2px;" placeholder="Answer the question above and click Insert Write-Up, or describe compliance/exemption and upload/reference any relevant documents (reports, surveys, letters)."></textarea>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Asbestos <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— Asbestos may be present in older buildings and in roofing materials through the present day. Refer to specific program guidance for date thresholds, additional exemptions and requirements.</span></div>
+        <div style="font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;color:#2d3748;margin-top:8px;">Was a comprehensive asbestos building survey performed pursuant to the relevant requirements of the latest ASTM standard?</div>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosQ" value="surveyed" style="margin-right:6px;">Yes</label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosQ" value="date_threshold" style="margin-right:6px;">No, because the project meets a date threshold in program guidance.<br><span style="margin-left:22px;display:block;color:#4a5568;">Provide documentation of construction date(s) and how this fits program guidance below.</span></label>
+        <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosQ" value="not_required" style="margin-right:6px;">No, because program guidance does not require testing for this type of project.<br><span style="margin-left:22px;display:block;color:#4a5568;">Explain below.</span></label>
+        <div class="no-print" style="margin-top:6px;"><button type="button" onclick="insertMapAsbestosWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Write-Up</button></div>
+        <div id="mapAsbestosWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
+        <div style="margin-top:6px;">
+          <label style="font-size:11px;">Describe how compliance or exemption was met (ERR text)</label>
+          <textarea data-field="housingAsbestosNotes" style="min-height:70px;margin-top:2px;" placeholder="Answer the question above and click Insert Write-Up, or describe compliance/exemption and upload/reference any relevant documents (reports, surveys, letters)."></textarea>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Additional Nuisances and Hazards</div>
+        <div style="font-size:11.5px;color:#4a5568;margin-bottom:6px;">Many Housing Programs have additional requirements with respect to common nuisances and hazards. These include High Pressure Pipelines; Fall Hazards (High Voltage Transmission Lines and Support Structures); Oil or Gas Wells, Sour Gas Wells and Slush Pits; and Development planned on filled ground. There may also be additional regional or local requirements.</div>
+        <label style="font-size:11px;">Describe how compliance or exemption was met for any relevant nuisance, hazard or local requirement</label>
+        <textarea data-field="housingNuisancesNotes" style="min-height:60px;margin-top:2px;" placeholder="Address High Pressure Pipelines; Fall Hazards; Oil/Gas Wells, Sour Gas Wells and Slush Pits; Development on filled ground; and any additional regional or local requirements. Leave blank if none apply."></textarea>
+      </div>
+
+      <div style="margin-top:14px;">
+        <label style="font-weight:600;font-size:12.5px;color:var(--azri-navy);">Mitigation</label>
+        <div style="font-size:11.5px;color:#4a5568;margin-bottom:4px;">Explain in detail the exact measures that must be implemented to mitigate for any impact or effect discussed on this screen, including the timeline for implementation. If no mitigation is required for any of the factors above, leave this textbox blank.</div>
+        <textarea data-field="housingMitigationNotes" style="min-height:60px;"></textarea>
       </div>
     `;
     authContainer.appendChild(sub);
@@ -5577,6 +5713,23 @@ document.addEventListener('change', e => {
     (e.target.closest && e.target.closest('#herosCitations'));
   if (isLevelTrigger) toggleEA();
 });
+
+// ===== MAP (HUD Multifamily Accelerated Processing) TOGGLE =====
+// The Housing Requirements compliance factor (MAP Guide, Chapter 9) only applies to HUD MAP /
+// FHA-insured multifamily projects, so it's shown/hidden manually via the "HUD MAP Project"
+// toolbar toggle — mirroring the EA toggle above, but with no auto-derivation (MAP applicability
+// is a program-eligibility fact the reviewer knows up front, not something inferred from other
+// screens the way EA/EIS is derived from Level of Review).
+function isMapProject() {
+  const t = document.getElementById('mapToggle');
+  return !!(t && t.checked);
+}
+function toggleMapSection() {
+  const on = isMapProject();
+  document.querySelectorAll('.map-section').forEach(s => s.classList.toggle('visible', on));
+  if (typeof updateMatrix === 'function') updateMatrix();
+  if (typeof buildSideNav === 'function') buildSideNav();
+}
 // Live update Project Name context indicators on HEROS-style headers
 function syncProjectNameContext() {
   const pn = (document.querySelector('input[data-field="projectName"]') || {}).value || '—';
@@ -5743,6 +5896,9 @@ function updateMatrix() {
   let counts = { compliant: 0, followup: 0, na: 0, awaiting: 0, exempt: 0, unset: 0 };
   AUTHORITIES.forEach(a => {
    try {
+    // Housing Requirements (MAP Guide Ch. 9) only applies to HUD MAP projects — leave it out of
+    // the Compliance Summary entirely while the "HUD MAP Project" toggle is unchecked.
+    if (a.id === 'housing_map' && !isMapProject()) return;
     const checked = document.querySelector(`input[name="${a.id}_status"]:checked`);
     const status = checked ? checked.value : 'unset';
     if (counts[status] === undefined) counts[status] = 0;
@@ -5755,11 +5911,17 @@ function updateMatrix() {
     // the on-screen Compliance Summary, matching the Word and Client Report exports. Newlines in
     // the appended subsection are converted to <br> for readability (the matrix cell collapses
     // raw newlines). The main Notes / Mitigation field keeps its existing rendering.
+    // (v109) Housing Requirements gets the same treatment via housingSubsectionText().
     let subExtra = '';
     if (a.id === 'contam' && typeof contamSubsectionText === 'function') {
       const f = {};
       document.querySelectorAll('[data-field]').forEach(el => { f[el.dataset.field] = el.value || ''; });
       const t = contamSubsectionText(f);
+      if (t) subExtra = (notes ? '<br><br>' : '') + t.replace(/\n/g, '<br>');
+    } else if (a.id === 'housing_map' && typeof housingSubsectionText === 'function') {
+      const f = {};
+      document.querySelectorAll('[data-field]').forEach(el => { f[el.dataset.field] = el.value || ''; });
+      const t = housingSubsectionText(f);
       if (t) subExtra = (notes ? '<br><br>' : '') + t.replace(/\n/g, '<br>');
     }
     // Show only the write-up (Notes / Mitigation). The short "source" tag (e.g.
@@ -5860,6 +6022,7 @@ function gatherData() {
   const lr = document.getElementById('levelResult');
   if (lr) data.levelResultHTML = lr.innerHTML;
   data.eaToggle = document.getElementById('eaToggle').checked;
+  data.mapToggle = document.getElementById('mapToggle').checked;
   data.state = CURRENT_STATE;
   // AST worksheet rows
   if (typeof astRows !== 'undefined') data.astRows = astRows;
@@ -6030,6 +6193,8 @@ function loadJSON(event) {
       if (typeof refreshAllCommentBadges === 'function') refreshAllCommentBadges();
       document.getElementById('eaToggle').checked = !!data.eaToggle;
       toggleEA();
+      document.getElementById('mapToggle').checked = !!data.mapToggle;
+      toggleMapSection();
       updateMatrix();
       buildResourceLinks();
     } catch (err) {
@@ -6048,6 +6213,7 @@ function resetForm() {
   document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
   document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
   document.getElementById('eaToggle').checked = false;
+  document.getElementById('mapToggle').checked = false;
   FIELD_COMMENTS = {};
   if (typeof refreshAllCommentBadges === 'function') refreshAllCommentBadges();
   { const _lr = document.getElementById('levelResult'); if (_lr) _lr.innerHTML = ''; }
@@ -6059,6 +6225,7 @@ function resetForm() {
     if (map) map.setView([39.8283, -98.5795], 4);
   }
   toggleEA();
+  toggleMapSection();
   updateMatrix();
   buildResourceLinks();
 }
@@ -6136,7 +6303,8 @@ const SAMPLE = {
     farm: 'na', flood_mgt: 'compliant', historic: 'followup', noise: 'compliant',
     aquifer: 'na', wetlands: 'na', wsr: 'na', ej: 'compliant'
   },
-  eaToggle: false
+  eaToggle: false,
+  mapToggle: false
 };
 
 function loadSample() {
@@ -6151,9 +6319,11 @@ function loadSample() {
     if (radio) radio.checked = true;
   });
   document.getElementById('eaToggle').checked = SAMPLE.eaToggle;
+  document.getElementById('mapToggle').checked = SAMPLE.mapToggle;
   FIELD_COMMENTS = {};
   if (typeof refreshAllCommentBadges === 'function') refreshAllCommentBadges();
   toggleEA();
+  toggleMapSection();
   updateMatrix();
   buildResourceLinks();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -6169,10 +6339,11 @@ function exportWord() {
 
   let authorityRows = '';
   AUTHORITIES.forEach(a => {
+    if (a.id === 'housing_map' && !isMapProject()) return; // MAP-only factor; leave out of non-MAP exports
     const checked = document.querySelector(`input[name="${a.id}_status"]:checked`);
     const status = checked ? checked.value : 'unset';
     counts[status]++;
-    const notesText = (f[a.id+'_notes']||'') + (a.id === 'contam' ? (function(){ const t = contamSubsectionText(f); return t ? (f.contam_notes ? '\n\n' : '') + t : ''; })() : '');
+    const notesText = (f[a.id+'_notes']||'') + (a.id === 'contam' ? (function(){ const t = contamSubsectionText(f); return t ? (f.contam_notes ? '\n\n' : '') + t : ''; })() : (a.id === 'housing_map' ? (function(){ const t = housingSubsectionText(f); return t ? (f.housing_map_notes ? '\n\n' : '') + t : ''; })() : ''));
     authorityRows += `
       <tr><td colspan="2" style="background:#0f2a44;color:white;padding:6px 10px;font-weight:bold;">${a.name.replace(/&amp;/g,'&')}</td></tr>
       <tr><td style="width:30%;font-weight:bold;">Citation</td><td>${a.cite}</td></tr>
@@ -6278,12 +6449,13 @@ function generateClientReport() {
   // Compliance summary — one self-contained card per authority (never splits across pages)
   let cards = '';
   AUTHORITIES.forEach(a => {
+    if (a.id === 'housing_map' && !isMapProject()) return; // MAP-only factor; leave out of non-MAP exports
     const checked = document.querySelector(`input[name="${a.id}_status"]:checked`);
     const status = checked ? checked.value : 'unset';
     counts[status] = (counts[status] || 0) + 1;
     const flagged = (typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[a.id]);
     if (flagged) flaggedList.push(a.name.replace(/&amp;/g, '&'));
-    const fullNotes = (f[a.id + '_notes'] || '') + (a.id === 'contam' ? (function(){ const t = contamSubsectionText(f); return t ? (f.contam_notes ? '\n\n' : '') + t : ''; })() : '');
+    const fullNotes = (f[a.id + '_notes'] || '') + (a.id === 'contam' ? (function(){ const t = contamSubsectionText(f); return t ? (f.contam_notes ? '\n\n' : '') + t : ''; })() : (a.id === 'housing_map' ? (function(){ const t = housingSubsectionText(f); return t ? (f.housing_map_notes ? '\n\n' : '') + t : ''; })() : ''));
     const body = (fullNotes ? nl(fullNotes) : '')
       || '<span style="color:#a0aec0;font-style:italic;">Not yet assessed</span>';
     cards += `<div class="auth">
