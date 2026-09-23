@@ -5338,6 +5338,11 @@ AUTHORITIES.forEach(a => {
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpQ" value="lead_free" style="margin-right:6px;">No, because the project was previously deemed to be lead free.<br><span style="margin-left:22px;display:block;color:#4a5568;">Upload all lead-free certificates and reference them below.</span></label>
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpQ" value="not_pre1978" style="margin-right:6px;">No, because the project does not involve any buildings constructed prior to 1978.<br><span style="margin-left:22px;display:block;color:#4a5568;">Provide documentation of construction date(s) below.</span></label>
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpQ" value="not_required" style="margin-right:6px;">No, because program guidance does not require testing for this type of project.<br><span style="margin-left:22px;display:block;color:#4a5568;">For example, HUD's lead-based paint requirements at 24 CFR Part 35 do not apply to housing designated exclusively for the elderly or persons with disabilities, unless a child of less than 6 years of age resides or is expected to reside in such housing. In addition, the requirements do not apply to 0-bedroom dwelling units.</span></label>
+        <div id="housingLbpIdentifiedBlock" style="display:none;margin-top:8px;">
+          <div style="font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;color:#2d3748;">Was lead-based paint identified on site?</div>
+          <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpIdentifiedQ" value="yes" style="margin-right:6px;">Yes<br><span style="margin-left:22px;display:block;color:#4a5568;">Refer to program guidance for remediation requirements. Describe the testing procedure and findings in the textbox below and any necessary mitigation measures in the Mitigation textbox at the bottom of this screen. Upload all documentation below.</span></label>
+          <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingLbpIdentifiedQ" value="no" style="margin-right:6px;">No<br><span style="margin-left:22px;display:block;color:#4a5568;">Upload all testing documents demonstrating that no lead-based paint was found below.</span></label>
+        </div>
         <div class="no-print" style="margin-top:6px;"><button type="button" onclick="insertMapLbpWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Write-Up</button></div>
         <div id="mapLbpWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
         <div style="margin-top:6px;">
@@ -5351,6 +5356,11 @@ AUTHORITIES.forEach(a => {
         <div style="font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;color:#2d3748;margin-top:8px;">Was radon testing performed following the appropriate and latest ANSI-AARST standard?</div>
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingRadonQ" value="tested" style="margin-right:6px;">Yes</label>
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingRadonQ" value="not_required" style="margin-right:6px;">No, because program guidance does not require testing for this type of project.<br><span style="margin-left:22px;display:block;color:#4a5568;">Note that radon testing is encouraged for all HUD projects, even where it is not required. Explain why radon testing was not completed below.</span></label>
+        <div id="housingRadonIdentifiedBlock" style="display:none;margin-top:8px;">
+          <div style="font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;color:#2d3748;">Did testing identify one or more units with radon levels above the EPA action level for mitigation?</div>
+          <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingRadonIdentifiedQ" value="yes" style="margin-right:6px;">Yes<br><span style="margin-left:22px;display:block;color:#4a5568;">Refer to program guidance for remediation requirements. Describe the testing procedure and findings below and any necessary mitigation measures in the Mitigation textbox at the bottom of this screen. Upload all documentation below.</span></label>
+          <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingRadonIdentifiedQ" value="no" style="margin-right:6px;">No<br><span style="margin-left:22px;display:block;color:#4a5568;">Upload below all testing documents demonstrating that radon was not found above EPA action levels for mitigation.</span></label>
+        </div>
         <div class="no-print" style="margin-top:6px;"><button type="button" onclick="insertMapRadonWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Write-Up</button></div>
         <div id="mapRadonWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
         <div style="margin-top:6px;">
@@ -5365,6 +5375,12 @@ AUTHORITIES.forEach(a => {
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosQ" value="surveyed" style="margin-right:6px;">Yes</label>
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosQ" value="date_threshold" style="margin-right:6px;">No, because the project meets a date threshold in program guidance.<br><span style="margin-left:22px;display:block;color:#4a5568;">Provide documentation of construction date(s) and how this fits program guidance below.</span></label>
         <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosQ" value="not_required" style="margin-right:6px;">No, because program guidance does not require testing for this type of project.<br><span style="margin-left:22px;display:block;color:#4a5568;">Explain below.</span></label>
+        <div id="housingAsbestosIdentifiedBlock" style="display:none;margin-top:8px;">
+          <div style="font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;color:#2d3748;">Was asbestos identified on site?</div>
+          <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosIdentifiedQ" value="friable" style="margin-right:6px;">Yes, friable or damaged asbestos was identified.<br><span style="margin-left:22px;display:block;color:#4a5568;">Refer to program guidance for remediation requirements. Describe the testing procedure and findings in the textbox below and any necessary mitigation measures in the Mitigation textbox at the bottom of this screen. Upload all documentation below.</span></label>
+          <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosIdentifiedQ" value="not_friable" style="margin-right:6px;">Yes, asbestos was identified, but it was not friable or damaged<br><span style="margin-left:22px;display:block;color:#4a5568;">Refer to program guidance for remediation requirements. Describe the testing procedure and findings in the textbox below and any necessary mitigation measures in the Mitigation textbox at the bottom of this screen. Upload all documentation below.</span></label>
+          <label style="display:block;font-size:12px;font-weight:400;line-height:1.4;margin:4px 0;color:#2d3748;"><input type="radio" name="housingAsbestosIdentifiedQ" value="no" style="margin-right:6px;">No<br><span style="margin-left:22px;display:block;color:#4a5568;">Upload all testing documents demonstrating that no asbestos was found below.</span></label>
+        </div>
         <div class="no-print" style="margin-top:6px;"><button type="button" onclick="insertMapAsbestosWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Write-Up</button></div>
         <div id="mapAsbestosWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
         <div style="margin-top:6px;">
@@ -5729,7 +5745,34 @@ function toggleMapSection() {
   document.querySelectorAll('.map-section').forEach(s => s.classList.toggle('visible', on));
   if (typeof updateMatrix === 'function') updateMatrix();
   if (typeof buildSideNav === 'function') buildSideNav();
+  updateHousingIdentifiedVisibility();
 }
+
+// (v110) HEROS-style expand-on-"Yes" behavior for the Housing Requirements subsection: each of
+// Lead-Based Paint / Radon / Asbestos has a first question ("was an inspection/survey/testing
+// performed?") and, only when that first question is answered "Yes", a second follow-up question
+// ("was it identified on site?") appears — matching how the real HUD HEROS screen expands.
+function updateHousingIdentifiedVisibility() {
+  const lbpBlock = document.getElementById('housingLbpIdentifiedBlock');
+  if (lbpBlock) {
+    const lbpYes = (document.querySelector('input[name="housingLbpQ"]:checked') || {}).value === 'inspected';
+    lbpBlock.style.display = lbpYes ? 'block' : 'none';
+  }
+  const radonBlock = document.getElementById('housingRadonIdentifiedBlock');
+  if (radonBlock) {
+    const radonYes = (document.querySelector('input[name="housingRadonQ"]:checked') || {}).value === 'tested';
+    radonBlock.style.display = radonYes ? 'block' : 'none';
+  }
+  const asbestosBlock = document.getElementById('housingAsbestosIdentifiedBlock');
+  if (asbestosBlock) {
+    const asbestosYes = (document.querySelector('input[name="housingAsbestosQ"]:checked') || {}).value === 'surveyed';
+    asbestosBlock.style.display = asbestosYes ? 'block' : 'none';
+  }
+}
+document.addEventListener('change', e => {
+  const n = e.target && e.target.name;
+  if (n === 'housingLbpQ' || n === 'housingRadonQ' || n === 'housingAsbestosQ') updateHousingIdentifiedVisibility();
+});
 // Live update Project Name context indicators on HEROS-style headers
 function syncProjectNameContext() {
   const pn = (document.querySelector('input[data-field="projectName"]') || {}).value || '—';
