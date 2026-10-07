@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v112</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v113</div>
   </div>
 </header>
 
@@ -2116,7 +2116,7 @@ const AUTO_DETERMINERS = {
       zoneFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 28, lng, lat, 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID,STUDY_TYP');
     } catch (e) { console.warn('[flood_mgt] zone query failed:', e); }
     try {
-      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 16, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP');
+      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP');
       if (panelFeatures.length) panelInfo = panelFeatures[0].attributes;
     } catch (e) { console.warn('[flood_mgt] panel query failed:', e); }
 
@@ -2181,7 +2181,7 @@ const AUTO_DETERMINERS = {
       zoneFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 28, lng, lat, 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID,STUDY_TYP');
     } catch (e) { console.warn('[flood_ins] zone query failed:', e); }
     try {
-      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 16, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP');
+      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP');
       if (panelFeatures.length) panelInfo = panelFeatures[0].attributes;
     } catch (e) { console.warn('[flood_ins] panel query failed:', e); }
 
@@ -3334,6 +3334,19 @@ function figProjectMeta(proj, center) {
   const grantLabel = grant ? 'Grant No. ' + grant : (heros ? 'HEROS No. ' + heros : '');
   return { projectName: (proj.projectName || '').trim(), location: figSiteLabel(proj, center), grant: grantLabel };
 }
+// Half-extent (metres) that frames the parcel boundary: pad × its larger half-dimension, clamped (feet)
+function figParcelHalfM(site, center, pad, minFt, maxFt) {
+  let halfFt = minFt;
+  const g = site && site.boundary && site.boundary.geometry;
+  if (g) {
+    const rings = g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : [];
+    const lat0 = center[1] * Math.PI / 180, kx = 111320 * Math.cos(lat0) * FT_PER_M, ky = 110574 * FT_PER_M;
+    let m = 0;
+    rings.forEach(r => r.forEach(q => { m = Math.max(m, Math.abs((q[0] - center[0]) * kx), Math.abs((q[1] - center[1]) * ky)); }));
+    halfFt = Math.max(minFt, Math.min(maxFt, m * pad));
+  }
+  return halfFt / FT_PER_M;
+}
 function figSiteLabel(proj, center) {
   return (proj.siteAddress || '').trim() ? [proj.siteAddress, proj.siteCity, proj.siteState, proj.siteZip].filter(Boolean).join(', ') : (center[1].toFixed(5) + ', ' + center[0].toFixed(5));
 }
@@ -3698,10 +3711,126 @@ async function generateCBRSFigure(authId) {
   }
 }
 
+
+// ===== FEMA FLOOD HAZARD FIGURE (Flood Insurance §58.6(a) / Floodplain Management §58.5(b)) =====
+// FEMA National Flood Hazard Layer, drawn with FEMA's own symbology. One generator serves both authorities;
+// the header cite changes with the authority it was launched from.
+const NFHL_SERVICE = 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer';
+const NFHL_LAYER = { panels: 3, lomr: 1, loma: 34, zones: 28, bfe: 16, xs: 14, floodwayBdy: 27 };
+function nfhlIsSFHA(z) { if (!z) return false; const u = String(z).toUpperCase().trim(); if (u === 'X' || u === 'D' || u.startsWith('OPEN WATER') || u.startsWith('AREA NOT')) return false; return /^[AV]/.test(u); }
+function nfhlZoneLabel(a) {
+  const z = String(a.FLD_ZONE || '').toUpperCase(), st = String(a.ZONE_SUBTY || '').toUpperCase();
+  if (st.includes('FLOODWAY')) return 'Regulatory Floodway ';
+  if (st.includes('FUTURE')) return 'Future Conditions 1% Annual Chance Flood Hazard';
+  if (st.includes('REDUCED') && st.includes('LEVEE')) return 'Area with Reduced Risk Due to Levee';
+  if (st.includes('LEVEE')) return 'Area with Risk Due to Levee';
+  if (st.includes('0.2 PCT') || st.includes('0.2%')) return '0.2% Annual Chance Flood Hazard';
+  if (z === 'D') return 'Area of Undetermined Flood Hazard';
+  if (nfhlIsSFHA(z)) return '1% Annual Chance Flood Hazard';
+  if (z === 'X') return 'Zone X — Area of Minimal Flood Hazard';
+  return null;
+}
+async function nfhlQuery(layer, geometry, geometryType, extra) {
+  const params = new URLSearchParams(Object.assign({ f: 'json', geometry: JSON.stringify(geometry), geometryType, inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: '*', returnGeometry: 'false', outSR: '4326' }, extra || {}));
+  const j = await (await fetch(NFHL_SERVICE + '/' + layer + '/query?' + params)).json();
+  if (j.error) throw new Error(j.error.message || 'NFHL query failed');
+  return j.features || [];
+}
+async function generateFloodFigure(authId) {
+  authId = authId || 'flood_ins';
+  const statusEl = document.getElementById('autoStatus_' + authId);
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the flood figure.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const isMgmt = authId === 'flood_mgt';
+  try {
+    say('Querying the FEMA National Flood Hazard Layer…');
+    let siteGeom = { x: center[0], y: center[1], spatialReference: { wkid: 4326 } }, siteType = 'esriGeometryPoint';
+    if (site.boundary && site.boundary.geometry) {
+      const g = site.boundary.geometry; const rings = (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []);
+      if (rings.length) { siteGeom = { rings, spatialReference: { wkid: 4326 } }; siteType = 'esriGeometryPolygon'; }
+    }
+    const ptGeom = { x: center[0], y: center[1], spatialReference: { wkid: 4326 } };
+    const [siteZones, panels, lomrs, lomas] = await Promise.all([
+      nfhlQuery(NFHL_LAYER.zones, siteGeom, siteType, { outFields: 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,STATIC_BFE,DFIRM_ID' }),
+      nfhlQuery(NFHL_LAYER.panels, ptGeom, 'esriGeometryPoint', { outFields: 'FIRM_PAN,EFF_DATE,PANEL_TYP,DFIRM_ID' }).catch(() => []),
+      nfhlQuery(NFHL_LAYER.lomr, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS' }).catch(() => []),
+      nfhlQuery(NFHL_LAYER.loma, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS,DETERMINATION' }).catch(() => [])
+    ]);
+    const panel = panels[0] ? panels[0].attributes : null;
+    const effDate = panel && panel.EFF_DATE ? new Date(parseInt(panel.EFF_DATE)).toLocaleDateString('en-US') : '';
+    const firmRef = panel ? (panel.FIRM_PAN || panel.DFIRM_ID || '') + (effDate ? ' (effective ' + effDate + ')' : '') : '';
+    const zoneTxt = a => (a.FLD_ZONE || '?') + (a.ZONE_SUBTY ? ' — ' + String(a.ZONE_SUBTY).toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) : '');
+    const uniq = arr => arr.filter((v, i) => arr.indexOf(v) === i);
+    const zonesOnSite = uniq(siteZones.map(f => zoneTxt(f.attributes)));
+    const inSFHA = siteZones.some(f => nfhlIsSFHA(f.attributes.FLD_ZONE));
+    const in500 = siteZones.some(f => String(f.attributes.ZONE_SUBTY || '').toUpperCase().includes('0.2 PCT'));
+    const noData = siteZones.length === 0;
+
+    say('Rendering basemap…');
+    // Frame tight on the parcel boundary (2.2× its half-extent, floor 350 ft, ceiling 1,500 ft) so the
+    // property's position relative to the zone lines is unmistakable
+    const base = await figBuildBase(center, figParcelHalfM(site, center, 2.2, 350, 1500), { basemap: 'streets' });
+    if (!base.tilesOk) throw new Error('basemap tiles could not be loaded');
+    const { ctx, toPx, W, H } = base;
+    let overlayOk = true;
+    // Zones + zone boundaries only — no cross-section / BFE layers (their hexagon labels clutter a parcel-scale frame)
+    try { await figOverlayExport(base, NFHL_SERVICE, [NFHL_LAYER.zones, NFHL_LAYER.floodwayBdy].join(','), 0.8); } catch (e) { overlayOk = false; }
+    figDrawSite(base, site, center);
+    const c = toPx(center);
+    // Site label: zone(s) + FIRM panel
+    ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+    const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), W - w - 12), ly = Math.min(Math.max(110, y), H - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
+    tag('Subject Property: ' + (noData ? 'no NFHL flood zone data mapped' : 'Zone ' + zonesOnSite.join('; ')), c[0] + 16, c[1] - 24, inSFHA ? '#b91c1c' : '#1e3a8a');
+    if (firmRef) tag('FIRM Panel ' + firmRef, c[0] + 16, c[1] - 2, '#1f2937');
+    // Legend: only the zone categories that are actually within the mapped extent
+    const [xmin, ymin, xmax, ymax] = base.bbox;
+    let extentZones = [];
+    try { extentZones = await nfhlQuery(NFHL_LAYER.zones, { xmin, ymin, xmax, ymax, spatialReference: { wkid: 3857 } }, 'esriGeometryEnvelope', { inSR: '3857', outFields: 'FLD_ZONE,ZONE_SUBTY' }); } catch (e) {}
+    const wanted = uniq(extentZones.map(f => nfhlZoneLabel(f.attributes)).filter(Boolean));
+    const siteLabel = figSiteLabel(proj, center);
+    let legend = [{ label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
+    try {
+      const svc = await figServiceLegend(NFHL_SERVICE, [NFHL_LAYER.zones]);
+      const order = ['1% Annual Chance Flood Hazard', 'Regulatory Floodway ', 'Special Floodway', '0.2% Annual Chance Flood Hazard', 'Future Conditions 1% Annual Chance Flood Hazard', 'Area with Reduced Risk Due to Levee', 'Area with Risk Due to Levee', 'Area of Undetermined Flood Hazard'];
+      order.forEach(lbl => { if (wanted.includes(lbl)) { const e = svc.find(x => x.label === lbl); if (e) legend.push({ label: lbl.trim() + (lbl.startsWith('1%') ? ' (SFHA — Zones A, AE, AH, AO, V, VE)' : lbl.startsWith('0.2%') ? ' (Zone X shaded — 500-yr)' : ''), draw: e.draw }); } });
+    } catch (e) {}
+    if (wanted.includes('Zone X — Area of Minimal Flood Hazard') || noData) legend.push({ label: 'Zone X — Area of Minimal Flood Hazard (unshaded)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 5, y, 20, h); } });
+    await figFurnish(base, {
+      title: isMgmt ? 'Floodplain Management Map' : 'Flood Insurance (FIRM) Map',
+      meta: figProjectMeta(proj, center),
+      subtitle: (isMgmt ? 'Executive Order 11988 / 24 CFR Part 55 · §58.5(b)' : 'Flood Disaster Protection Act of 1973 (42 U.S.C. 4012a) · §58.6(a)') + ' · FEMA National Flood Hazard Layer' + (firmRef ? ' · FIRM Panel ' + firmRef : '') + (overlayOk ? '' : ' (overlay unavailable at generation time)'),
+      legend
+    });
+    // Findings (internal — status line, Source/Ref, Supporting Doc caption only)
+    let finding, status;
+    const lomrTxt = lomrs.length ? ' A LOMR (' + lomrs.map(f => f.attributes.CASE_NO).filter(Boolean).join(', ') + ') intersects the site — review it.' : '';
+    const lomaTxt = lomas.length ? ' A LOMA (' + lomas.map(f => f.attributes.CASE_NO).filter(Boolean).join(', ') + ') is recorded at the site.' : '';
+    if (noData) { finding = 'No NFHL flood hazard data is mapped at the site (unmapped / NFHL not available here). Check the paper FIRM at the FEMA Map Service Center before writing up.'; status = 'followup'; }
+    else if (inSFHA) { finding = 'Subject Property is IN a Special Flood Hazard Area (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies — 8-Step (or 5-Step) process required; Write Up 2a.' : ' Flood insurance required; confirm NFIP participation in the Community Status Book → Write Up 3 (or cannot proceed if the community is not participating).') + lomrTxt + lomaTxt; status = 'followup'; }
+    else if (in500) { finding = 'Subject Property is NOT in an SFHA but IS in the 0.2% annual chance (500-yr) floodplain (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies via the 500-year approach — Write Up 2b.' : ' Flood insurance not required under §58.6(a) → Write Up 1 (still check preliminary / pending products at the MSC).') + lomrTxt + lomaTxt; status = isMgmt ? 'followup' : 'compliant'; }
+    else { finding = 'Subject Property is NOT in an SFHA (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' Not in the 500-year floodplain → Write Up 1a (confirm no preliminary / pending products move it).' : ' Flood insurance not required → Write Up 1 after confirming no preliminary / pending products at the MSC.') + lomrTxt + lomaTxt; status = 'compliant'; }
+    const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
+    const fileBase = isMgmt ? '_Floodplain_Management_Map' : '_FIRM_Map';
+    figAttach(authId, base.cv, slug + fileBase + '.jpg', finding);
+    figFillSourceRef(authId, 'FEMA National Flood Hazard Layer (NFHL) — ' + (isMgmt ? 'Floodplain Management Map' : 'FIRM Map'), firmRef || ('Zone ' + zonesOnSite.join('; ')));
+    figDownloadPdf(base.cv, slug + fileBase + '.pdf');
+    say('✓ Flood figure generated — PDF downloaded and attached to Supporting Documents. ' + finding, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
+    return { finding, status, zonesOnSite, firmRef, inSFHA, in500 };
+  } catch (e) {
+    console.warn('[Flood figure]', e);
+    say('✗ Flood figure failed: ' + e.message, 'var(--red,#c00)');
+  }
+}
+
 // ===== MAP GENERATOR REGISTRY (per authority) =====
 const MAP_GENERATORS = {
   airport: { fn: 'generateAirportFigure', label: '🗺 Airport Hazards Figure (FAA runway ends)' },
   cbra:    { fn: 'generateCBRSFigure',    label: '🗺 CBRS Figure (USFWS units)' },
+  flood_ins: { fn: 'generateFloodFigure', label: '🗺 FIRM Figure (FEMA NFHL)' },
+  flood_mgt: { fn: 'generateFloodFigure', label: '🗺 Floodplain Figure (FEMA NFHL)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -9652,7 +9781,9 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v112 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v113 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
+  console.log('  v113: FEMA flood figure (FIRM / Floodplain Management) from the NFHL — zones on the actual parcel, FIRM panel + effective date, LOMR/LOMA check, FEMA symbology with a legend limited to zones present in the frame. Also fixed the auto-determiners querying FIRM Panels from NFHL layer 16 (that is Base Flood Elevations) — panels are layer 3, so FIRM panel refs were always blank.');
   console.log('  v112: "Push site address & coordinates" now reverse-geocodes the site centroid to fill blank Street / City / State / Zip (DE FirstMap parcels carry no address; MD SDAT carries no city/zip). Existing entries are never overwritten; the confirmation says which fields came from the geocoder.');
   console.log('  v111: FIGURE STANDARD — every figure is external-facing (HUD / RE / client): header carries project name, site location and Grant No. (or HEROS No.); NO findings/instructions footer on the PDF; findings go only to the status line, Source/Ref and the Supporting Doc caption.');
   console.log('  v110: CBRS figure — USFWS/USGS CBRS Mapper service: in-unit / buffer-zone / nearest-unit distance, official symbology overlay + legend, PDF + Supporting Documents; figure engine gained shared overlay/legend/site helpers.');
