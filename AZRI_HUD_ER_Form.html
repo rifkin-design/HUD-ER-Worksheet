@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v113</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v114</div>
   </div>
 </header>
 
@@ -3825,12 +3825,259 @@ async function generateFloodFigure(authId) {
   }
 }
 
+// ===== AIR QUALITY — GENERAL CONFORMITY EVALUATION ATTACHMENT (Clean Air Act §176(c); §58.5(g)) =====
+// Queries EPA's Green Book nonattainment-area service for every current NAAQS at the site, applies the
+// 40 CFR 93.153(b) de minimis thresholds, and writes a letter-format PDF (same header standard as the
+// figures) that can go to the state air agency for concurrence. External-facing: no internal notes.
+const GREENBOOK_SERVICE = 'https://gispub.epa.gov/arcgis/rest/services/OAR_OAQPS/NonattainmentAreas/MapServer';
+// Layers for CURRENT standards only (0 = 1997 ozone and 10 = 1979 1-hr ozone are revoked — per the SOP, ignore revoked NAAQS)
+const GREENBOOK_LAYERS = [
+  { id: 2, naaqs: '8-Hour Ozone (2015)', pollutant: 'Ozone', precursors: 'NOx, VOC' },
+  { id: 1, naaqs: '8-Hour Ozone (2008)', pollutant: 'Ozone', precursors: 'NOx, VOC' },
+  { id: 7, naaqs: 'PM2.5 Annual (2012)', pollutant: 'PM2.5', precursors: 'PM2.5, SO2, NOx' },
+  { id: 5, naaqs: 'PM2.5 24-Hour (2006)', pollutant: 'PM2.5', precursors: 'PM2.5, SO2, NOx' },
+  { id: 6, naaqs: 'PM2.5 Annual (1997)', pollutant: 'PM2.5', precursors: 'PM2.5, SO2, NOx' },
+  { id: 8, naaqs: 'PM10 (1987)', pollutant: 'PM10', precursors: 'PM10' },
+  { id: 4, naaqs: 'SO2 1-Hour (2010)', pollutant: 'SO2', precursors: 'SO2' },
+  { id: 9, naaqs: 'CO (1971)', pollutant: 'CO', precursors: 'CO' },
+  { id: 3, naaqs: 'Lead (2008)', pollutant: 'Lead', precursors: 'Pb' },
+  { id: 11, naaqs: 'NO2 (1971)', pollutant: 'NO2', precursors: 'NOx' }
+];
+// De minimis levels, tons per year — 40 CFR 93.153(b)(1) nonattainment, (b)(2) maintenance
+function deMinimisFor(hit) {
+  const cls = String(hit.classification || '').toLowerCase(), status = String(hit.current_status || '').toLowerCase();
+  const p = hit._layer.pollutant;
+  const otr = ['MD', 'DC', 'DE', 'PA', 'VA', 'NJ', 'NY', 'CT', 'RI', 'MA', 'VT', 'NH', 'ME'].includes(String(hit.state_abbreviation || '').toUpperCase());  // Ozone Transport Region states (VA: northern VA only — noted in text)
+  if (p === 'Ozone') {
+    if (status.includes('maint')) return [{ pol: 'VOC', tpy: otr ? 50 : 100 }, { pol: 'NOx', tpy: 100 }];
+    if (cls.includes('extreme') || cls.includes('severe')) return [{ pol: 'VOC', tpy: cls.includes('extreme') ? 10 : 25 }, { pol: 'NOx', tpy: cls.includes('extreme') ? 10 : 25 }];
+    if (cls.includes('serious')) return [{ pol: 'VOC', tpy: 50 }, { pol: 'NOx', tpy: 50 }];
+    // marginal / moderate (or unclassified) — inside the OTR the VOC level is 50
+    return [{ pol: 'VOC', tpy: otr ? 50 : 100 }, { pol: 'NOx', tpy: 100 }];
+  }
+  if (p === 'PM2.5') return [{ pol: 'PM2.5 (direct)', tpy: 100 }, { pol: 'SO2', tpy: 100 }, { pol: 'NOx', tpy: 100 }];
+  if (p === 'PM10') return [{ pol: 'PM10', tpy: cls.includes('serious') ? 70 : 100 }];
+  if (p === 'SO2') return [{ pol: 'SO2', tpy: 100 }];
+  if (p === 'CO') return [{ pol: 'CO', tpy: 100 }];
+  if (p === 'NO2') return [{ pol: 'NOx', tpy: 100 }];
+  if (p === 'Lead') return [{ pol: 'Pb', tpy: 25 }];
+  return [];
+}
+// State air agency contact for the concurrence request — from the AZ-RI SOP
+const AIR_AGENCY = {
+  MD: { agency: 'Maryland Department of the Environment (MDE), Air and Radiation Administration', note: 'MDE\'s General Conformity letter dated Feb 19, 2026 (Roger Thunell) makes a de minimis finding for comparable HUD residential projects (Appendix 1), valid through Feb 1, 2027; this evaluation is submitted in reliance on that letter.' },
+  DC: { agency: 'DC Department of Energy & Environment (DOEE), Air Quality Division', note: 'DOEE has confirmed that MDE\'s General Conformity letter may be relied on for District projects.' },
+  DE: { agency: 'Delaware DNREC, Division of Air Quality', contact: 'Amy Mann — Amy.Mann@delaware.gov — 302-323-4542', note: 'Alternatively submitted through the Delaware Coastal Management Program federal-consistency review.' },
+  PA: { agency: 'Pennsylvania DEP, Bureau of Air Quality (regional office)', contact: 'Susan Foster — sufoster@pa.gov — 717-772-3369', note: 'Allegheny County and Philadelphia have their own air agencies.' },
+  VA: { agency: 'Virginia DEQ, Air Division', contact: 'Chuck Turner — charles.turner@deq.virginia.gov — 804-517-2394' }
+};
+const STATE_ABBR = { 'Maryland': 'MD', 'District of Columbia': 'DC', 'Delaware': 'DE', 'Pennsylvania': 'PA', 'Virginia': 'VA', 'West Virginia': 'WV', 'New Jersey': 'NJ', 'New York': 'NY' };
+
+async function greenBookQuery(layer, center) {
+  const flds = 'pollutant_name,area_name,state_abbreviation,current_status,classification,designation_effective_date,redesignation_effective_date,meets_naaqs,design_value,dv_units,dv_years,statutory_attainment_date';
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const t = ctrl ? setTimeout(() => ctrl.abort(), 60000) : null;   // EPA's service is slow some afternoons
+  try {
+    const r = await fetch(`${GREENBOOK_SERVICE}/${layer.id}/query?f=json&geometry=${center[0]},${center[1]}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=${flds}&returnGeometry=false`, { signal: ctrl ? ctrl.signal : undefined });
+    const j = await r.json(); if (t) clearTimeout(t);
+    if (j.error) return { layer, error: j.error.message || 'query error' };
+    return { layer, hits: (j.features || []).map(f => Object.assign({ _layer: layer }, f.attributes)) };
+  } catch (e) { if (t) clearTimeout(t); return { layer, error: e.message }; }
+}
+function fmtEpaDate(v) { if (!v) return ''; const n = parseInt(v); return isNaN(n) ? String(v) : new Date(n).toLocaleDateString('en-US'); }
+
+async function generateAirQualityAttachment(authId) {
+  authId = authId || 'air';
+  const statusEl = document.getElementById('autoStatus_' + authId);
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the Air Quality attachment.'); return; }
+  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const meta = figProjectMeta(proj, center);
+  const stateAbbr = STATE_ABBR[(proj.siteState || '').trim()] || (proj.siteState || '').trim().toUpperCase().slice(0, 2);
+  const inputs = {
+    units: (proj.air_units || '').trim(), sqft: (proj.air_sqft || '').trim(), months: (proj.air_constMonths || '').trim(), fuel: (proj.air_fuel || '').trim(),
+    emis: { NOx: proj.air_emisNOx, VOC: proj.air_emisVOC, 'PM2.5 (direct)': proj.air_emisPM25, PM10: proj.air_emisPM10, SO2: proj.air_emisSO2, CO: proj.air_emisCO },
+    emisBasis: (proj.air_emisBasis || '').trim(), contactOverride: (proj.air_contact || '').trim(), preparerTitle: (proj.air_preparerTitle || '').trim()
+  };
+  try {
+    say('Querying the EPA Green Book for every current NAAQS…');
+    // All standards queried in parallel — some EPA layers answer in a second, others take 20 s+
+    let done = 0;
+    const results = await Promise.all(GREENBOOK_LAYERS.map(L => greenBookQuery(L, center).then(r => { done++; say(`Green Book: ${done} of ${GREENBOOK_LAYERS.length} standards checked…`); return r; })));
+    let hits = results.flatMap(r => r.hits || []).filter(h => h.current_status);
+    let failed = results.filter(r => r.error).map(r => r.layer.naaqs);
+    // Manual Green Book entries (used when EPA's service is down, or to add an area the service missed).
+    // One per line: "NAAQS | Area, ST | Status | Classification"  e.g. "8-Hour Ozone (2015) | Baltimore, MD | Nonattainment | Serious"
+    const manual = String(proj.air_gbManual || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+      const c = l.split('|').map(x => x.trim());
+      const naaqs = c[0] || '', pol = /ozone/i.test(naaqs) ? 'Ozone' : /pm2\.?5/i.test(naaqs) ? 'PM2.5' : /pm10/i.test(naaqs) ? 'PM10' : /so2/i.test(naaqs) ? 'SO2' : /\bco\b/i.test(naaqs) ? 'CO' : /lead|\bpb\b/i.test(naaqs) ? 'Lead' : /no2/i.test(naaqs) ? 'NO2' : 'Ozone';
+      const area = c[1] || '', st = (area.match(/,\s*([A-Z]{2})\s*$/) || [])[1] || stateAbbr;
+      return { _layer: { naaqs, pollutant: pol }, area_name: area.replace(/,\s*[A-Z]{2}\s*$/, ''), state_abbreviation: st, current_status: c[2] || 'Nonattainment', classification: c[3] || '', design_value: null, dv_units: '', dv_years: '', meets_naaqs: '', _manual: true };
+    });
+    if (manual.length) { hits = hits.concat(manual); failed = []; }
+    if (failed.length) {
+      // Never issue an external document with unknowns: stop and tell the reviewer how to proceed.
+      say('✗ EPA\'s Green Book service did not answer for: ' + failed.join('; ') + '. Try again in a few minutes, or look the area up at epa.gov/green-book and enter the result in the "Green Book status (manual)" box — then generate again.', 'var(--red,#c00)');
+      return { failed };
+    }
+    const nonatt = hits.filter(h => /nonatt/i.test(h.current_status));
+    const maint = hits.filter(h => /maint/i.test(h.current_status));
+    const applies = hits.length > 0;
+    // Threshold table (dedupe by pollutant keeping the most stringent)
+    const thr = {};
+    hits.forEach(h => deMinimisFor(h).forEach(d => { if (!thr[d.pol] || d.tpy < thr[d.pol].tpy) thr[d.pol] = { tpy: d.tpy, from: h._layer.naaqs + ' — ' + h.area_name + ' (' + h.current_status + (h.classification ? ', ' + h.classification : '') + ')' }; }));
+    const anyEmis = Object.values(inputs.emis).some(v => v != null && String(v).trim() !== '');
+    let exceeds = [];
+    if (anyEmis) Object.entries(thr).forEach(([pol, t]) => { const v = parseFloat(inputs.emis[pol]); if (!isNaN(v) && v >= t.tpy) exceeds.push(pol); });
+
+    // ---------- PDF ----------
+    say('Writing the attachment…');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight(), M = 48;
+    const safe = t => String(t == null ? '' : t).replace(/→/g, '->').replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/§/g, 'Sec. ').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/ /g, ' ').replace(/·/g, '-').replace(/—/g, '-').replace(/–/g, '-');
+    let y = 0;
+    // Logo downscaled once (the report logo is a large PNG; embedding it full-size on every page bloats the PDF)
+    let logoSmall = null, logoAR = 3;
+    try { const im = await figDataUrlImg(window.AZRI_REPORT_LOGO); const cv = document.createElement('canvas'); cv.width = 480; cv.height = Math.round(480 * im.height / im.width); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); logoSmall = cv.toDataURL('image/png'); logoAR = im.width / im.height; } catch (e) {}
+    // Header (figure standard): logo | title + project / location / grant | date
+    const drawHeader = async (first) => {
+      let tx = M; const lh = first ? 46 : 30, lw = logoSmall ? lh * logoAR : 0; if (logoSmall) tx = M + lw + 16;
+      const maxW = pageW - tx - 110;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 15 : 11);
+      const titleLines = doc.splitTextToSize(safe('Air Quality - General Conformity Evaluation' + (meta.projectName ? ' - ' + meta.projectName : '')), maxW);
+      const tLineH = first ? 17 : 13;
+      const l2 = [meta.location, meta.grant].filter(Boolean).join('   -   ');
+      // header height grows with the wrapped title so nothing overlaps
+      let HB = (first ? 30 : 22) + (titleLines.length - 1) * tLineH + (l2 ? (first ? 18 : 15) : 0) + (first ? 20 : 0) + 22;
+      HB = Math.max(HB, first ? 96 : 54);
+      doc.setFillColor(255, 255, 255); doc.rect(0, 0, pageW, HB, 'F');
+      doc.setFillColor(15, 42, 68); doc.rect(0, HB - 3, pageW, 3, 'F');
+      if (logoSmall) doc.addImage(logoSmall, 'PNG', M, (HB - 3 - lh) / 2, lw, lh);
+      let ty = first ? 30 : 22;
+      doc.setTextColor(15, 42, 68); doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 15 : 11);
+      titleLines.forEach((ln, i) => doc.text(ln, tx, ty + i * tLineH)); ty += (titleLines.length - 1) * tLineH;
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(31, 41, 55); doc.setFontSize(first ? 10 : 8.5);
+      if (l2) { ty += first ? 18 : 15; doc.text(safe(l2), tx, ty, { maxWidth: maxW }); }
+      if (first) { ty += 20; doc.setFontSize(8.5); doc.setTextColor(75, 85, 99); doc.text(safe('Clean Air Act Sec. 176(c) - 40 CFR Part 93 Subpart B - 24 CFR 58.5(g) - EPA Green Book (Nonattainment Areas for Criteria Pollutants)'), tx, ty, { maxWidth: maxW }); }
+      doc.setFontSize(9); doc.setTextColor(51, 65, 85); doc.text(new Date().toLocaleDateString(), pageW - M, first ? 30 : 22, { align: 'right' });
+      y = HB + 22;
+    };
+    const ensure = async (need) => { if (y + need > pageH - M) { doc.addPage(); await drawHeader(false); } };
+    const h2 = async (t) => { await ensure(30); doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(15, 42, 68); doc.text(safe(t), M, y); y += 16; doc.setTextColor(20, 20, 20); };
+    const para = async (t, opts) => { doc.setFont('helvetica', (opts && opts.bold) ? 'bold' : 'normal'); doc.setFontSize((opts && opts.size) || 10); const lines = doc.splitTextToSize(safe(t), pageW - M * 2); for (const ln of lines) { await ensure(14); doc.text(ln, M, y); y += 13; } y += 5; };
+    const table = async (head, rows, widths) => {
+      const x0 = M; const lineH = 12;
+      const drawRow = async (cells, bold, fill) => {
+        doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(8.5);
+        const wrapped = cells.map((c, i) => doc.splitTextToSize(safe(c), widths[i] - 8));
+        const rh = Math.max(...wrapped.map(w => w.length)) * lineH + 8;
+        await ensure(rh + 4);
+        if (fill) { doc.setFillColor(fill[0], fill[1], fill[2]); doc.rect(x0, y - 9, widths.reduce((a, b) => a + b, 0), rh, 'F'); }
+        doc.setDrawColor(180, 180, 180); doc.rect(x0, y - 9, widths.reduce((a, b) => a + b, 0), rh);
+        let x = x0; wrapped.forEach((w, i) => { w.forEach((ln, k) => doc.text(ln, x + 4, y + k * lineH)); x += widths[i]; });
+        y += rh;
+      };
+      await drawRow(head, true, [226, 232, 240]);
+      for (const r of rows) await drawRow(r, false, null);
+      y += 8;
+    };
+    await drawHeader(true);
+    doc.setTextColor(20, 20, 20);
+
+    // 1. Project
+    await h2('1. Project');
+    const scopeAns = (typeof rq === 'function') ? rq('air', 'scope') : '';
+    const scopeTxt = scopeAns === 'major' ? 'new construction or conversion creating commercial/industrial space, five or more dwelling units, or five or more single-family units within 2,000 feet of one another' : scopeAns === 'sf' ? 'new construction or substantial rehabilitation of single-family housing (four or fewer units)' : 'the activities described below';
+    const scale = [inputs.units ? inputs.units + ' dwelling unit(s)' : '', inputs.sqft ? inputs.sqft + ' sq ft of building area' : '', inputs.months ? 'approximately ' + inputs.months + ' month(s) of construction' : '', inputs.fuel ? inputs.fuel + ' heating' : ''].filter(Boolean).join('; ');
+    await para((proj.projectDescription || '').trim() || '(Project description not entered in Screen 1125.)');
+    await para('The project consists of ' + scopeTxt + (scale ? ' (' + scale + ')' : '') + ', located at ' + meta.location + (proj.siteCity ? '' : '') + '. Site coordinates: ' + center[1].toFixed(5) + ', ' + center[0].toFixed(5) + '. The project is not exempt from the General Conformity review under HUD\'s screening (it is not limited to acquisition, interior work, or single-family construction qualifying for the Individual Action Exemption), so the attainment status of the project area was evaluated.');
+
+    // 2. Attainment status
+    await h2('2. Attainment Status of the Project Area (EPA Green Book)');
+    if (!applies) {
+      await para('The project location was checked against the EPA Green Book nonattainment-area boundaries for every current National Ambient Air Quality Standard (8-hour ozone 2008 and 2015; PM2.5 1997, 2006 and 2012; PM10; SO2 2010; CO; lead 2008; NO2). The project area is not designated nonattainment and is not a maintenance area for any criteria pollutant under a current NAAQS.');
+    } else {
+      await para('The project location was checked against the EPA Green Book nonattainment-area boundaries for every current NAAQS. The project area is within the following nonattainment and/or maintenance areas:');
+      await table(['NAAQS', 'Area', 'Status', 'Classification', 'Design value (yrs)', 'Meets NAAQS?'],
+        hits.map(h => [h._layer.naaqs, (h.area_name || '') + (h.state_abbreviation ? ', ' + h.state_abbreviation : ''), h.current_status || '', h.classification || '-', (h.design_value != null ? Number(h.design_value).toFixed(3).replace(/0+$/, '').replace(/\.$/, '') + ' ' + (h.dv_units || '') : '-') + (h.dv_years ? ' (' + h.dv_years + ')' : ''), h.meets_naaqs || '-']),
+        [112, 128, 72, 72, 82, 50]);
+      if (hits.some(h => h._manual)) await para('Designations entered from the EPA Green Book area listings (epa.gov/green-book) current as of the date of this evaluation.', { size: 9 });
+    }
+    const revoked = results.filter(r => (r.hits || []).length === 0).length; // informational only
+
+    // 3. General Conformity analysis
+    await h2('3. General Conformity Analysis (40 CFR Part 93, Subpart B)');
+    if (!applies) {
+      await para('Because the project area is in attainment (or unclassifiable) for all criteria pollutants, the General Conformity Rule at 40 CFR 93.150-165 does not apply to this federal action (40 CFR 93.153(a) applies only to actions in nonattainment and maintenance areas). No conformity determination is required.');
+    } else {
+      await para('The General Conformity Rule applies to federal actions in nonattainment and maintenance areas unless the action\'s total direct and indirect emissions of each affected pollutant and precursor are below the de minimis levels of 40 CFR 93.153(b). The applicable de minimis levels for this project area are:');
+      await table(['Pollutant / precursor', 'De minimis (tons/yr)', 'Basis'], Object.entries(thr).map(([pol, t]) => [pol, String(t.tpy), t.from]), [150, 100, 266]);
+      if (anyEmis) {
+        await para('Estimated total direct and indirect emissions for the project (construction and operation, ' + (inputs.emisBasis || 'per the project estimate') + '):');
+        await table(['Pollutant / precursor', 'Project estimate (tons/yr)', 'De minimis (tons/yr)', 'Below de minimis?'], Object.entries(thr).map(([pol, t]) => { const v = inputs.emis[pol]; const n = parseFloat(v); return [pol, (v == null || String(v).trim() === '') ? 'not estimated' : String(v), String(t.tpy), isNaN(n) ? '-' : (n < t.tpy ? 'Yes' : 'NO')]; }), [150, 130, 110, 126]);
+      } else {
+        await para('Project emissions are characterized qualitatively. ' + (scopeAns === 'sf' ? 'The action is construction of a small number of residential units; ' : 'The action is a ' + (scaleWords(inputs) || 'small-scale building') + ' project; ') + 'direct emissions are limited to temporary construction equipment exhaust and fugitive dust over ' + (inputs.months ? 'approximately ' + inputs.months + ' months' : 'a short construction period') + ', and indirect emissions are limited to residential-scale space heating' + (inputs.fuel ? ' (' + inputs.fuel + ')' : '') + ' and the vehicle trips generated by the completed project. Emissions of this type and scale from projects of this size are routinely well below the ' + Object.values(thr).map(t => t.tpy).sort((a, b) => a - b)[0] + '-ton-per-year de minimis levels listed above; by comparison, the lowest applicable threshold corresponds to the annual NOx emissions of roughly several thousand homes or a mid-sized industrial boiler.');
+      }
+    }
+
+    // 4. Opinion
+    await h2('4. Compliance Opinion');
+    let opinion, status;
+    if (!applies) { opinion = 'In AZ-RI Consultants\' opinion, the project is in compliance with the Clean Air Act. The project area is in attainment for all criteria pollutants under current NAAQS; the General Conformity Rule does not apply, and no further action is required under 24 CFR 58.5(g).'; status = 'compliant'; }
+    else if (exceeds.length) { opinion = 'The project\'s estimated emissions of ' + exceeds.join(', ') + ' equal or exceed the applicable de minimis level(s). A General Conformity Determination under 40 CFR 93.158 (demonstrating that emissions are accounted for in the State Implementation Plan or are otherwise offset) is required before the project may proceed. This evaluation does not support a finding of compliance at this time.'; status = 'followup'; }
+    else { opinion = 'In AZ-RI Consultants\' opinion, the project is in compliance with the Clean Air Act General Conformity Rule. Although the project area is designated ' + [...new Set(hits.map(h => h.current_status.toLowerCase()))].join(' / ') + ' for ' + [...new Set(hits.map(h => h._layer.pollutant))].join(', ') + ', the total direct and indirect emissions of the project are below the de minimis levels of 40 CFR 93.153(b) for every affected pollutant and precursor. Under 40 CFR 93.153(c)(1) the action is therefore exempt from the requirement to make a conformity determination, and the project will not cause or contribute to any new violation of a NAAQS, increase the frequency or severity of any existing violation, or delay timely attainment. The project is consistent with the applicable State Implementation Plan.' + (AIR_AGENCY[stateAbbr] && AIR_AGENCY[stateAbbr].note && stateAbbr === 'MD' ? ' ' + AIR_AGENCY[stateAbbr].note : ''); status = 'compliant'; }
+    await para(opinion);
+
+    // 5. Concurrence
+    await h2('5. Agency Concurrence');
+    const ag = AIR_AGENCY[stateAbbr];
+    await para('This evaluation is provided to ' + (inputs.contactOverride || (ag ? ag.agency + (ag.contact ? ' (' + ag.contact + ')' : '') : 'the state air quality agency')) + ' for review. Please indicate concurrence with the finding above by signing below, or advise of any additional information required.' + (ag && ag.note && stateAbbr !== 'MD' ? ' ' + ag.note : ''));
+    await ensure(120);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    const sig = (label, x) => { doc.setDrawColor(60, 60, 60); doc.line(x, y + 36, x + 220, y + 36); doc.setFontSize(8.5); doc.text(safe(label), x, y + 48); doc.setFontSize(10); };
+    doc.text('Prepared by:', M, y); doc.text('Agency concurrence:', M + 260, y); y += 6;
+    sig((proj.consultantPOC || '') + (inputs.preparerTitle ? ', ' + inputs.preparerTitle : '') + ' - AZ-RI Consultants - Date', M);
+    sig('Name / Title - Agency - Date', M + 260);
+    y += 70;
+    await para('Attachments: EPA Green Book area listing(s) for the project area; project location figure.', { size: 9 });
+    doc.setFontSize(8); doc.setTextColor(110, 110, 110);
+    doc.text(safe('Source: U.S. EPA Green Book, Nonattainment Areas for Criteria Pollutants (OAR/OAQPS map service), retrieved ' + new Date().toLocaleDateString() + '. De minimis levels per 40 CFR 93.153(b).'), M, pageH - 24, { maxWidth: pageW - M * 2 });
+
+    // ---------- save / attach / findings ----------
+    const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
+    const fname = slug + '_Air_Quality_General_Conformity.pdf';
+    const dataUrl = doc.output('datauristring');
+    if (typeof supportingDocs !== 'undefined') {
+      if (!supportingDocs[authId]) supportingDocs[authId] = [];
+      supportingDocs[authId] = supportingDocs[authId].filter(d => !(d.auto && d.name === fname));
+      supportingDocs[authId].push({ name: fname, size: Math.round(dataUrl.length * 0.75), type: 'application/pdf', uploadedAt: new Date().toISOString(), data: dataUrl, auto: true, caption: opinion });
+      if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId);
+    }
+    doc.save(fname);
+    const summary = !applies ? 'Attainment for all current NAAQS — General Conformity does not apply → Write Up 3.' : (exceeds.length ? 'Emissions exceed de minimis for ' + exceeds.join(', ') + ' — conformity determination required.' : hits.map(h => h._layer.naaqs + ': ' + h.area_name + ' ' + h.current_status + (h.classification ? ' (' + h.classification + ')' : '')).join('; ') + ' — below de minimis → Write Up 4 + state addendum (' + (stateAbbr || 'state') + ').');
+    figFillSourceRef(authId, 'EPA Green Book (Nonattainment Areas) — General Conformity Evaluation', !applies ? 'Attainment, all NAAQS' : hits.map(h => h._layer.naaqs + ' ' + h.current_status).join('; '));
+    say('✓ Air Quality attachment generated — PDF downloaded and attached to Supporting Documents. ' + summary, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
+    return { hits, failed, thr, opinion, status };
+  } catch (e) {
+    console.warn('[Air attachment]', e);
+    say('✗ Air Quality attachment failed: ' + e.message, 'var(--red,#c00)');
+  }
+}
+function scaleWords(inputs) {
+  const parts = []; if (inputs.units) parts.push(inputs.units + '-unit residential'); if (inputs.sqft) parts.push(inputs.sqft + ' sq ft'); return parts.join(', ');
+}
+
 // ===== MAP GENERATOR REGISTRY (per authority) =====
 const MAP_GENERATORS = {
   airport: { fn: 'generateAirportFigure', label: '🗺 Airport Hazards Figure (FAA runway ends)' },
   cbra:    { fn: 'generateCBRSFigure',    label: '🗺 CBRS Figure (USFWS units)' },
   flood_ins: { fn: 'generateFloodFigure', label: '🗺 FIRM Figure (FEMA NFHL)' },
   flood_mgt: { fn: 'generateFloodFigure', label: '🗺 Floodplain Figure (FEMA NFHL)' },
+  air:       { fn: 'generateAirQualityAttachment', label: '📄 General Conformity Attachment (EPA Green Book)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -5751,6 +5998,26 @@ AUTHORITIES.forEach(a => {
     </div>
     ${sopHtml}
     ${EXEMPTION_CHECKS[a.id] ? `<div id="exemptPanel_${a.id}" class="no-print" style="display:none;margin:0 22px 12px;border:1px solid var(--azri-sand,#d6b656);border-radius:6px;background:#fffdf5;padding:10px 14px;"></div>` : ''}
+    ${a.id === 'air' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Attachment inputs — General Conformity evaluation <span style="font-weight:400;color:var(--gray);">(fill before generating; all optional except where noted)</span></summary>
+      <div class="field-grid" style="margin-top:10px;">
+        <div><label>Dwelling units</label><input type="text" data-field="air_units" placeholder="e.g., 1"></div>
+        <div><label>Building area (sq ft)</label><input type="text" data-field="air_sqft" placeholder="e.g., 1,400"></div>
+        <div><label>Construction duration (months)</label><input type="text" data-field="air_constMonths" placeholder="e.g., 8"></div>
+        <div><label>Heating fuel</label><select data-field="air_fuel"><option value="">— select —</option><option>electric</option><option>natural gas</option><option>propane</option><option>fuel oil</option><option>heat pump (electric)</option></select></div>
+        <div class="full" style="font-size:11px;color:#4a5568;margin-top:4px;">Estimated total direct + indirect emissions, tons per year — <b>optional</b>. Leave blank for a qualitative (type-and-scale) de minimis statement; enter values when you have a construction/operations emissions estimate.</div>
+        <div><label>NOx (tpy)</label><input type="text" data-field="air_emisNOx"></div>
+        <div><label>VOC (tpy)</label><input type="text" data-field="air_emisVOC"></div>
+        <div><label>PM2.5 direct (tpy)</label><input type="text" data-field="air_emisPM25"></div>
+        <div><label>PM10 (tpy)</label><input type="text" data-field="air_emisPM10"></div>
+        <div><label>SO2 (tpy)</label><input type="text" data-field="air_emisSO2"></div>
+        <div><label>CO (tpy)</label><input type="text" data-field="air_emisCO"></div>
+        <div class="full"><label>Emissions estimate basis</label><input type="text" data-field="air_emisBasis" placeholder="e.g., EPA NONROAD / MOVES construction estimate dated …"></div>
+        <div class="full"><label>Green Book status (manual) <span style="font-weight:400;color:var(--gray);">— only if EPA's map service is down or missed an area. One per line: <code>NAAQS | Area, ST | Status | Classification</code>, e.g. <code>8-Hour Ozone (2015) | Baltimore, MD | Nonattainment | Serious</code></span></label><textarea data-field="air_gbManual" style="min-height:48px;"></textarea></div>
+        <div class="full"><label>Agency contact override <span style="font-weight:400;color:var(--gray);">(default comes from the State field: MDE / DOEE / DNREC / PA DEP / VA DEQ)</span></label><input type="text" data-field="air_contact" placeholder="Agency, contact name, email, phone"></div>
+        <div><label>Preparer title</label><input type="text" data-field="air_preparerTitle" placeholder="e.g., Environmental Professional"></div>
+      </div>
+    </details>` : ''}
     <div class="authority-fields">
       <!-- Source / Date Consulted hidden (preserved for save/load + ERR exports back-compat) -->
       <input type="hidden" data-field="${a.id}_source">
@@ -9781,7 +10048,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v113 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v114 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
   console.log('  v113: FEMA flood figure (FIRM / Floodplain Management) from the NFHL — zones on the actual parcel, FIRM panel + effective date, LOMR/LOMA check, FEMA symbology with a legend limited to zones present in the frame. Also fixed the auto-determiners querying FIRM Panels from NFHL layer 16 (that is Base Flood Elevations) — panels are layer 3, so FIRM panel refs were always blank.');
   console.log('  v112: "Push site address & coordinates" now reverse-geocodes the site centroid to fill blank Street / City / State / Zip (DE FirstMap parcels carry no address; MD SDAT carries no city/zip). Existing entries are never overwritten; the confirmation says which fields came from the geocoder.');
