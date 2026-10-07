@@ -3402,7 +3402,9 @@ function figDownloadPdf(canvas, filename, footerLines) {
   // used to run off the bottom of the page)
   doc.setFontSize(fontPt);
   const wrapped = [];
-  (footerLines || []).forEach(t => doc.splitTextToSize(String(t), pageW - margin * 2).forEach(l => wrapped.push(l)));
+  // jsPDF's built-in Helvetica has no glyphs for arrows / math symbols (they print as "!'"), so map them to ASCII
+  const pdfSafe = t => String(t).replace(/→/g, '->').replace(/←/g, '<-').replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/✓/g, 'OK').replace(/✗/g, 'X').replace(/§/g, 'Sec. ').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\u00A0/g, ' ');
+  (footerLines || []).forEach(t => doc.splitTextToSize(pdfSafe(t), pageW - margin * 2 - 6).forEach(l => wrapped.push(l)));
   const footH = wrapped.length ? wrapped.length * lineH + 10 : 0;
   const aspect = canvas.width / canvas.height;
   let imgW = pageW - margin * 2, imgH = imgW / aspect;
