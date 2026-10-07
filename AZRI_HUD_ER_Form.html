@@ -3495,7 +3495,8 @@ async function generateAirportFigure(authId) {
     ctx.fillStyle = '#c2185b'; ctx.beginPath(); ctx.moveTo(c[0], c[1] - 16); ctx.lineTo(c[0] + 7, c[1] - 6); ctx.lineTo(c[0] + 2, c[1] - 6); ctx.lineTo(c[0] + 2, c[1] + 2); ctx.lineTo(c[0] - 2, c[1] + 2); ctx.lineTo(c[0] - 2, c[1] - 6); ctx.lineTo(c[0] - 7, c[1] - 6); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.arc(c[0], c[1], 5, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#c2185b'; ctx.lineWidth = 2; ctx.stroke();
     // Furniture
-    const siteLabel = [proj.siteAddress, proj.siteCity, proj.siteState, proj.siteZip].filter(Boolean).join(', ') || (center[1].toFixed(5) + ', ' + center[0].toFixed(5));
+    // Address only when a street is entered — otherwise the State default alone would label the map "Maryland"
+    const siteLabel = (proj.siteAddress || '').trim() ? [proj.siteAddress, proj.siteCity, proj.siteState, proj.siteZip].filter(Boolean).join(', ') : (center[1].toFixed(5) + ', ' + center[0].toFixed(5));
     const legend = [
       { label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
       { label: 'Civil airport screen — 2,500 ft', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(255,214,0,0.40)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#c62828'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
