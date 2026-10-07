@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v121</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v122</div>
   </div>
 </header>
 
@@ -3224,6 +3224,10 @@ async function runAutoAll() {
 
 
 
+
+
+
+
 // ===== AZ-RI FIGURE ENGINE (v108) =====
 // Canvas-based figure generator ported from the Phase I ESA Worksheet so both tools draw figures
 // the same way: stitch basemap tiles (fetched as blobs so the canvas never taints — works from
@@ -4452,6 +4456,120 @@ async function generateWSRFigure(authId) {
     say('✗ Wild & Scenic Rivers figure failed: ' + e.message, 'var(--red,#c00)');
   }
 }
+
+
+// ===== NOISE SCREENING FIGURE (24 CFR 51 Subpart B; §58.5(i)(1)) =====
+// One map: the parcel boundary buffered 1,000 ft (major roads) and 3,000 ft (railroads), with the Census TIGER
+// primary (S1100) / secondary (S1200) roads and railroads drawn and measured from the BOUNDARY; FAA airports and
+// military airfields within 15 miles are listed in the note (they fall outside the frame). Any generator inside its
+// screening distance means the Step 4 DNL assessment is required for new construction of a noise-sensitive use.
+const TIGER_TRANS = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Transportation/MapServer';
+const TIGER_PRIMARY = 2, TIGER_SECONDARY = 6, TIGER_RAIL = 9;
+const NOISE_ROAD_FT = 1000, NOISE_RAIL_FT = 3000, NOISE_AIRPORT_MI = 15;
+function figBufferRings(site, center, ft) {
+  // Buffer the parcel boundary (turf) → array of rings; fallback: circle around the centroid
+  try {
+    if (typeof turf !== 'undefined' && site.boundary && site.boundary.geometry) {
+      const b = turf.buffer(site.boundary, ft, { units: 'feet' });
+      const g = b.geometry; return g.type === 'Polygon' ? [g.coordinates[0]] : g.coordinates.map(p => p[0]);
+    }
+  } catch (e) {}
+  const lat0 = center[1] * Math.PI / 180, kx = 111320 * Math.cos(lat0) * FT_PER_M, ky = 110574 * FT_PER_M, ring = [];
+  for (let i = 0; i <= 72; i++) { const a = i / 72 * 2 * Math.PI; ring.push([center[0] + Math.cos(a) * ft / kx, center[1] + Math.sin(a) * ft / ky]); }
+  return [ring];
+}
+async function generateNoiseScreeningFigure(authId) {
+  authId = authId || 'noise';
+  const statusEl = document.getElementById('autoStatus_' + authId);
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the noise screening figure.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  try {
+    say('Querying Census TIGER roads / railroads and FAA airports…');
+    const probes = figSiteProbes(site, center);
+    const g = site.boundary && site.boundary.geometry;
+    const parcelRings = g ? (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []) : [[center, center]];
+    const parcelHalfFt = figParcelHalfM(site, center, 1, 0, 1e9) * FT_PER_M;
+    const env = figEnvFt(center, parcelHalfFt + NOISE_RAIL_FT + 600);
+    const q = (layer, fields) => figArcQuery(TIGER_TRANS + '/' + layer, env, 'esriGeometryEnvelope', { outFields: fields, returnGeometry: 'true' }).catch(() => []);
+    const [primary, secondary, rail, airports] = await Promise.all([
+      q(TIGER_PRIMARY, 'NAME,MTFCC,RTTYP'), q(TIGER_SECONDARY, 'NAME,MTFCC,RTTYP'), q(TIGER_RAIL, 'NAME,MTFCC'),
+      faaQuery(FAA_AIRPORTS_URL, center, NOISE_AIRPORT_MI, 'IDENT,NAME,TYPE_CODE,MIL_CODE,PRIVATEUSE,OPERSTATUS,SERVCITY,STATE', true).catch(() => [])
+    ]);
+    // Distance from the parcel boundary to each line feature (both directions so long straight segments measure right)
+    const distTo = f => { let best = null; ((f.geometry && f.geometry.paths) || []).forEach(path => { parcelRings.forEach(pr => { pr.forEach(v => { const n = figNearestOnRing(v, path); if (n && (!best || n.distFt < best.distFt)) best = n; }); path.forEach(v => { const n = figNearestOnRing(v, pr); if (n && (!best || n.distFt < best.distFt)) best = { distFt: n.distFt, pt: v }; }); }); }); return best; };
+    const nearestByName = (feats, limitFt) => { const m = {}; feats.forEach(f => { const d = distTo(f); if (!d || d.distFt > limitFt) return; const k = f.attributes.NAME || 'Unnamed'; if (!m[k] || d.distFt < m[k].distFt) m[k] = { name: k, distFt: d.distFt, pt: d.pt, attrs: f.attributes }; }); return Object.values(m).sort((a, b) => a.distFt - b.distFt); };
+    const roadsIn = nearestByName(primary.concat(secondary), NOISE_ROAD_FT);
+    const railIn = nearestByName(rail, NOISE_RAIL_FT);
+    const nearestRoadAny = nearestByName(primary.concat(secondary), 1e9)[0], nearestRailAny = nearestByName(rail, 1e9)[0];
+    // Airports: fixed-wing civil airports + military airfields (heliports / seaplane / ultralight excluded from the noise screen)
+    // Public-use civil airports and military airfields only (private-use strips are not HUD noise generators)
+    const apts = airports.filter(f => { const a = f.attributes; return (a.TYPE_CODE || '').toUpperCase() === 'AD' && String(a.OPERSTATUS || '').toUpperCase() !== 'CLOSED' && (airportKind(a) !== 'civil' || !/^(1|Y|TRUE)$/i.test(String(a.PRIVATEUSE || '').trim())); })
+      .map(f => ({ name: f.attributes.NAME, kind: airportKind(f.attributes), priv: /^(1|Y|TRUE)$/i.test(String(f.attributes.PRIVATEUSE || '').trim()), distFt: figDistFt(center, [f.geometry.x, f.geometry.y]), pt: [f.geometry.x, f.geometry.y] }))
+      .filter(a => a.distFt <= NOISE_AIRPORT_MI * 5280).sort((a, b) => a.distFt - b.distFt).filter((a, i, arr) => arr.findIndex(x => x.name === a.name && Math.abs(x.distFt - a.distFt) < 50) === i);
+    say('Rendering basemap…');
+    const halfFt = parcelHalfFt + NOISE_RAIL_FT + 500;
+    const base = await figBuildBase(center, halfFt / FT_PER_M, { basemap: 'streets' });
+    if (!base.tilesOk) throw new Error('basemap tiles could not be loaded');
+    const { ctx, toPx, W, H } = base;
+    // Screening rings (buffers of the boundary)
+    const ring1000 = figBufferRings(site, center, NOISE_ROAD_FT), ring3000 = figBufferRings(site, center, NOISE_RAIL_FT);
+    const drawRings = (rings, color, dash, label) => { rings.forEach(r => { ctx.save(); ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.beginPath(); r.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath(); ctx.stroke(); ctx.restore(); }); let top = null; rings[0].forEach(q => { const p = toPx(q); if (!top || p[1] < top[1]) top = p; }); if (top) { ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; const w = ctx.measureText(label).width; ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(top[0] - w / 2 - 4, Math.max(FIG_HB + 6, top[1] - 20), w + 8, 16); ctx.fillStyle = color; ctx.fillText(label, top[0], Math.max(FIG_HB + 18, top[1] - 8)); } };
+    drawRings(ring3000, '#1d4ed8', [10, 6], NOISE_RAIL_FT.toLocaleString() + ' ft from boundary — railroad screen');
+    drawRings(ring1000, '#c2410c', [6, 4], NOISE_ROAD_FT.toLocaleString() + ' ft from boundary — major road screen');
+    // Roads / rails
+    const drawLines = (feats, color, width, dash) => feats.forEach(f => ((f.geometry && f.geometry.paths) || []).forEach(path => { ctx.save(); if (dash) ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.beginPath(); path.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); ctx.restore(); }));
+    drawLines(secondary, '#f59e0b', 4, null); drawLines(primary, '#b91c1c', 5, null);
+    // Railroad: black line with cross-ties
+    rail.forEach(f => ((f.geometry && f.geometry.paths) || []).forEach(path => { ctx.save(); ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.beginPath(); path.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); ctx.setLineDash([3, 9]); ctx.lineWidth = 9; ctx.beginPath(); path.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); ctx.restore(); }));
+    // Labels for generators inside the screens (name + distance at the nearest point)
+    figDrawSite(base, site, center);
+    const tag = (txt, p, color) => { ctx.font = 'bold 12px Arial'; ctx.textAlign = 'left'; const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, p[0] + 8), W - w - 12), ly = Math.min(Math.max(FIG_HB + 20, p[1] - 8), H - 100); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 13, w + 8, 18); ctx.fillStyle = color; ctx.fillText(txt, lx, ly); };
+    const groups = [];
+    roadsIn.forEach(r => { const p = toPx(r.pt); const g = groups.find(x => Math.hypot(x.p[0] - p[0], x.p[1] - p[1]) < 24); if (g) { if (!g.names.includes(r.name)) g.names.push(r.name); } else groups.push({ p, names: [r.name], distFt: r.distFt, cls: r.attrs.MTFCC }); });
+    groups.forEach(g => tag(g.names.join(' / ') + ' — ' + figFmtFt(g.distFt), g.p, (g.cls === 'S1100') ? '#991b1b' : '#b45309'));
+    railIn.forEach(r => tag(r.name + ' (railroad) — ' + figFmtFt(r.distFt), toPx(r.pt), '#111'));
+    // Determination tag at the site
+    const triggered = roadsIn.length || railIn.length || apts.length;
+    const c = toPx(center);
+    ctx.font = 'bold 13px Arial'; { const txt = triggered ? 'Noise generator(s) within screening distance — DNL assessment required for new construction of a noise-sensitive use' : 'No major roads (1,000 ft), railroads (3,000 ft) or airports (15 mi) within screening distances'; const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, c[0] + 16), W - w - 12), ly = Math.min(H - 120, c[1] + 48);   /* below the site so it never covers the generator labels */ ctx.fillStyle = 'rgba(255,255,255,0.93)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = triggered ? '#b91c1c' : '#166534'; ctx.fillText(txt, lx, ly); }
+    // Note box (bottom-right): what is inside each screen; airports beyond the frame
+    const fmtA = a => a.name + ' (' + (a.kind === 'civil' ? (a.priv ? 'private civil' : 'civil') : a.kind) + ') — ' + figFmtFt(a.distFt) + ' ' + figBearing(center, a.pt);
+    const lines = [
+      'Major roads within ' + NOISE_ROAD_FT.toLocaleString() + ' ft: ' + (roadsIn.length ? roadsIn.slice(0, 4).map(r => r.name + ' (' + (r.attrs.MTFCC === 'S1100' ? 'primary' : 'secondary') + ') ' + figFmtFt(r.distFt)).join('; ') : 'none' + (nearestRoadAny ? ' (nearest: ' + nearestRoadAny.name + ' ' + figFmtFt(nearestRoadAny.distFt) + ')' : '')),
+      'Railroads within ' + NOISE_RAIL_FT.toLocaleString() + ' ft: ' + (railIn.length ? railIn.slice(0, 3).map(r => r.name + ' ' + figFmtFt(r.distFt)).join('; ') : 'none' + (nearestRailAny ? ' (nearest: ' + nearestRailAny.name + ' ' + figFmtFt(nearestRailAny.distFt) + ')' : '')),
+      'Public-use airports / military airfields within ' + NOISE_AIRPORT_MI + ' mi (beyond this frame): ' + (apts.length ? apts.length + ' — ' + apts.slice(0, 4).map(fmtA).join('; ') + (apts.length > 4 ? '; …' : '') : 'none')
+    ];
+    ctx.font = '12px Arial';
+    const maxW = W - 470;   // keep clear of the legend + scale bar on the left
+    const wrapped = []; lines.forEach(t => { const words = t.split(' '); let cur = ''; words.forEach(w => { const test = cur ? cur + ' ' + w : w; if (ctx.measureText(test).width > maxW - 16 && cur) { wrapped.push(cur); cur = '    ' + w; } else cur = test; }); if (cur) wrapped.push(cur); });
+    const bw = Math.min(maxW, Math.max(...wrapped.map(t => ctx.measureText(t).width)) + 16), bh = wrapped.length * 17 + 10; const bx = W - bw - 14, by = H - bh - 14;
+    ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#1f2937'; ctx.textAlign = 'left'; wrapped.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
+    const legend = [
+      { label: 'Subject Property — ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
+      { label: NOISE_ROAD_FT.toLocaleString() + ' ft screening distance from the boundary — major roads', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#c2410c'; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, h); ctx.restore(); } },
+      { label: NOISE_RAIL_FT.toLocaleString() + ' ft screening distance from the boundary — railroads', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([10, 6]); ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, h); ctx.restore(); } },
+      { label: 'Primary road — interstate / limited-access highway (Census S1100)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#b91c1c'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); } },
+      { label: 'Secondary road — US / state highway or arterial (Census S1200)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); } },
+      { label: 'Railroad (Census TIGER)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); ctx.setLineDash([3, 7]); ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x + 2, y + h / 2); ctx.lineTo(x + w - 2, y + h / 2); ctx.stroke(); ctx.restore(); } }
+    ];
+    await figFurnish(base, { title: 'Noise Screening Map', meta: figProjectMeta(proj, center), subtitle: '24 CFR Part 51 Subpart B · §58.5(i)(1) · Screening distances per HUD Noise Guidebook: major roads 1,000 ft · railroads 3,000 ft · airports 15 miles · Census TIGER roads / rails · FAA airports', legend });
+    let finding, status;
+    if (triggered) { finding = 'Noise screening: ' + [roadsIn.length ? roadsIn.length + ' major road(s) within 1,000 ft (' + roadsIn.slice(0, 3).map(r => r.name + ' ' + figFmtFt(r.distFt)).join(', ') + ')' : '', railIn.length ? railIn.length + ' railroad(s) within 3,000 ft (' + railIn.slice(0, 2).map(r => r.name + ' ' + figFmtFt(r.distFt)).join(', ') + ')' : '', apts.length ? apts.length + ' airport(s)/airfield(s) within 15 mi (nearest ' + fmtA(apts[0]) + ')' : ''].filter(Boolean).join('; ') + '. New construction of a noise-sensitive use → Step 4 full Noise Assessment (DNL at each NAL); rehab affecting attenuating materials → Write Up 1b with the screening result; non-residential rehab → Write Up 2. Confirm road traffic volumes with the state DOT counts before treating a secondary road as a major roadway.'; status = 'followup'; }
+    else { finding = 'Noise screening: no major roads within 1,000 ft, no railroads within 3,000 ft, and no airports/airfields within 15 miles of the Subject Property boundary' + (nearestRoadAny ? ' (nearest classified road ' + nearestRoadAny.name + ' at ' + figFmtFt(nearestRoadAny.distFt) + ')' : '') + ' → Write Up 3 (document the screening sources).'; status = 'compliant'; }
+    const slug = figSlug(proj);
+    figAttach(authId, base.cv, slug + '_Noise_Screening_Map.jpg', finding);
+    figFillSourceRef(authId, 'Census TIGER roads & railroads; FAA airports (noise screening distances per HUD Noise Guidebook)', triggered ? 'Generators within screening distance' : 'No generators within screening distances');
+    figDownloadPdf(base.cv, slug + '_Noise_Screening_Map.pdf');
+    say('✓ Noise screening figure generated — PDF downloaded and attached to Supporting Documents. ' + finding, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
+    return { finding, status, roadsIn: roadsIn.map(r => ({ name: r.name, distFt: r.distFt, cls: r.attrs.MTFCC })), railIn: railIn.map(r => ({ name: r.name, distFt: r.distFt })), airports: apts.slice(0, 8).map(a => ({ name: a.name, kind: a.kind, mi: +(a.distFt / 5280).toFixed(2) })) };
+  } catch (e) {
+    console.warn('[Noise screening figure]', e);
+    say('✗ Noise screening figure failed: ' + e.message, 'var(--red,#c00)');
+  }
+}
 // ===== AIR QUALITY — GENERAL CONFORMITY EVALUATION ATTACHMENT (Clean Air Act §176(c); §58.5(g)) =====
 // Queries EPA's Green Book nonattainment-area service for every current NAAQS at the site, applies the
 // 40 CFR 93.153(b) de minimis thresholds, and writes a letter-format PDF (same header standard as the
@@ -4709,6 +4827,7 @@ const MAP_GENERATORS = {
   aquifer:   { fn: 'generateSSAFigure', label: '🗺 SSA Figure (EPA Sole Source Aquifers)' },
   wetlands:  { fn: 'generateWetlandsFigure', label: '🗺 Wetlands Figure (USFWS NWI)' },
   wsr:       { fn: 'generateWSRFigure', label: '🗺 Wild & Scenic Rivers Figure (NWSRS + NPS NRI)' },
+  noise:     { fn: 'generateNoiseScreeningFigure', label: '🗺 Noise Screening Figure (roads 1,000 ft · rail 3,000 ft · airports 15 mi)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -10763,7 +10882,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v121 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v122 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
