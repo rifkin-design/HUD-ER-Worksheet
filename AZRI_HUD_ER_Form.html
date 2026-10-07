@@ -1619,16 +1619,19 @@ const AUTHORITIES = [
 const AUTHORITY_SOP = {
   airport: `
     <div style="margin-bottom:8px;"><b>Step 1 — Does it apply? (applicability check)</b><br>Always. Airport Hazards is a <b>§58.6</b> requirement — it applies to every CENST, CEST, and EA regardless of activity type or ground disturbance. There is <b>no exemption</b> (no "not new construction → N/A" shortcut like the §58.5 authorities). Compliance write-ups cite 24 CFR Part 51 Subpart D &amp; §58.6(d).</div>
-    <div style="margin-bottom:8px;"><b>Step 2 — Location-specific process?</b> No.<br>Same federal process for MD, DC, VA, PA, DE: screen in NEPAssist, then contact the specific airport for its zone map.</div>
-    <div><b>Step 3 — Determine compliance / follow-up</b>
+    <div style="margin-bottom:8px;"><b>Step 2 — Location-specific process?</b> No.<br>Same federal process for MD, DC, VA, PA, DE: generate the Airport Hazards figure, then contact the specific airport for its zone map if a screening distance is triggered.</div>
+    <div style="margin-bottom:8px;"><b>Step 3 — Make the map &amp; measure</b> — click <b>🗺 Airport Hazards Figure (FAA runway ends)</b> on this card (needs the parcel selected in 1125, or a Lat/Long). It:
       <ol style="margin:6px 0 6px 18px;padding:0;">
-        <li>Open <a href="https://nepassisttool.epa.gov/nepassist/nepamap.aspx" target="_blank" rel="noopener">NEPAssist</a> → type the site address (site shows as a pink cross).</li>
-        <li>Transportation → enable <i>Airport Points</i> + <i>Airport Polygons</i>.</li>
-        <li>Tools → Measure → distance (ft) to each airport.</li>
-        <li>Make the map (Tools → Print → Layout → name it "Airport Hazards" → Export PDF; add a distance line + text box to the nearest airport; <b>flatten</b> the PDF). Save to the project ERR folder.</li>
+        <li>Pulls every FAA-registered landing facility near the site from the <b>FAA NASR airport database</b> — airports <i>and</i> heliports, public <i>and</i> private use — plus the FAA runway / helipad polygons.</li>
+        <li>Measures from the Subject Property to the <b>nearest runway end</b> of each facility (HUD's measuring point under 24 CFR 51.303 — not the airport reference point NEPAssist uses). Facilities with no runway geometry fall back to the FAA reference point and are labeled as such.</li>
+        <li>Draws the 2,500 ft civil ring and the 15,000 ft military ring, labels each facility with its distance, downloads the PDF, attaches a copy to Supporting Documents, and fills the Source / Ref fields. Red cross = civil (incl. heliports), blue cross = military or joint-use.</li>
       </ol>
-      <div style="margin:5px 0;"><b>(A) No civil ≤2,500 ft &amp; no military ≤15,000 ft</b> → Compliant (map name "No Airport Hazards") → <b>Write Up 1.</b></div>
-      <div style="margin:5px 0;"><b>(B) Civil airport ≤2,500 ft</b> — check the Runway Protection Zone/Clear Zone (RPZ/CZ); contact the airport for its map:
+      <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;">Why runway end matters: a long military runway can reach inside 15,000 ft while the base's reference point is well outside it (Dover AFB vs. downtown Dover is the live example). If the figure and an older NEPAssist map disagree, the runway-end distance governs. Heliports and private strips are civil airports for Subpart D screening — the 2,500 ft test applies to them too. Joint-use fields (FAA "ALL") are screened as military.</div>
+      <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;">Fallback if the FAA service is down: <a href="https://nepassisttool.epa.gov/nepassist/nepamap.aspx" target="_blank" rel="noopener">NEPAssist</a> → Transportation → Airport Points + Polygons → Measure; note that NEPAssist measures to the airport point, so add the runway length to your margin before calling it clear.</div>
+    </div>
+    <div><b>Step 4 — Determine compliance / follow-up</b> (the figure's status line tells you which branch you are in)
+      <div style="margin:5px 0;"><b>(A) No civil runway end ≤2,500 ft &amp; no military runway end ≤15,000 ft</b> → Compliant → <b>Write Up 1</b> (cite the figure: nearest civil and military facility with their runway-end distances).</div>
+      <div style="margin:5px 0;"><b>(B) Civil airport or heliport runway end ≤2,500 ft</b> — check the Runway Protection Zone/Clear Zone (RPZ/CZ); contact the airport operator for its ALP / RPZ map (for a heliport, its FATO / approach-departure surfaces):
         <ul style="margin:4px 0 4px 18px;">
           <li>Outside RPZ/CZ → Compliant → <b>Write Up 2.</b></li>
           <li>Inside, acquisition/sale of an existing <i>occupied</i> property only → buyer notice §51.303(a)(3) (<a href="https://www.hudexchange.info/resource/2758/notice-prospective-buyers-properties-in-runway-clear-zones/" target="_blank" rel="noopener">HUD sample Notice to Prospective Buyers</a>) → <b>Write Up 3.</b></li>
@@ -1636,7 +1639,7 @@ const AUTHORITY_SOP = {
           <li>Inside, <i>not</i> frequently used/occupied by people + airport-operator assurance → §51.303(a)(2) → <b>Write Up 6.</b></li>
         </ul>
       </div>
-      <div style="margin:5px 0;"><b>(C) Military airfield ≤15,000 ft</b> — check the Clear Zone (CZ) <b>and</b> Accident Potential Zones (APZ I/II); contact the airfield for its map:
+      <div style="margin:5px 0;"><b>(C) Military / joint-use airfield runway end ≤15,000 ft</b> — check the Clear Zone (CZ) <b>and</b> Accident Potential Zones (APZ I/II) on the installation's AICUZ map (contact the base community planner if it is not published):
         <ul style="margin:4px 0 4px 18px;">
           <li>Outside CZ &amp; both APZs → Compliant → <b>Write Up 4.</b></li>
           <li>In an APZ &amp; generally consistent with DOD guidelines (DOD Instruction 4165.57; 32 CFR Part 256), §51.303(b) → <b>Write Up 5.</b></li>
@@ -9453,6 +9456,7 @@ function renderHerosCitations() {
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
   console.log('%c[AZ-RI HUD ER Form] Build v109 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  SOP: Airport Hazards step-by-step rewritten around the in-app figure — FAA NASR data, runway-end measuring point, heliports + private strips screened as civil, joint-use as military, NEPAssist kept as fallback.');
   console.log('  v109: Airport Hazards figure simplified per Scott — logo in a white header border, no distance lines (distance to runway end is in each label), civil vs military symbols only, no sources footer.');
   console.log('  FIGURES: new canvas figure engine (ported from the Phase I worksheet) + Airport Hazards figure — one map, 2,500 ft civil / 15,000 ft military rings, FAA NASR airports (incl. heliports & private strips) and runway polygons, distances to the nearest runway end, AZ-RI logo; PDF download + auto-attach to Supporting Documents.');
   console.log('  1311: Section 1 Activity Questions removed — scope now lives in the per-authority Review Questions (Historic Preservation gained its own: 50+ yr structure / ground disturbance). Auto-Determine reads those answers plus the 1125 Activities (fixes projectType always-blank bug from v92).');
