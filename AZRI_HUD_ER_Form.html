@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v124</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v125</div>
   </div>
 </header>
 
@@ -932,6 +932,42 @@
         <input type="file" id="locationUploadInput" multiple style="display:none;" onchange="handleLocationUpload(event)">
         <span id="locationUploadList" style="font-size:11px;color:var(--gray);margin-left:10px;"></span>
       </div>
+      <!-- PROJECT PACKET FOR AGENCY REVIEW — shared inputs (v125) -->
+      <details class="no-print" id="packetInputs" style="margin:14px 0 6px 0;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
+        <summary style="cursor:pointer;font-weight:600;font-size:12.5px;color:var(--azri-navy);">📦 Project Packet for Agency Review — shared inputs <span style="font-weight:400;color:var(--gray);">(used by the ESA, Section 106, CZM and other consultation packets; fill once per project)</span></summary>
+        <div class="field-grid" style="margin-top:10px;">
+          <div class="full"><label>Project description (2–4 sentences: what is being built / rehabbed, units, footprint, height)</label><textarea data-field="packet_description" style="min-height:64px;" placeholder="e.g., Demolition of a vacant single-family dwelling and construction of a 3-story, 24-unit affordable apartment building with surface parking…"></textarea></div>
+          <div><label>Dwelling units</label><input type="text" data-field="packet_units" placeholder="e.g., 24"></div>
+          <div><label>Building footprint (sq ft)</label><input type="text" data-field="packet_footprintSqft" placeholder="e.g., 9,800"></div>
+          <div><label>Building height</label><input type="text" data-field="packet_height" placeholder="e.g., 3 stories / 38 ft"></div>
+          <div><label>Applicant / developer</label><input type="text" data-field="packet_applicant" placeholder="Name, organization, phone/email"></div>
+          <div><label>Ground disturbance (acres)</label><input type="text" data-field="packet_disturbedAcres" placeholder="e.g., 0.6"></div>
+          <div><label>Max excavation depth (ft)</label><input type="text" data-field="packet_excavDepthFt" placeholder="e.g., 8"></div>
+          <div><label>Tree clearing (acres; 0 / none if no trees removed)</label><input type="text" data-field="packet_treeClearingAcres" placeholder="e.g., 0"></div>
+          <div><label>Net impervious change</label><input type="text" data-field="packet_imperviousChange" placeholder="e.g., +0.3 acre / no change"></div>
+          <div><label>Construction start</label><input type="text" data-field="packet_startDate" placeholder="e.g., Spring 2027"></div>
+          <div><label>Construction duration (months)</label><input type="text" data-field="packet_durationMonths" placeholder="e.g., 14"></div>
+          <div><label>Current use / existing conditions</label><input type="text" data-field="packet_existingUse" placeholder="e.g., vacant 2-story commercial building with paved lot"></div>
+          <div><label>Year built (existing structures)</label><input type="text" data-field="packet_yearBuilt" placeholder="e.g., 1952"></div>
+          <div class="full"><label>Vegetative cover</label><input type="text" data-field="packet_vegCover" placeholder="e.g., mowed lawn and ornamental plantings; no forest; no wetlands"></div>
+          <div><label>Preparer title</label><input type="text" data-field="packet_preparerTitle" placeholder="e.g., Environmental Professional"></div>
+          <div><label>Preparer phone</label><input type="text" data-field="packet_preparerPhone"></div>
+          <div><label>Preparer email</label><input type="text" data-field="packet_preparerEmail"></div>
+          <div class="full" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;">
+            <div style="flex:1;min-width:260px;"><label>Plans &amp; drawings <span style="font-weight:400;color:var(--gray);">(site plan, elevations — PDF or image; images embed in the packet, PDFs are listed and attached separately)</span></label>
+              <button type="button" onclick="uploadSupportingDoc('packet_plans')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;">⬆ Upload plans / drawings</button>
+              <div id="docs_packet_plans" style="margin-top:6px;"></div></div>
+            <div style="flex:1;min-width:260px;"><label>Site photographs <span style="font-weight:400;color:var(--gray);">(JPG/PNG; file name is used as the caption)</span></label>
+              <button type="button" onclick="uploadSupportingDoc('packet_photos')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;">⬆ Upload photos</button>
+              <div id="docs_packet_photos" style="margin-top:6px;"></div></div>
+          </div>
+          <div class="full" style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button type="button" onclick="generateProjectPacket()" style="background:var(--azri-navy);color:white;border:none;padding:7px 14px;border-radius:4px;font-size:12.5px;cursor:pointer;font-weight:600;">📦 Generate Project Packet (core)</button>
+            <span id="packetStatus" style="font-size:11.5px;color:var(--gray);"></span>
+          </div>
+          <div class="full"><div id="docs_packet" style="margin-top:4px;"></div></div>
+        </div>
+      </details>
       <!-- PROJECT LOCATION MAP (relocated from former Screen 1120) -->
     <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px 0;font-size:13px;font-weight:500;">
       <span style="font-weight:600;color:var(--azri-navy);">Parcel data &amp; state resources:</span>
@@ -3074,6 +3110,8 @@ function renderSupportingDocs(authId) {
 
 function renderAllSupportingDocs() {
   AUTHORITIES.forEach(a => renderSupportingDocs(a.id));
+  ['packet_plans', 'packet_photos', 'packet'].forEach(renderSupportingDocs);
+  if (typeof esaRenderTable === 'function') esaRenderTable();
 }
 
 // Refresh the per-authority Write-Up dropdown options to reflect current state pack (state-specific Write-Ups appear at top with state badge).
@@ -4806,6 +4844,359 @@ function scaleWords(inputs) {
   const parts = []; if (inputs.units) parts.push(inputs.units + '-unit residential'); if (inputs.sqft) parts.push(inputs.sqft + ' sq ft'); return parts.join(', ');
 }
 
+// ===== PROJECT PACKET FOR AGENCY REVIEW + CONSULTATION ADDENDA (v125) =====
+// One reusable core packet (project description, site data, figures, plans, photos, contacts) that every
+// agency consultation re-uses, plus authority-specific addenda: ESA Section 7 effect determination,
+// Section 106 SHPO submittal, and CZM federal consistency. Everything here is EXTERNAL-FACING (HUD, RE,
+// agencies, client) — no internal routing notes. Figures use the same engine/template as the maps.
+
+// ---------- small PDF writer on top of jsPDF ----------
+function pkSafe(t) { return String(t == null ? '' : t).replace(/→/g, '->').replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/§/g, 'Sec. ').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/ /g, ' ').replace(/·/g, '-').replace(/×/g, 'x').replace(/–|—/g, '-').replace(/✓/g, 'OK').replace(/[^\x00-\x7F]/g, c => ({ 'é': 'e', 'ñ': 'n', '°': ' deg', '½': '1/2', '¼': '1/4', '…': '...' }[c] || '')); }
+async function pkNewDoc(titleShort, meta) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+  const P = { doc, M: 48, W: doc.internal.pageSize.getWidth(), H: doc.internal.pageSize.getHeight(), y: 0, titleShort, meta: meta || {}, logo: null, logoAR: 3, page: 0 };
+  try { const im = await figDataUrlImg(window.AZRI_REPORT_LOGO); const cv = document.createElement('canvas'); cv.width = 480; cv.height = Math.round(480 * im.height / im.width); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); P.logo = cv.toDataURL('image/png'); P.logoAR = im.width / im.height; } catch (e) {}
+  pkHeader(P, true);
+  return P;
+}
+function pkHeader(P, first) {
+  const { doc, M, W } = P; P.page++;
+  const lh = first ? 44 : 26, lw = P.logo ? lh * P.logoAR : 0; let tx = M + (P.logo ? lw + 14 : 0);
+  if (P.logo) doc.addImage(P.logo, 'PNG', M, 30, lw, lh);
+  doc.setTextColor(15, 42, 68); doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 15 : 10.5);
+  const titleLines = doc.splitTextToSize(pkSafe(P.titleShort + (P.meta.projectName ? ' - ' + P.meta.projectName : '')), W - tx - 150);   // keep clear of the date at right
+  let y = first ? 48 : 42; titleLines.forEach(l => { doc.text(l, tx, y); y += first ? 17 : 12; });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(first ? 10 : 8.5); doc.setTextColor(60, 60, 60);
+  const l2 = [P.meta.location, P.meta.grant].filter(Boolean).join('   -   '); if (l2) { doc.text(pkSafe(l2), tx, y); y += first ? 14 : 11; }
+  doc.setFontSize(8.5); doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), W - M, 42, { align: 'right' });
+  const hb = Math.max(y + 6, first ? 92 : 62);
+  doc.setDrawColor(15, 42, 68); doc.setLineWidth(1.5); doc.line(M, hb, W - M, hb);
+  P.y = hb + 22; doc.setTextColor(30, 30, 30);
+}
+function pkFooter(P) { const { doc, M, W, H } = P; doc.setFontSize(8); doc.setTextColor(120, 120, 120); doc.text('AZ-RI Consultants  -  ' + pkSafe(P.titleShort) + '  -  page ' + P.page, M, H - 24); doc.setTextColor(30, 30, 30); }
+function pkEnsure(P, h) { if (P.y + h > P.H - 54) { pkFooter(P); P.doc.addPage(); pkHeader(P, false); } }
+function pkH1(P, t) { pkEnsure(P, 30); P.doc.setFont('helvetica', 'bold'); P.doc.setFontSize(13); P.doc.setTextColor(15, 42, 68); P.doc.text(pkSafe(t), P.M, P.y); P.y += 8; P.doc.setDrawColor(200, 200, 200); P.doc.setLineWidth(0.5); P.doc.line(P.M, P.y, P.W - P.M, P.y); P.y += 14; P.doc.setTextColor(30, 30, 30); }
+function pkH2(P, t) { pkEnsure(P, 22); P.doc.setFont('helvetica', 'bold'); P.doc.setFontSize(10.5); P.doc.text(pkSafe(t), P.M, P.y); P.y += 15; }
+function pkP(P, t, opts) { const o = opts || {}; P.doc.setFont('helvetica', o.bold ? 'bold' : (o.italic ? 'italic' : 'normal')); P.doc.setFontSize(o.size || 9.5); const lines = P.doc.splitTextToSize(pkSafe(t), P.W - 2 * P.M - (o.indent || 0)); lines.forEach(l => { pkEnsure(P, 13); P.doc.text(l, P.M + (o.indent || 0), P.y); P.y += 12.5; }); P.y += o.after == null ? 6 : o.after; }
+function pkBullets(P, items) { items.forEach(t => { P.doc.setFont('helvetica', 'normal'); P.doc.setFontSize(9.5); const lines = P.doc.splitTextToSize(pkSafe(t), P.W - 2 * P.M - 16); lines.forEach((l, i) => { pkEnsure(P, 13); if (i === 0) P.doc.text('-', P.M + 4, P.y); P.doc.text(l, P.M + 16, P.y); P.y += 12.5; }); }); P.y += 6; }
+function pkKV(P, rows) { // [[label, value], ...]
+  const { doc, M, W } = P; const lw = 160, vw = W - 2 * M - lw - 10;
+  rows.forEach(r => { if (r[1] == null || r[1] === '') return; doc.setFont('helvetica', 'bold'); doc.setFontSize(9); const ll = doc.splitTextToSize(pkSafe(r[0]), lw - 6); doc.setFont('helvetica', 'normal'); const vl = doc.splitTextToSize(pkSafe(r[1]), vw); const h = Math.max(ll.length, vl.length) * 12 + 6; pkEnsure(P, h); doc.setFillColor(243, 244, 246); doc.rect(M, P.y - 9, lw, h, 'F'); doc.setFont('helvetica', 'bold'); ll.forEach((l, i) => doc.text(l, M + 4, P.y + i * 12)); doc.setFont('helvetica', 'normal'); vl.forEach((l, i) => doc.text(l, M + lw + 8, P.y + i * 12)); doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.4); doc.line(M, P.y - 9 + h, W - M, P.y - 9 + h); P.y += h; });
+  P.y += 10;
+}
+function pkTable(P, head, rows, widths) {
+  const { doc, M, W } = P; const total = W - 2 * M; const ws = widths.map(w => w * total);
+  const drawRow = (cells, bold, fill) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(8.5); const lines = cells.map((c, i) => doc.splitTextToSize(pkSafe(c), ws[i] - 8)); const h = Math.max(...lines.map(l => l.length)) * 10.5 + 8; pkEnsure(P, h); if (fill) { doc.setFillColor(fill[0], fill[1], fill[2]); doc.rect(M, P.y - 8, total, h, 'F'); } let x = M; lines.forEach((l, i) => { l.forEach((t, j) => doc.text(t, x + 4, P.y + 2 + j * 10.5)); x += ws[i]; }); doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.4); doc.line(M, P.y - 8 + h, W - M, P.y - 8 + h); P.y += h; };
+  drawRow(head, true, [226, 232, 240]); rows.forEach((r, i) => drawRow(r, false, i % 2 ? [250, 250, 250] : null)); P.y += 10;
+}
+function pkImagePage(P, dataUrl, w, h, caption) {
+  const { doc, M, W, H } = P; pkFooter(P); doc.addPage(); pkHeader(P, false);
+  const maxW = W - 2 * M, maxH = H - P.y - 70; let iw = maxW, ih = iw * h / w; if (ih > maxH) { ih = maxH; iw = ih * w / h; }
+  doc.addImage(dataUrl, /^data:image\/png/i.test(dataUrl) ? 'PNG' : 'JPEG', (W - iw) / 2, P.y, iw, ih); P.y += ih + 14;
+  if (caption) { doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.splitTextToSize(pkSafe(caption), maxW).forEach(l => { doc.text(l, M, P.y); P.y += 11; }); }
+}
+function pkSignature(P, name, title, firmLine) { pkEnsure(P, 70); P.y += 20; P.doc.setDrawColor(30, 30, 30); P.doc.setLineWidth(0.6); P.doc.line(P.M, P.y, P.M + 220, P.y); P.y += 12; P.doc.setFont('helvetica', 'normal'); P.doc.setFontSize(9.5); P.doc.text(pkSafe(name || '[Name]'), P.M, P.y); P.y += 12; P.doc.text(pkSafe(title || 'Environmental Professional'), P.M, P.y); P.y += 12; P.doc.text(pkSafe(firmLine || 'AZ-RI Consultants'), P.M, P.y); P.y += 18; }
+function pkFinish(P) { pkFooter(P); return P.doc; }
+function pkAttachPdf(authId, doc, name, caption) { const data = doc.output('datauristring'); if (typeof supportingDocs === 'undefined') return; if (!supportingDocs[authId]) supportingDocs[authId] = []; supportingDocs[authId] = supportingDocs[authId].filter(d => !(d.auto && d.name === name)); supportingDocs[authId].push({ name, size: Math.round(data.length * 0.75), type: 'application/pdf', uploadedAt: new Date().toISOString(), data, auto: true, caption: caption || '' }); if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId); }
+function pkCanvasToJpeg(cv, q) { return cv.toDataURL('image/jpeg', q || 0.85); }
+
+// ---------- project / packet inputs ----------
+function packetContext() {
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const site = figSiteContext(); const center = site ? site.centroid : null;
+  const meta = center ? figProjectMeta(proj, center) : { projectName: proj.projectName || '', location: '', grant: '' };
+  const stateAbbr = (typeof STATE_ABBR !== 'undefined' && STATE_ABBR[(proj.siteState || '').trim()]) || (proj.siteState || '').trim().toUpperCase().slice(0, 2) || (typeof CURRENT_STATE !== 'undefined' ? CURRENT_STATE : '');
+  const acts = (typeof activityFlags === 'function') ? activityFlags() : { acts: [] };
+  const summary = (typeof siteSummaryForLetter === 'function') ? siteSummaryForLetter() : {};
+  const level = (proj.reviewLevel || '').trim();
+  const reviewer = (document.querySelector('input[data-field="reviewer"]') || {}).value || proj.hudPreparer || 'Scott Rifkin';
+  return { proj, site, center, meta, stateAbbr, acts, summary, level, reviewer, g: k => (proj[k] || '').trim() };
+}
+const ACTIVITY_WORDS = { newconst: 'new construction', rehab: 'rehabilitation', demo: 'demolition', acq: 'acquisition', lease: 'leasing', dispo: 'disposition', maint: 'maintenance', soft: 'non-construction (services / soft costs)', infra: 'infrastructure' };
+function packetDescriptionText(C) {
+  const g = C.g; const parts = [];
+  if (g('packet_description')) parts.push(g('packet_description'));
+  else parts.push('The proposed project consists of ' + ((C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ') || '[describe the proposed action]') + ' at the Subject Property.');
+  const facts = [];
+  if (g('packet_units')) facts.push(g('packet_units') + ' dwelling unit(s)');
+  if (g('packet_footprintSqft')) facts.push('building footprint of approximately ' + g('packet_footprintSqft') + ' sq ft');
+  if (g('packet_height')) facts.push('building height of ' + g('packet_height'));
+  if (facts.length) parts.push('The project includes ' + facts.join(', ') + '.');
+  const dist = [];
+  if (g('packet_disturbedAcres')) dist.push('approximately ' + g('packet_disturbedAcres') + ' acre(s) of ground disturbance');
+  if (g('packet_excavDepthFt')) dist.push('excavation to a maximum depth of about ' + g('packet_excavDepthFt') + ' ft');
+  if (g('packet_treeClearingAcres')) dist.push((/^0*(\.0+)?$|^none$/i.test(g('packet_treeClearingAcres')) ? 'no tree clearing' : 'tree clearing of approximately ' + g('packet_treeClearingAcres') + ' acre(s)'));
+  if (g('packet_imperviousChange')) dist.push('a net change in impervious surface of ' + g('packet_imperviousChange'));
+  if (dist.length) parts.push('Limits of disturbance: ' + dist.join('; ') + '.');
+  if (g('packet_startDate') || g('packet_durationMonths')) parts.push('Construction is anticipated to begin ' + (g('packet_startDate') || '[date]') + (g('packet_durationMonths') ? ' and last approximately ' + g('packet_durationMonths') + ' months' : '') + '.');
+  return parts.join(' ');
+}
+function existingConditionsText(C) {
+  const g = C.g; const parts = [];
+  if (g('packet_existingUse')) parts.push('The Subject Property is currently ' + g('packet_existingUse') + '.');
+  if (g('packet_yearBuilt')) parts.push('Existing structure(s) were constructed circa ' + g('packet_yearBuilt') + '.');
+  if (g('packet_vegCover')) parts.push('Vegetative cover: ' + g('packet_vegCover') + '.');
+  if (C.proj.additionalLocation) parts.push(C.proj.additionalLocation.trim());
+  return parts.join(' ') || '[Describe existing site conditions: current use, structures, vegetation, surrounding land use.]';
+}
+
+// Core packet pages appended to an open writer. figures = { location, aerial, topo } canvases (optional, built by packetFigures()).
+async function packetCorePages(P, C, figures, opts) {
+  const o = opts || {}; const g = C.g;
+  pkH1(P, (o.sectionPrefix || '') + 'Project Description');
+  pkP(P, packetDescriptionText(C));
+  pkKV(P, [
+    ['Project name', C.meta.projectName], ['HUD program / funding', [C.proj.hudProgram, C.meta.grant].filter(Boolean).join(' - ')],
+    ['Responsible Entity', [C.proj.responsibleEntity, [C.proj.reAddress, C.proj.reCity, C.proj.reState, C.proj.reZip].filter(Boolean).join(', ')].filter(Boolean).join(' - ')],
+    ['Applicant / developer', g('packet_applicant')], ['Level of environmental review', C.level], ['Activities', (C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ')],
+    ['Construction schedule', [g('packet_startDate') ? 'start ' + g('packet_startDate') : '', g('packet_durationMonths') ? g('packet_durationMonths') + ' months' : ''].filter(Boolean).join(', ')]
+  ]);
+  pkH1(P, (o.sectionPrefix || '') + 'Site Information');
+  pkP(P, existingConditionsText(C));
+  pkKV(P, [
+    ['Site address', C.meta.location], ['Coordinates (lat, long)', C.center ? C.center[1].toFixed(6) + ', ' + C.center[0].toFixed(6) : ''],
+    ['Parcel / account ID(s)', C.summary.acctids || ''], ['Parcel area (GIS)', C.summary.acres && C.summary.acres !== '(unknown)' ? C.summary.acres + ' acres' : ''],
+    ['Jurisdiction', [C.proj.siteCity, C.proj.siteState].filter(Boolean).join(', ')], ['Current use', g('packet_existingUse')], ['Year built', g('packet_yearBuilt')]
+  ]);
+  if (figures) {
+    if (figures.location) pkImagePage(P, pkCanvasToJpeg(figures.location.cv), figures.location.cv.width, figures.location.cv.height, 'Figure: Site location - Subject Property boundary (site detail and vicinity).');
+    if (figures.aerial) pkImagePage(P, pkCanvasToJpeg(figures.aerial.cv), figures.aerial.cv.width, figures.aerial.cv.height, 'Figure: Aerial imagery with Subject Property boundary.');
+    if (figures.topo) pkImagePage(P, pkCanvasToJpeg(figures.topo.cv), figures.topo.cv.width, figures.topo.cv.height, 'Figure: USGS topographic map with Subject Property boundary.');
+  }
+  // Plans & drawings (images embedded; PDFs listed and transmitted as separate attachments)
+  const plans = (typeof supportingDocs !== 'undefined' && supportingDocs.packet_plans) || [];
+  if (plans.length) {
+    const pdfs = plans.filter(d => /pdf$/i.test(d.type)), imgs = plans.filter(d => /^image\//i.test(d.type));
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false);
+    pkH1(P, (o.sectionPrefix || '') + 'Plans and Drawings');
+    if (pdfs.length) { pkP(P, 'The following plan sheets accompany this packet as separate PDF attachments:'); pkBullets(P, pdfs.map(d => d.name + (d.caption ? ' - ' + d.caption : ''))); }
+    for (const d of imgs) { try { const im = await figDataUrlImg(d.data); pkImagePage(P, d.data, im.width, im.height, 'Plan / drawing: ' + d.name + (d.caption ? ' - ' + d.caption : '')); } catch (e) {} }
+  }
+  // Photos — two per page
+  const photos = ((typeof supportingDocs !== 'undefined' && supportingDocs.packet_photos) || []).filter(d => /^image\//i.test(d.type));
+  if (photos.length) {
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkH1(P, (o.sectionPrefix || '') + 'Site Photographs');
+    let n = 0;
+    for (const d of photos) {
+      try {
+        const im = await figDataUrlImg(d.data); const maxW = P.W - 2 * P.M, maxH = 300; let iw = maxW, ih = iw * im.height / im.width; if (ih > maxH) { ih = maxH; iw = ih * im.width / im.height; }
+        pkEnsure(P, ih + 36); P.doc.addImage(d.data, /png/i.test(d.type) ? 'PNG' : 'JPEG', (P.W - iw) / 2, P.y, iw, ih); P.y += ih + 12;
+        n++; P.doc.setFont('helvetica', 'italic'); P.doc.setFontSize(9); P.doc.text(pkSafe('Photo ' + n + ': ' + (d.caption || d.name)), P.M, P.y); P.y += 18;
+      } catch (e) {}
+    }
+  }
+  pkH1(P, (o.sectionPrefix || '') + 'Contacts');
+  pkKV(P, [
+    ['Environmental consultant', 'AZ-RI Consultants - ' + C.reviewer + (g('packet_preparerTitle') ? ', ' + g('packet_preparerTitle') : '') + (g('packet_preparerPhone') ? ' - ' + g('packet_preparerPhone') : '') + (g('packet_preparerEmail') ? ' - ' + g('packet_preparerEmail') : '')],
+    ['Responsible Entity / Certifying Officer', [C.proj.responsibleEntity, C.proj.certifyingOfficer].filter(Boolean).join(' - ')],
+    ['Applicant / developer contact', g('packet_applicant')]
+  ]);
+}
+// Standard figures for the packet: location (split pane, streets), aerial (imagery, parcel-tight), topo (USGS, ~1 mi)
+async function packetFigures(C, say) {
+  const { site, center, proj } = C; if (!site) return null; const meta = C.meta;
+  const legend = [{ label: 'Subject Property - ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
+  say && say('Rendering site location figure…');
+  const location = await figSplitPane({ site, center, detailHalfM: figParcelHalfM(site, center, 2.5, 400, 2000), vicHalfFt: 5280, title: 'Site Location Map', meta, subtitle: 'Project Packet for Agency Review - Subject Property boundary (site detail and 2-mile vicinity)', detailCaption: 'Subject Property boundary', vicCaption: 'Vicinity', legend: legend.concat([{ label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }]) });
+  say && say('Rendering aerial figure…');
+  const aerial = await figBuildBase(center, figParcelHalfM(site, center, 2.2, 300, 1500), { basemap: 'imagery' }); figDrawSite(aerial, site, center);
+  await figFurnish(aerial, { title: 'Aerial Imagery', meta, subtitle: 'Project Packet for Agency Review - Esri World Imagery', legend });
+  say && say('Rendering USGS topographic figure…');
+  const topo = await figBuildBase(center, 2640 / FT_PER_M, { basemap: 'topo' }); figDrawSite(topo, site, center);
+  await figFurnish(topo, { title: 'USGS Topographic Map', meta, subtitle: 'Project Packet for Agency Review - USGS The National Map (topo)', legend });
+  return { location, aerial, topo };
+}
+function packetSay(id) { const el = document.getElementById(id); return (t, c) => { if (el) { el.textContent = t; el.style.color = c || 'var(--azri-navy)'; } }; }
+
+// ---------- 1) Core packet (stand-alone) ----------
+async function generateProjectPacket() {
+  const say = packetSay('packetStatus');
+  const C = packetContext();
+  if (!C.site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the packet.'); return; }
+  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
+  try {
+    const figures = await packetFigures(C, say);
+    say('Writing the packet…');
+    const P = await pkNewDoc('Project Packet for Agency Review', C.meta);
+    pkP(P, 'This packet provides the project information commonly requested by federal, state and tribal agencies during environmental review consultations under 24 CFR Part 58 (HUD). It is intended to accompany authority-specific requests (e.g., ESA Section 7, NHPA Section 106, CZMA federal consistency).', { italic: true, size: 9 });
+    await packetCorePages(P, C, figures);
+    const doc = pkFinish(P); const slug = figSlug(C.proj);
+    pkAttachPdf('packet', doc, slug + '_Project_Packet.pdf', 'Project Packet for Agency Review (core)');
+    doc.save(slug + '_Project_Packet.pdf');
+    say('✓ Project Packet generated — PDF downloaded and listed below.', 'var(--green,#2f855a)');
+  } catch (e) { console.warn('[Packet]', e); say('✗ Packet failed: ' + e.message, 'var(--red,#c00)'); }
+}
+
+// ---------- 2) ESA Section 7 ----------
+const ESA_STATUS_RE = /\b(Proposed Endangered|Proposed Threatened|Endangered|Threatened|Candidate|Similarity of Appearance \(Threatened\)|Experimental Population, Non-Essential|Proposed Similarity of Appearance|Under Review)\b/i;
+function parseIpacText(txt) {
+  const lines = String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const species = []; let critHab = null;
+  const skip = l => /^(https?:|No critical habitat|This species only needs|Population:|Wherever found|There is|Species profile|Status|Name|NAME|STATUS|Mammals|Birds|Reptiles|Amphibians|Fishes|Clams|Snails|Insects|Flowering Plants|Ferns|Crustaceans|IPaC|Page \d)/i.test(l);
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i]; const m = l.match(ESA_STATUS_RE); if (!m) { if (/critical habitat/i.test(l) && /no critical habitats?|not been designated|no designated/i.test(l)) critHab = critHab || 'none'; continue; }
+    const status = m[1].replace(/\b\w/g, c => c.toUpperCase());
+    let name = l.slice(0, m.index).replace(/[-–—:]+$/, '').trim(); let sci = '';
+    if (!name) { for (let j = i - 1; j >= Math.max(0, i - 4); j--) { if (skip(lines[j])) continue; if (/^[A-Z][a-z]+ [a-z]+( [a-z]+)?$/.test(lines[j]) && !sci) { sci = lines[j]; continue; } name = lines[j]; break; } }
+    const sm = name.match(/^(.*?)\s+\(?([A-Z][a-z]+ [a-z]+(?: [a-z]+)?)\)?$/); if (sm && !sci) { name = sm[1]; sci = sm[2]; }
+    if (/critical habitat/i.test(name)) { critHab = (critHab === 'none' ? null : critHab) || []; if (Array.isArray(critHab)) critHab.push(name); continue; }
+    if (name && !species.some(s => s.name.toLowerCase() === name.toLowerCase())) species.push({ name, sci, status, habitat: '', rationale: '' });
+  }
+  return { species, critHab };
+}
+function esaGroup(s) { const n = (s.name + ' ' + s.sci).toLowerCase(); if (/bat|myotis|perimyotis/.test(n)) return 'bat'; if (/turtle|salamander|snake|frog/.test(n)) return 'herp'; if (/mussel|wedgemussel|lampmussel|floater|pearlymussel|sturgeon|darter|shiner|madtom|fish|chub|lamprey/.test(n)) return 'aquatic'; if (/plover|knot|tern|rail|warbler|eagle|falcon|sparrow|woodpecker/.test(n)) return 'bird'; if (/monarch|beetle|butterfly|bee|moth|skipper/.test(n)) return 'insect'; if (/orchid|pogonia|joint-vetch|sedge|grass|aster|rush|fern|lily|rose|pink|milkweed|pondweed|chaffseed|harperella|bulrush|amaranth|beaked|bittercress|lousewort|gentian|wort|plant/.test(n)) return 'plant'; return 'other'; }
+function esaDefaultHabitat(s, C) { const g = esaGroup(s); const trees = parseFloat(C.g('packet_treeClearingAcres')); const inWater = /yes/i.test(C.g('esa_inWater')); if (g === 'bat') return (!isNaN(trees) && trees > 0) ? 'possible' : 'none'; if (g === 'aquatic') return inWater ? 'possible' : 'none'; if (g === 'insect' && /monarch/i.test(s.name)) return 'none'; return ''; }
+function esaMeasures(s, C) {
+  const g = esaGroup(s); const out = [];
+  if (g === 'bat') out.push('Tree removal (if any) will be conducted between November 1 and March 31, outside the active season for roosting bats; no trees >= 3 inches dbh will be cut during the active season without prior coordination with the Service.', 'No new permanent night lighting will be directed toward retained forest edges; any construction lighting will be downward-directed and shielded.');
+  if (g === 'aquatic') out.push('No in-water work is proposed; erosion and sediment controls meeting state requirements will be installed before and maintained during land disturbance so that no sediment is discharged to receiving waters.');
+  if (g === 'herp') out.push('Wetlands and wetland buffers on or adjacent to the site will be flagged and avoided; silt fence/erosion controls will be installed at the limits of disturbance.');
+  if (g === 'plant') out.push('Suitable habitat for this species (as described in the IPaC species profile) is not present within the limits of disturbance; disturbance is confined to previously developed/maintained areas.');
+  if (g === 'bird') out.push('No suitable nesting, foraging or stopover habitat for this species occurs within the project area; no work will occur in beach, dune, marsh or open-water habitats.');
+  if (g === 'insect') out.push('Landscaping will avoid removal of native nectar/host plants where present; no pesticide application is proposed as part of the project.');
+  return out;
+}
+function esaRows() { try { return JSON.parse((document.querySelector('[data-field="esa_speciesJSON"]') || {}).value || '[]'); } catch (e) { return []; } }
+function esaSaveRows(rows) { const el = document.querySelector('[data-field="esa_speciesJSON"]'); if (el) { el.value = JSON.stringify(rows); el.dispatchEvent(new Event('input', { bubbles: true })); } }
+function esaParseIpac() {
+  const C = packetContext(); const txt = (document.querySelector('[data-field="esa_ipacText"]') || {}).value || '';
+  const r = parseIpacText(txt); if (!r.species.length) { alert('No species with a listing status were found in the pasted text. Paste the "Endangered Species" section of the IPaC official species list (common name, scientific name, status).'); return; }
+  const existing = esaRows();
+  const rows = r.species.map(s => { const old = existing.find(e => e.name.toLowerCase() === s.name.toLowerCase()); return Object.assign(s, { habitat: old ? old.habitat : esaDefaultHabitat(s, C), rationale: old ? old.rationale : '' }); });
+  esaSaveRows(rows); const ch = document.querySelector('[data-field="esa_critHab"]'); if (ch && !ch.value && r.critHab) ch.value = Array.isArray(r.critHab) ? r.critHab.join('; ') : 'None designated in the project area';
+  esaRenderTable();
+}
+function esaRenderTable() {
+  const host = document.getElementById('esaSpeciesTable'); if (!host) return; const rows = esaRows();
+  if (!rows.length) { host.innerHTML = '<em style="font-size:11px;color:var(--gray);">No species parsed yet — paste the IPaC list above and click Parse.</em>'; return; }
+  const opt = (v, cur) => `<option value="${v}"${cur === v ? ' selected' : ''}>`;
+  host.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="background:#e2e8f0;"><th style="text-align:left;padding:4px;">Species</th><th style="text-align:left;padding:4px;">Status</th><th style="text-align:left;padding:4px;">Suitable habitat on / adjacent to site?</th><th style="text-align:left;padding:4px;">Rationale (optional)</th><th></th></tr></thead><tbody>'
+    + rows.map((s, i) => `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:4px;"><input type="text" value="${s.name.replace(/"/g, '&quot;')}" onchange="esaEdit(${i},'name',this.value)" style="width:100%;font-size:11.5px;"><input type="text" value="${(s.sci || '').replace(/"/g, '&quot;')}" placeholder="Scientific name" onchange="esaEdit(${i},'sci',this.value)" style="width:100%;font-size:10.5px;font-style:italic;margin-top:2px;"></td><td style="padding:4px;"><input type="text" value="${s.status}" onchange="esaEdit(${i},'status',this.value)" style="width:110px;font-size:11.5px;"></td><td style="padding:4px;"><select onchange="esaEdit(${i},'habitat',this.value)" style="font-size:11.5px;">${opt('', s.habitat)}— select —</option>${opt('none', s.habitat)}No — no suitable habitat (developed / maintained site)</option>${opt('possible', s.habitat)}Possible — habitat nearby or marginal; avoidance measures apply</option>${opt('present', s.habitat)}Yes — suitable habitat within the limits of disturbance</option></select></td><td style="padding:4px;"><input type="text" value="${(s.rationale || '').replace(/"/g, '&quot;')}" onchange="esaEdit(${i},'rationale',this.value)" style="width:100%;font-size:11px;" placeholder="e.g., no forest on site; nearest stream 900 ft"></td><td style="padding:4px;"><button type="button" onclick="esaRemove(${i})" style="border:none;background:none;color:#c00;cursor:pointer;">×</button></td></tr>`).join('')
+    + '</tbody></table><button type="button" onclick="esaAddRow()" style="margin-top:6px;font-size:11px;background:#e2e8f0;border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;">+ Add species manually</button>';
+}
+function esaEdit(i, k, v) { const rows = esaRows(); if (rows[i]) { rows[i][k] = v; esaSaveRows(rows); } }
+function esaRemove(i) { const rows = esaRows(); rows.splice(i, 1); esaSaveRows(rows); esaRenderTable(); }
+function esaAddRow() { const rows = esaRows(); rows.push({ name: '', sci: '', status: 'Threatened', habitat: '', rationale: '' }); esaSaveRows(rows); esaRenderTable(); }
+function esaDetermination(rows, C) {
+  return rows.map(s => {
+    const grp = esaGroup(s); const hab = s.habitat || esaDefaultHabitat(s, C) || 'none';
+    let det, basis;
+    if (hab === 'none') { det = 'No effect'; basis = s.rationale || 'No suitable habitat for this species occurs on or adjacent to the Subject Property; the project is confined to ' + (C.g('packet_existingUse') ? 'the existing ' + C.g('packet_existingUse') + ' site' : 'previously developed / maintained land') + ' and will not alter habitat used by the species.'; }
+    else { det = 'May affect, not likely to adversely affect'; basis = (s.rationale ? s.rationale + ' ' : '') + 'Suitable habitat is ' + (hab === 'present' ? 'present within the limits of disturbance' : 'present in the vicinity of the project') + '; with the avoidance and minimization measures listed below, effects would be insignificant or discountable.'; }
+    return Object.assign({}, s, { grp, hab, det, basis, measures: hab === 'none' ? [] : esaMeasures(s, C) });
+  });
+}
+async function generateESAConsultation(authId) {
+  authId = authId || 'esa'; const say = packetSay('autoStatus_' + authId);
+  const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before generating the ESA packet.'); return; }
+  const rows = esaRows(); if (!rows.length) { alert('Paste the IPaC species list in the ESA inputs panel and click "Parse IPaC list" first.'); return; }
+  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
+  try {
+    const det = esaDetermination(rows, C);
+    const anyNLAA = det.some(d => d.det !== 'No effect'); const critHab = C.g('esa_critHab');
+    const recip = (typeof LETTER_TEMPLATES !== 'undefined' && LETTER_TEMPLATES.esa) ? LETTER_TEMPLATES.esa.recipient(C.stateAbbr) : { title: '[USFWS Field Office]', agency: 'USFWS' };
+    const office = C.g('esa_fieldOffice') || recip.title;
+    const figures = await packetFigures(C, say);
+    say('Writing the Section 7 packet…');
+    const P = await pkNewDoc('ESA Section 7 - Effect Determination and Request for ' + (anyNLAA ? 'Concurrence' : 'Technical Assistance'), C.meta);
+    // Transmittal
+    pkP(P, office, { size: 9.5, after: 10 });
+    pkP(P, 'Re: Endangered Species Act Section 7 - ' + (anyNLAA ? 'Request for concurrence with a "may affect, not likely to adversely affect" determination' : 'Documentation of "no effect" determination') + ' - ' + (C.meta.projectName || 'HUD-assisted project') + (C.meta.location ? ', ' + C.meta.location : ''), { bold: true });
+    pkP(P, 'AZ-RI Consultants is preparing the environmental review for the above-referenced project on behalf of ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ', the Responsible Entity under 24 CFR Part 58 for ' + (C.proj.hudProgram || 'HUD') + ' assistance administered by the U.S. Department of Housing and Urban Development. HUD is the federal action agency; the Responsible Entity assumes HUD\'s Section 7 responsibilities under 24 CFR 58.5(e). An official species list was obtained from the Service\'s IPaC system' + (C.g('esa_ipacCode') ? ' (project code ' + C.g('esa_ipacCode') + ')' : '') + (C.g('esa_ipacDate') ? ' on ' + C.g('esa_ipacDate') : '') + '. This letter documents our effect determination for each listed, proposed and candidate species and any designated critical habitat identified by IPaC.');
+    pkH1(P, 'Species and Critical Habitat Identified by IPaC');
+    pkTable(P, ['Species', 'Status', 'Suitable habitat on / near site', 'Effect determination'], det.map(d => [d.name + (d.sci ? ' (' + d.sci + ')' : ''), d.status, d.hab === 'none' ? 'No' : d.hab === 'present' ? 'Yes - within limits of disturbance' : 'Possible - in the vicinity', d.det]), [0.34, 0.16, 0.26, 0.24]);
+    pkKV(P, [['Designated critical habitat', critHab || 'None designated within the project area']]);
+    pkH1(P, 'Basis for Determinations');
+    det.forEach(d => { pkH2(P, d.name + ' - ' + d.det); pkP(P, d.basis); if (d.measures.length) { pkP(P, 'Avoidance and minimization measures incorporated into the project:', { bold: true, after: 2 }); pkBullets(P, d.measures); } });
+    pkH1(P, 'Conclusion and Requested Action');
+    if (anyNLAA) pkP(P, 'Based on the above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' has determined that the project may affect, but is not likely to adversely affect, ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ', and will have no effect on the remaining species listed above' + (critHab && !/none/i.test(critHab) ? ' and no effect on designated critical habitat' : '') + '. We respectfully request the Service\'s written concurrence with this determination pursuant to 50 CFR 402.13. The project will not proceed with activities affecting the species\' habitat until concurrence is received.');
+    else pkP(P, 'Based on the above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' has determined that the project will have no effect on federally listed, proposed or candidate species' + (critHab && !/none/i.test(critHab) ? ' or designated critical habitat' : ', and no critical habitat is designated in the project area') + '. A "no effect" determination does not require the Service\'s concurrence (50 CFR 402.14(a)); this documentation and the IPaC official species list will be retained in the Environmental Review Record. Please contact us if the Service has information that would alter this determination.');
+    pkP(P, 'The attached Project Packet provides the project description, site information, figures, plans and photographs. Please contact the undersigned with any questions.');
+    pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : '') + (C.g('packet_preparerPhone') ? ' - ' + C.g('packet_preparerPhone') : ''));
+    pkP(P, 'Attachments: Project Packet for Agency Review (following pages); IPaC Official Species List (separate PDF).', { italic: true, size: 9 });
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false);
+    pkP(P, 'ATTACHMENT - PROJECT PACKET FOR AGENCY REVIEW', { bold: true, size: 12, after: 10 });
+    await packetCorePages(P, C, figures);
+    const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_ESA_Section7_Packet.pdf';
+    const finding = anyNLAA ? 'NLAA determination for ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ' — concurrence requested from ' + recip.agency + ' → Write Up 3 (pending); switch to Write Up 3 (received) when the response arrives.' : 'No effect for all ' + det.length + ' IPaC species; no concurrence required → Write Up 2 (retain IPaC list + this documentation in the ERR).';
+    pkAttachPdf(authId, doc, name, finding); doc.save(name);
+    figFillSourceRef(authId, 'USFWS IPaC official species list; Section 7 effect determination packet', det.map(d => d.name + ': ' + d.det).join('; '));
+    const radio = document.querySelector('input[name="' + authId + '_status"][value="' + (anyNLAA ? 'awaiting' : 'compliant') + '"]'); if (radio && !document.querySelector('input[name="' + authId + '_status"]:checked')) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    say('✓ ESA Section 7 packet generated — PDF downloaded and attached. ' + finding, anyNLAA ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
+    return { det, anyNLAA };
+  } catch (e) { console.warn('[ESA packet]', e); say('✗ ESA packet failed: ' + e.message, 'var(--red,#c00)'); }
+}
+
+// ---------- 3) Section 106 (SHPO submittal) ----------
+async function generateHistoricConsultation(authId) {
+  authId = authId || 'historic'; const say = packetSay('autoStatus_' + authId);
+  const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before generating the Section 106 packet.'); return; }
+  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
+  try {
+    const apeFt = parseFloat(C.g('hist_apeFt')) || 250; const age = (typeof rq === 'function') ? rq('historic', 'age') : ''; const ground = (typeof rq === 'function') ? rq('historic', 'ground') : '';
+    const recip = (typeof LETTER_TEMPLATES !== 'undefined' && LETTER_TEMPLATES.historic) ? LETTER_TEMPLATES.historic.recipient(C.stateAbbr) : { title: '[SHPO]', agency: 'SHPO', portal: '' };
+    const figures = await packetFigures(C, say);
+    say('Rendering APE figure…');
+    const { site, center, proj } = C; const apeRings = figBufferRings(site, center, apeFt);
+    const drawAPE = base => { const { ctx, toPx } = base; apeRings.forEach(r => { ctx.save(); ctx.setLineDash([8, 5]); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(124,58,237,0.10)'; ctx.beginPath(); r.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }); };
+    const apeFig = await figSplitPane({ site, center, detailHalfM: (figParcelHalfM(site, center, 1, 0, 1e9) * FT_PER_M + apeFt + 150) / FT_PER_M, vicHalfFt: 2640, basemap: 'imagery', title: 'Area of Potential Effects (APE)', meta: C.meta, subtitle: 'NHPA Section 106 - 36 CFR 800.16(d) - APE = Subject Property plus ' + apeFt.toLocaleString() + ' ft (direct and visual effects)', detailCaption: 'Subject Property and APE (' + apeFt.toLocaleString() + ' ft)', vicCaption: 'APE in its setting', legend: [{ label: 'Subject Property - ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }, { label: 'Area of Potential Effects - ' + apeFt.toLocaleString() + ' ft from the boundary', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(124,58,237,0.10)'; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); ctx.restore(); } }, { label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }], drawDetail: drawAPE, drawVicinity: drawAPE });
+    say('Writing the Section 106 packet…');
+    const P = await pkNewDoc('NHPA Section 106 - Project Submittal', C.meta);
+    pkP(P, recip.title, { size: 9.5, after: 10 });
+    pkP(P, 'Re: Section 106 consultation - ' + (C.meta.projectName || 'HUD-assisted project') + (C.meta.location ? ', ' + C.meta.location : '') + (C.g('hist_shpoFile') ? ' - SHPO file no. ' + C.g('hist_shpoFile') : ''), { bold: true });
+    pkP(P, 'On behalf of ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ', the Responsible Entity assuming HUD\'s Section 106 responsibilities under 24 CFR 58.5(a) for the above ' + (C.proj.hudProgram || 'HUD') + '-assisted undertaking, AZ-RI Consultants is initiating consultation under Section 106 of the National Historic Preservation Act (36 CFR Part 800). The undertaking, its Area of Potential Effects, and the identification efforts completed to date are described below and in the attached Project Packet.');
+    pkH1(P, 'Undertaking'); pkP(P, packetDescriptionText(C));
+    pkH1(P, 'Area of Potential Effects');
+    pkP(P, 'The APE for direct effects is the Subject Property (limits of disturbance). The APE for visual/indirect effects extends ' + apeFt.toLocaleString() + ' feet from the property boundary' + (C.g('hist_apeNote') ? ' (' + C.g('hist_apeNote') + ')' : '') + ', as shown on the attached APE figure. ' + (ground === 'yes' ? 'The undertaking involves ground disturbance (' + (C.g('packet_disturbedAcres') ? C.g('packet_disturbedAcres') + ' acres, ' : '') + (C.g('packet_excavDepthFt') ? 'to about ' + C.g('packet_excavDepthFt') + ' ft' : 'see Project Packet') + '), so the archaeological APE is the limits of disturbance.' : 'The undertaking involves no ground disturbance beyond utility tie-ins; the archaeological APE is therefore limited to the building footprint.'));
+    pkH1(P, 'Identification of Historic Properties');
+    pkKV(P, [['Structures on the property', C.g('packet_yearBuilt') ? 'Existing structure(s) built circa ' + C.g('packet_yearBuilt') + (age === 'yes' ? ' (50+ years old)' : age === 'no' ? ' (under 50 years old)' : '') : (age === 'no' ? 'No structures 50 years old or older (or vacant site)' : '[year built]')], ['NRHP-listed / eligible resources or historic district', C.g('hist_nrhp') || 'None identified in the state inventory within the APE [confirm]'], ['Previous surveys / SHPO file numbers', C.g('hist_priorSurvey')], ['Consulting parties', C.g('hist_parties')], ['Tribes notified (HUD TDAT)', C.g('hist_tribes') ? C.g('hist_tribes').split(/\n/).filter(Boolean).join('; ') : (ground === 'yes' ? '[paste the HUD TDAT list]' : 'Not applicable - no ground disturbance')]]);
+    pkH1(P, 'Finding and Requested Action');
+    pkP(P, C.g('hist_finding') || ('Based on the identification efforts described above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' proposes a finding of ' + (age === 'yes' ? '"no adverse effect" on historic properties' : '"no historic properties affected"') + ' (36 CFR 800.4(d)/800.5). We request the SHPO\'s concurrence within the 30-day review period.'));
+    if (recip.portal) pkP(P, 'Submittal: ' + recip.portal, { size: 9, italic: true });
+    pkP(P, 'Attachments: APE figure; Project Packet for Agency Review (project description, site data, location/aerial/topographic figures, plans and photographs).', { italic: true, size: 9 });
+    pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : ''));
+    pkImagePage(P, pkCanvasToJpeg(apeFig.cv), apeFig.cv.width, apeFig.cv.height, 'Figure: Area of Potential Effects.');
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT PACKET FOR AGENCY REVIEW', { bold: true, size: 12, after: 10 });
+    await packetCorePages(P, C, figures);
+    const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_Section106_Packet.pdf';
+    pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency + ' - APE ' + apeFt + ' ft'); doc.save(name);
+    figFillSourceRef(authId, 'Section 106 submittal packet (' + recip.agency + ')', 'APE ' + apeFt.toLocaleString() + ' ft; submitted ' + new Date().toLocaleDateString());
+    say('✓ Section 106 packet generated — PDF downloaded and attached. Submit via ' + (recip.portal ? 'the state portal (see letter)' : 'email to the SHPO') + '; mark Awaiting Response until concurrence arrives.', 'var(--azri-navy)');
+  } catch (e) { console.warn('[106 packet]', e); say('✗ Section 106 packet failed: ' + e.message, 'var(--red,#c00)'); }
+}
+
+// ---------- 4) CZM federal consistency ----------
+async function generateCZMConsultation(authId) {
+  authId = authId || 'czm'; const say = packetSay('autoStatus_' + authId);
+  const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before generating the CZM packet.'); return; }
+  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
+  try {
+    const recip = (typeof LETTER_TEMPLATES !== 'undefined' && LETTER_TEMPLATES.czm) ? LETTER_TEMPLATES.czm.recipient(C.stateAbbr) : { title: '[State CZM Program]', agency: 'State CZM Program', portal: '' };
+    const scope = (typeof rq === 'function') ? rq('czm', 'scope') : '';
+    const figures = await packetFigures(C, say);
+    say('Writing the CZM consistency packet…');
+    const P = await pkNewDoc('CZMA Federal Consistency Determination', C.meta);
+    pkP(P, C.g('czm_agency') || recip.title, { size: 9.5, after: 10 });
+    pkP(P, 'Re: Coastal Zone Management Act Section 307(c) - Federal consistency ' + (C.g('czm_type') || 'determination') + ' - ' + (C.meta.projectName || 'HUD-assisted project') + (C.meta.location ? ', ' + C.meta.location : ''), { bold: true });
+    pkP(P, 'On behalf of ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ', the Responsible Entity assuming HUD\'s environmental responsibilities under 24 CFR 58.5(c) for the above ' + (C.proj.hudProgram || 'HUD') + '-assisted project, AZ-RI Consultants submits this federal consistency ' + (C.g('czm_type') || 'determination') + ' under 15 CFR Part 930' + (/negative/i.test(C.g('czm_type')) ? ', Subpart C (negative determination, 15 CFR 930.35)' : ', Subpart C') + '. The project is located ' + (scope === 'inside' ? 'within' : 'outside but potentially affecting') + ' the state\'s designated coastal zone.');
+    pkH1(P, 'Project Description'); pkP(P, packetDescriptionText(C));
+    pkH1(P, 'Coastal Effects and Consistency with Enforceable Policies');
+    pkP(P, C.g('czm_effects') || 'The project is a ' + ((C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ') || 'housing') + ' activity on ' + (C.g('packet_existingUse') ? 'an existing ' + C.g('packet_existingUse') + ' site' : 'a previously developed site') + '. It does not involve work in tidal waters, wetlands, dunes or beaches, does not alter public access to the shoreline, and will comply with state erosion and sediment control and stormwater management requirements during construction. No reasonably foreseeable effects on coastal uses or resources beyond the site are anticipated.');
+    if (C.g('czm_policies')) { pkH2(P, 'Enforceable policies reviewed'); pkBullets(P, C.g('czm_policies').split(/\n/).filter(Boolean)); }
+    pkH1(P, 'Determination and Requested Action');
+    pkP(P, C.g('czm_determination') || ((C.proj.responsibleEntity || 'The Responsible Entity') + ' has determined that the project is consistent to the maximum extent practicable with the enforceable policies of the ' + recip.agency + '. We request the program\'s concurrence' + (/negative/i.test(C.g('czm_type')) ? ' with this negative determination' : '') + ' within the review period provided by 15 CFR 930.41.'));
+    if (recip.portal) pkP(P, 'Submittal: ' + recip.portal, { size: 9, italic: true });
+    pkP(P, 'Attachments: Project Packet for Agency Review (project description, site data, location/aerial/topographic figures, plans and photographs)' + (supportingDocs && supportingDocs.flood_ins && supportingDocs.flood_ins.length ? '; FIRM figure' : '') + '.', { italic: true, size: 9 });
+    pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : ''));
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT PACKET FOR AGENCY REVIEW', { bold: true, size: 12, after: 10 });
+    await packetCorePages(P, C, figures);
+    const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_CZM_Consistency_Packet.pdf';
+    pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); doc.save(name);
+    figFillSourceRef(authId, 'CZMA federal consistency packet (' + recip.agency + ')', (C.g('czm_type') || 'Consistency determination') + ' submitted ' + new Date().toLocaleDateString());
+    say('✓ CZM consistency packet generated — PDF downloaded and attached. Mark Awaiting Response until the program responds (Write Up 4/5 or the DE submission write-ups).', 'var(--azri-navy)');
+  } catch (e) { console.warn('[CZM packet]', e); say('✗ CZM packet failed: ' + e.message, 'var(--red,#c00)'); }
+}
 // ===== MAP GENERATOR REGISTRY (per authority) =====
 const MAP_GENERATORS = {
   airport: { fn: 'generateAirportFigure', label: '🗺 Airport Hazards Figure (FAA runway ends)' },
@@ -4818,6 +5209,9 @@ const MAP_GENERATORS = {
   wetlands:  { fn: 'generateWetlandsFigure', label: '🗺 Wetlands Figure (USFWS NWI)' },
   wsr:       { fn: 'generateWSRFigure', label: '🗺 Wild & Scenic Rivers Figure (NWSRS + NPS NRI)' },
   noise:     { fn: 'generateNoiseScreeningFigure', label: '🗺 Noise Screening Figure (roads 1,000 ft · rail 3,000 ft · airports 15 mi)' },
+  esa:       { fn: 'generateESAConsultation', label: '📄 ESA Section 7 Packet (IPaC determination + concurrence request)' },
+  historic:  { fn: 'generateHistoricConsultation', label: '📄 Section 106 Packet (SHPO submittal + APE figure)' },
+  czm:       { fn: 'generateCZMConsultation', label: '📄 CZM Consistency Packet' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -6840,6 +7234,43 @@ AUTHORITIES.forEach(a => {
         <div class="full"><label>Green Book status (manual) <span style="font-weight:400;color:var(--gray);">— only if EPA's map service is down or missed an area. One per line: <code>NAAQS | Area, ST | Status | Classification</code>, e.g. <code>8-Hour Ozone (2015) | Baltimore, MD | Nonattainment | Serious</code></span></label><textarea data-field="air_gbManual" style="min-height:48px;"></textarea></div>
         <div class="full"><label>Agency contact override <span style="font-weight:400;color:var(--gray);">(default comes from the State field: MDE / DOEE / DNREC / PA DEP / VA DEQ)</span></label><input type="text" data-field="air_contact" placeholder="Agency, contact name, email, phone"></div>
         <div><label>Preparer title</label><input type="text" data-field="air_preparerTitle" placeholder="e.g., Environmental Professional"></div>
+      </div>
+    </details>` : ''}
+    ${a.id === 'esa' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 7 packet inputs — paste the IPaC official species list <span style="font-weight:400;color:var(--gray);">(shared project facts come from the Project Packet inputs in 1125)</span></summary>
+      <div class="field-grid" style="margin-top:10px;">
+        <div class="full"><label>IPaC species list text <span style="font-weight:400;color:var(--gray);">(open the IPaC PDF, select-all / copy the "Endangered Species" pages and paste here)</span></label><textarea data-field="esa_ipacText" style="min-height:90px;font-family:monospace;font-size:11px;" placeholder="Northern Long-eared Bat Myotis septentrionalis   Endangered&#10;Monarch Butterfly Danaus plexippus   Proposed Threatened&#10;…"></textarea></div>
+        <div class="full" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="esaParseIpac()" style="background:var(--azri-navy);color:white;border:none;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Parse IPaC list</button><span style="font-size:11px;color:var(--gray);">Then set "suitable habitat" for each species — No → No effect; Possible / Yes → NLAA with avoidance measures and a concurrence request.</span></div>
+        <input type="hidden" data-field="esa_speciesJSON">
+        <div class="full" id="esaSpeciesTable"></div>
+        <div><label>IPaC project code</label><input type="text" data-field="esa_ipacCode" placeholder="e.g., 2026-0012345"></div>
+        <div><label>IPaC list date</label><input type="text" data-field="esa_ipacDate" placeholder="e.g., October 7, 2026"></div>
+        <div><label>In-water / stream work?</label><select data-field="esa_inWater"><option value="">— select —</option><option>No</option><option>Yes</option></select></div>
+        <div><label>Designated critical habitat in project area</label><input type="text" data-field="esa_critHab" placeholder="auto-filled from IPaC when found; e.g., None designated"></div>
+        <div class="full"><label>USFWS field office override <span style="font-weight:400;color:var(--gray);">(default from the project state: Chesapeake Bay / PA / VA ESFO)</span></label><input type="text" data-field="esa_fieldOffice"></div>
+      </div>
+    </details>` : ''}
+    ${a.id === 'historic' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 106 packet inputs <span style="font-weight:400;color:var(--gray);">(APE, inventory results, Tribal list; shared project facts come from 1125)</span></summary>
+      <div class="field-grid" style="margin-top:10px;">
+        <div><label>APE distance from boundary (ft)</label><input type="text" data-field="hist_apeFt" placeholder="250"></div>
+        <div><label>APE note (optional)</label><input type="text" data-field="hist_apeNote" placeholder="e.g., one parcel in each direction / viewshed to the street"></div>
+        <div class="full"><label>NRHP-listed / eligible resources or historic districts in the APE (state inventory results)</label><input type="text" data-field="hist_nrhp" placeholder="e.g., None in MEDUSA / CHRIS / PA-SHARE within the APE; or list resource names and inventory numbers"></div>
+        <div class="full"><label>Previous surveys / SHPO file numbers</label><input type="text" data-field="hist_priorSurvey"></div>
+        <div class="full"><label>Consulting parties (local government, historical society, applicant)</label><input type="text" data-field="hist_parties"></div>
+        <div class="full"><label>Tribes to notify (paste the HUD TDAT list, one per line — required when there is ground disturbance)</label><textarea data-field="hist_tribes" style="min-height:50px;"></textarea></div>
+        <div class="full"><label>Proposed finding override (optional)</label><textarea data-field="hist_finding" style="min-height:44px;" placeholder="Default: 'no historic properties affected' (no 50+ yr structures) or 'no adverse effect' (50+ yr structure present)"></textarea></div>
+        <div class="full"><label>SHPO file no. (if assigned)</label><input type="text" data-field="hist_shpoFile"></div>
+      </div>
+    </details>` : ''}
+    ${a.id === 'czm' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">CZM consistency packet inputs <span style="font-weight:400;color:var(--gray);">(shared project facts come from 1125)</span></summary>
+      <div class="field-grid" style="margin-top:10px;">
+        <div><label>Submission type</label><select data-field="czm_type"><option value="">Consistency determination (default)</option><option>Consistency determination</option><option>Negative determination</option></select></div>
+        <div class="full"><label>State CZM agency / contact override <span style="font-weight:400;color:var(--gray);">(default from the project state)</span></label><input type="text" data-field="czm_agency"></div>
+        <div class="full"><label>Coastal effects narrative override (optional)</label><textarea data-field="czm_effects" style="min-height:50px;"></textarea></div>
+        <div class="full"><label>Enforceable policies reviewed (one per line, e.g., MD Tidal Wetlands Act — not applicable, no tidal wetlands on site)</label><textarea data-field="czm_policies" style="min-height:50px;"></textarea></div>
+        <div class="full"><label>Determination statement override (optional)</label><textarea data-field="czm_determination" style="min-height:44px;"></textarea></div>
       </div>
     </details>` : ''}
     <div class="authority-fields">
@@ -10875,7 +11306,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v124 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v125 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
