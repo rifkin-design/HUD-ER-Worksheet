@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v110</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v111</div>
   </div>
 </header>
 
@@ -3325,6 +3325,15 @@ function figDrawSite(base, site, center) {
   ctx.beginPath(); ctx.arc(c[0], c[1], 5, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#c2185b'; ctx.lineWidth = 2; ctx.stroke();
   return polys;
 }
+// Project name / location / grant number for the figure header (external-facing)
+function figProjectMeta(proj, center) {
+  let grant = (proj.grantId || '').trim();
+  if (!grant) { try { const fs = JSON.parse(proj.fundingSourcesJSON || '[]'); const g = (fs.find(f => (f.grantId || '').trim()) || {}).grantId; if (g) grant = g.trim(); } catch (e) {} }
+  if (!grant && typeof fundingSources !== 'undefined' && Array.isArray(fundingSources)) { const g = (fundingSources.find(f => (f.grantId || '').trim()) || {}).grantId; if (g) grant = g.trim(); }
+  const heros = (proj.herosNumber || '').trim();
+  const grantLabel = grant ? 'Grant No. ' + grant : (heros ? 'HEROS No. ' + heros : '');
+  return { projectName: (proj.projectName || '').trim(), location: figSiteLabel(proj, center), grant: grantLabel };
+}
 function figSiteLabel(proj, center) {
   return (proj.siteAddress || '').trim() ? [proj.siteAddress, proj.siteCity, proj.siteState, proj.siteZip].filter(Boolean).join(', ') : (center[1].toFixed(5) + ', ' + center[0].toFixed(5));
 }
@@ -3339,18 +3348,24 @@ function figFillSourceRef(authId, source, ref) {
 async function figFurnish(base, o) {
   const { ctx, W, H } = base;
   // Header border strip (white) — logo at left so it never sits over the map, title beside it, date at right
-  const HB = 72;
+  // Header strip: logo | figure title + project name / location / grant no. / authority cite | date.
+  // Everything on the figure is external-facing (HUD, RE, client) — no internal routing notes.
+  const HB = 92;
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, HB);
   ctx.fillStyle = '#0f2a44'; ctx.fillRect(0, HB - 3, W, 3);
   let tx = 20;
   try {
     const logo = await figDataUrlImg(window.AZRI_REPORT_LOGO);
-    const lh = 52, lw = lh * logo.width / logo.height;
+    const lh = 56, lw = lh * logo.width / logo.height;
     ctx.drawImage(logo, 16, (HB - 3 - lh) / 2, lw, lh); tx = 16 + lw + 22;
   } catch (e) {}
-  ctx.fillStyle = '#0f2a44'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'left'; ctx.fillText(o.title, tx, 32);
-  if (o.subtitle) { ctx.font = '14px Arial'; ctx.fillStyle = '#334155'; ctx.fillText(o.subtitle, tx, 55); }
-  ctx.font = '13px Arial'; ctx.fillStyle = '#334155'; ctx.textAlign = 'right'; ctx.fillText(new Date().toLocaleDateString(), W - 18, 43);
+  const meta = o.meta || {};
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#0f2a44'; ctx.font = 'bold 22px Arial'; ctx.fillText(o.title + (meta.projectName ? ' — ' + meta.projectName : ''), tx, 30);
+  const line2 = [meta.location, meta.grant].filter(Boolean).join('   ·   ');
+  ctx.font = '14px Arial'; ctx.fillStyle = '#1f2937'; if (line2) ctx.fillText(line2, tx, 54);
+  if (o.subtitle) { ctx.font = '12px Arial'; ctx.fillStyle = '#4b5563'; ctx.fillText(o.subtitle, tx, 76); }
+  ctx.font = '13px Arial'; ctx.fillStyle = '#334155'; ctx.textAlign = 'right'; ctx.fillText(new Date().toLocaleDateString(), W - 18, 30);
   // North arrow
   ctx.save(); ctx.translate(W - 52, HB + 48);
   ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.beginPath(); ctx.arc(0, 0, 34, 0, 7); ctx.fill();
@@ -3382,7 +3397,7 @@ async function figFurnish(base, o) {
   }
 }
 
-// Export helpers: PDF download + attach JPEG to the authority's Supporting Documents (replacing a prior auto figure)
+// Export helpers: PDF download (figure only — no internal notes; these go to HUD, the RE and the client) + attach JPEG to the authority's Supporting Documents (replacing a prior auto figure)
 function figAttach(authId, canvas, name, caption) {
   const data = canvas.toDataURL('image/jpeg', 0.9);
   if (typeof supportingDocs === 'undefined') return data;
@@ -3499,7 +3514,7 @@ async function generateAirportFigure(authId) {
     ctx.lineWidth = 3; ctx.strokeStyle = '#c62828'; ctx.stroke();
     // Ring labels
     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#7f1d1d';
-    const lab = (txt, r) => { const w = ctx.measureText(txt).width; const yTop = c[1] - r; const y = yTop - 20 >= 80 ? yTop - 20 : (yTop + 8 >= 80 ? yTop + 8 : c[1] + r - 26); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(c[0] - w / 2 - 4, y, w + 8, 18); ctx.fillStyle = '#7f1d1d'; ctx.fillText(txt, c[0], y + 14); };
+    const lab = (txt, r) => { const w = ctx.measureText(txt).width; const yTop = c[1] - r; const y = yTop - 20 >= 100 ? yTop - 20 : (yTop + 8 >= 100 ? yTop + 8 : c[1] + r - 26); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(c[0] - w / 2 - 4, y, w + 8, 18); ctx.fillStyle = '#7f1d1d'; ctx.fillText(txt, c[0], y + 14); };
     lab('Military airfield screen — 15,000 ft', rPx(AIRPORT_MIL_FT));
     lab('Civil airport screen — 2,500 ft', rPx(AIRPORT_CIVIL_FT));
     // Runway polygons
@@ -3510,7 +3525,7 @@ async function generateAirportFigure(authId) {
     // Airports
     const drawAirport = r => {
       const p = toPx(r.pt);
-      if (p[0] < 0 || p[0] > W || p[1] < 80 || p[1] > H) return;   // off the map — the edge pointer handles the nearest ones
+      if (p[0] < 0 || p[0] > W || p[1] < 100 || p[1] > H) return;   // off the map — the edge pointer handles the nearest ones
       const col = r.kind === 'civil' ? '#d32f2f' : '#1d4ed8';
       ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.fillStyle = col;
       ctx.beginPath(); ctx.moveTo(p[0] - 9, p[1]); ctx.lineTo(p[0] + 9, p[1]); ctx.moveTo(p[0], p[1] - 9); ctx.lineTo(p[0], p[1] + 9); ctx.stroke();
@@ -3518,7 +3533,7 @@ async function generateAirportFigure(authId) {
       ctx.font = '12px Arial'; ctx.textAlign = 'left'; const w = ctx.measureText(txt).width;
       // keep the label on the canvas: flip to the left of the symbol near the right edge, clamp vertically
       const lx = (p[0] + 15 + w > W - 6) ? p[0] - 15 - w : p[0] + 15;
-      const ly = Math.max(88, Math.min(H - 12, p[1] + 4));
+      const ly = Math.max(108, Math.min(H - 12, p[1] + 4));
       ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(lx - 4, ly - 13, w + 8, 17);
       ctx.fillStyle = '#111'; ctx.fillText(txt, lx, ly);
     };
@@ -3527,8 +3542,8 @@ async function generateAirportFigure(authId) {
     // If the nearest airport's reference point is off the map, add an edge pointer so it's still labelled
     const edgePointer = (r, col) => {
       if (!r) return; const p = toPx(r.pt);
-      if (p[0] >= 0 && p[0] <= W && p[1] >= 80 && p[1] <= H) return;
-      const dx = p[0] - c[0], dy = p[1] - c[1]; const t = Math.min((dx > 0 ? (W - 30 - c[0]) : (30 - c[0])) / (dx || 1e-9), (dy > 0 ? (H - 90 - c[1]) : (100 - c[1])) / (dy || 1e-9));
+      if (p[0] >= 0 && p[0] <= W && p[1] >= 100 && p[1] <= H) return;
+      const dx = p[0] - c[0], dy = p[1] - c[1]; const t = Math.min((dx > 0 ? (W - 30 - c[0]) : (30 - c[0])) / (dx || 1e-9), (dy > 0 ? (H - 90 - c[1]) : (120 - c[1])) / (dy || 1e-9));
       const ex = c[0] + dx * Math.max(0, Math.min(t, 1)), ey = c[1] + dy * Math.max(0, Math.min(t, 1));
       const ang = Math.atan2(dy, dx);
       ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-6, -9); ctx.lineTo(-6, 9); ctx.closePath(); ctx.fill(); ctx.restore();
@@ -3559,8 +3574,9 @@ async function generateAirportFigure(authId) {
       { label: 'Runway (FAA)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(55,65,81,0.85)'; ctx.fillRect(x, y + 3, w, h - 6); } }
     ];
     await figFurnish(base, {
-      title: 'Airport Hazards Map — ' + (proj.projectName || siteLabel),
-      subtitle: '24 CFR Part 51 Subpart D · §58.6(d) · distances from the Subject Property to the nearest runway end',
+      title: 'Airport Hazards Map',
+      meta: figProjectMeta(proj, center),
+      subtitle: '24 CFR Part 51 Subpart D · §58.6(d) · distances measured from the Subject Property to the nearest runway end (FAA NASR airports & runways)',
       legend
     });
     // Findings text
@@ -3579,7 +3595,7 @@ async function generateAirportFigure(authId) {
     const srcEl = document.querySelector('[data-field="' + authId + '_source"]');
     if (srcEl && !srcEl.value.trim()) { srcEl.value = 'FAA NASR Airports & Runways (ADIP) — Airport Hazards Map'; srcEl.dispatchEvent(new Event('input', { bubbles: true })); }
     window._lastAirportFigure = { canvas: base.cv, filename: slug + '_Airport_Hazards_Map.pdf', footer: [civilTxt, milTxt, verdict] };
-    figDownloadPdf(base.cv, slug + '_Airport_Hazards_Map.pdf', [civilTxt, milTxt, verdict]);
+    figDownloadPdf(base.cv, slug + '_Airport_Hazards_Map.pdf');   // no footer — findings stay in the worksheet, not on the external figure
     say('✓ Airport Hazards figure generated — PDF downloaded and attached to Supporting Documents. ' + verdict, (civilHit || milHit) ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
     return { civilTxt, milTxt, verdict, rows };
   } catch (e) {
@@ -3641,7 +3657,7 @@ async function generateCBRSFigure(authId) {
     const c = toPx(center);
     // Label the nearest unit with its distance (when outside) or the containing unit (when inside)
     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
-    const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), W - w - 12), ly = Math.min(Math.max(90, y), H - 14); ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
+    const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), W - w - 12), ly = Math.min(Math.max(110, y), H - 14); ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
     if (inside) {
       const u = inUnits[0].attributes;
       tag('Subject Property is WITHIN CBRS ' + (u.Unit_Type || 'unit') + ' ' + u.Unit + (u.Name ? ' (' + u.Name + ')' : ''), c[0] + 16, c[1] - 20, '#b91c1c');
@@ -3650,17 +3666,18 @@ async function generateCBRSFigure(authId) {
       ctx.fillStyle = '#1d4ed8'; ctx.beginPath(); ctx.arc(q[0], q[1], 5, 0, 7); ctx.fill();
       const u = nearest.a;
       tag('Nearest CBRS unit: ' + u.Unit + (u.Name ? ' (' + u.Name + ')' : '') + ', ' + (u.Unit_Type || '') + ' — ' + figFmtFt(nearest.distFt), q[0] + 10, q[1] - 8, '#1e3a8a');
-      if (buffer) tag('Subject Property touches the CBRS Buffer Zone — USFWS determination required', c[0] + 16, c[1] - 20, '#b45309');
+      if (buffer) tag('Subject Property lies within the CBRS Buffer Zone', c[0] + 16, c[1] - 20, '#b45309');
     } else {
       tag('No CBRS unit within ' + CBRS_SEARCH_MI + ' miles of the Subject Property', c[0] + 16, c[1] - 20, '#1e3a8a');
     }
     // Legend: site + the service's own symbols for Units / Buffer Zone / Prohibitions
     const siteLabel = figSiteLabel(proj, center);
     let legend = [{ label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
-    try { legend = legend.concat(await figServiceLegend(CBRS_SERVICE, [3, 0], { 0: 'CBRS Buffer Zone (indeterminate — needs USFWS letter)', '3:System Unit': 'CBRS System Unit', '3:Otherwise Protected Area': 'CBRS Otherwise Protected Area (OPA)' })); } catch (e) {}
+    try { legend = legend.concat(await figServiceLegend(CBRS_SERVICE, [3, 0], { 0: 'CBRS Buffer Zone', '3:System Unit': 'CBRS System Unit', '3:Otherwise Protected Area': 'CBRS Otherwise Protected Area (OPA)' })); } catch (e) {}
     await figFurnish(base, {
-      title: 'Coastal Barrier Resources Map — ' + (proj.projectName || siteLabel),
-      subtitle: 'Coastal Barrier Resources Act, 16 U.S.C. 3501 et seq. · §58.6(c) · USFWS CBRS units' + (overlayOk ? '' : ' (overlay unavailable at generation time)'),
+      title: 'Coastal Barrier Resources Map',
+      meta: figProjectMeta(proj, center),
+      subtitle: 'Coastal Barrier Resources Act, 16 U.S.C. 3501 et seq. · §58.6(c) · USFWS Coastal Barrier Resources System' + (overlayOk ? '' : ' (overlay unavailable at generation time)'),
       legend
     });
     // Findings
@@ -3672,7 +3689,7 @@ async function generateCBRSFigure(authId) {
     const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
     figAttach(authId, base.cv, slug + '_CBRS_Map.jpg', finding);
     figFillSourceRef(authId, 'USFWS Coastal Barrier Resources System (CBRS Mapper) — CBRS Map', inside ? ('In ' + inUnits[0].attributes.Unit) : nearest ? ('Nearest unit ' + nearest.a.Unit + ' ' + figFmtFt(nearest.distFt)) : 'No unit within ' + CBRS_SEARCH_MI + ' mi');
-    figDownloadPdf(base.cv, slug + '_CBRS_Map.pdf', [finding]);
+    figDownloadPdf(base.cv, slug + '_CBRS_Map.pdf');
     say('✓ CBRS figure generated — PDF downloaded and attached to Supporting Documents. ' + finding, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
     return { finding, status, inside, buffer, nearest };
   } catch (e) {
@@ -9603,7 +9620,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v110 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v111 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v111: FIGURE STANDARD — every figure is external-facing (HUD / RE / client): header carries project name, site location and Grant No. (or HEROS No.); NO findings/instructions footer on the PDF; findings go only to the status line, Source/Ref and the Supporting Doc caption.');
   console.log('  v110: CBRS figure — USFWS/USGS CBRS Mapper service: in-unit / buffer-zone / nearest-unit distance, official symbology overlay + legend, PDF + Supporting Documents; figure engine gained shared overlay/legend/site helpers.');
   console.log('  SOP: Airport Hazards step-by-step rewritten around the in-app figure — FAA NASR data, runway-end measuring point, heliports + private strips screened as civil, joint-use as military, NEPAssist kept as fallback.');
   console.log('  v109: Airport Hazards figure simplified per Scott — logo in a white header border, no distance lines (distance to runway end is in each label), civil vs military symbols only, no sources footer.');
