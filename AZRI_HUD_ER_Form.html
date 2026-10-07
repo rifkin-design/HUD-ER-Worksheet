@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v120</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v121</div>
   </div>
 </header>
 
@@ -3223,6 +3223,7 @@ async function runAutoAll() {
 
 
 
+
 // ===== AZ-RI FIGURE ENGINE (v108) =====
 // Canvas-based figure generator ported from the Phase I ESA Worksheet so both tools draw figures
 // the same way: stitch basemap tiles (fetched as blobs so the canvas never taints — works from
@@ -4222,6 +4223,235 @@ async function generateSSAFigure(authId) {
     say('✗ SSA figure failed: ' + e.message, 'var(--red,#c00)');
   }
 }
+
+
+// ===== SHARED SPLIT-PANE COMPOSER (v121) =====
+// Builds the two-panel figure used by Flood / SSA / Wetlands / WSR: LEFT site detail, RIGHT vicinity with the
+// detail extent outlined, header, one legend (bottom-left of the detail panel), per-panel scale bars, north arrow,
+// and an optional note box (bottom-right of the vicinity panel). o.drawDetail(base) / o.drawVicinity(base) draw the
+// thematic content; the site boundary is drawn by the composer after them.
+async function figSplitPane(o) {
+  const W = 1500, H = 1050, GAP = 10, PW = (W - GAP) / 2, PH = H - FIG_HB;
+  const { site, center } = o;
+  const [detail, vic] = await Promise.all([
+    figBuildBase(center, o.detailHalfM, { basemap: o.basemap || 'streets', W: PW, H: PH }),
+    figBuildBase(center, o.vicHalfFt / FT_PER_M, { basemap: o.basemap || 'streets', W: PW, H: PH })
+  ]);
+  if (!detail.tilesOk || !vic.tilesOk) throw new Error('basemap tiles could not be loaded');
+  detail.PW = vic.PW = PW; detail.PH = vic.PH = PH;
+  if (o.drawDetail) await o.drawDetail(detail);
+  if (o.drawVicinity) await o.drawVicinity(vic);
+  // Detail panel furniture
+  {
+    const { ctx, toPx } = detail; figDrawSite(detail, site, center); const c = toPx(center);
+    ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+    (o.detailTags || []).forEach((tg, i) => { const w = ctx.measureText(tg.text).width; const lx = Math.min(Math.max(8, c[0] + 16), PW - w - 12), ly = Math.min(Math.max(60, c[1] - 24 + i * 22), PH - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = tg.color || '#1f2937'; ctx.fillText(tg.text, lx, ly); });
+    figPanelCaption(ctx, 10, 10, 'Site Detail', o.detailCaption || 'Subject Property boundary');
+    figDrawScale(ctx, detail.fpp, 20, PH - 36);
+  }
+  // Vicinity panel furniture
+  {
+    const { ctx, toPx } = vic; figDrawSite(vic, site, center); const c = toPx(center);
+    ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c[0], c[1], 22, 0, 7); ctx.stroke();
+    const inv = mm => [mm[0] / 6378137 * 180 / Math.PI, (2 * Math.atan(Math.exp(mm[1] / 6378137)) - Math.PI / 2) * 180 / Math.PI];
+    const [dx0, dy0, dx1, dy1] = detail.bbox; const p0 = toPx(inv([dx0, dy1])), p1 = toPx(inv([dx1, dy0]));
+    ctx.save(); ctx.setLineDash([8, 5]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(p0[0], p0[1], Math.max(6, p1[0] - p0[0]), Math.max(6, p1[1] - p0[1])); ctx.restore();
+    ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+    const lblX = Math.min(Math.max(8, c[0] + 28), PW - 150), lblY = Math.min(Math.max(70, c[1] - 26), PH - 14);
+    const w = ctx.measureText('Subject Property').width; ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lblX - 4, lblY - 14, w + 8, 19); ctx.fillStyle = '#b91c1c'; ctx.fillText('Subject Property', lblX, lblY);
+    if (o.noteLines && o.noteLines.length) {
+      ctx.font = '12px Arial';
+      const bw = Math.min(PW - 20, Math.max(...o.noteLines.map(t => ctx.measureText(t).width)) + 16), bh = o.noteLines.length * 17 + 10;
+      const bx = PW - bw - 10, by = PH - bh - 66;
+      ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
+      ctx.fillStyle = '#1f2937'; ctx.textAlign = 'left'; o.noteLines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
+    }
+    const vicMi = o.vicHalfFt * 2 / 5280;
+    figPanelCaption(ctx, 10, 10, 'Vicinity', (o.vicCaption || 'Vicinity') + ' within approx. ' + (vicMi >= 1 ? vicMi.toFixed(0) + ' mile' + (vicMi > 1 ? 's' : '') : (vicMi * 5280).toLocaleString() + ' ft') + ' · dashed box = Site Detail extent');
+    figDrawScale(ctx, vic.fpp, 20, PH - 36);
+    figDrawNorth(ctx, PW - 52, 100);
+  }
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(detail.cv, 0, FIG_HB); ctx.drawImage(vic.cv, PW + GAP, FIG_HB);
+  ctx.strokeStyle = '#0f2a44'; ctx.lineWidth = 1; ctx.strokeRect(0.5, FIG_HB + 0.5, PW - 1, PH - 1); ctx.strokeRect(PW + GAP + 0.5, FIG_HB + 0.5, PW - 1, PH - 1);
+  await figDrawHeader(ctx, W, { title: o.title, meta: o.meta, subtitle: o.subtitle });
+  figDrawLegend(ctx, o.legend, 16, null, FIG_HB + PH - 70);
+  return { cv, detail, vic };
+}
+// Envelope (WGS84) of half-width ft around center; nearest-distance helpers for polygons (rings) and lines (paths)
+function figEnvFt(center, halfFt) { const dM = halfFt / FT_PER_M, lat0 = center[1] * Math.PI / 180; return { xmin: center[0] - dM / (111320 * Math.cos(lat0)), xmax: center[0] + dM / (111320 * Math.cos(lat0)), ymin: center[1] - dM / 110574, ymax: center[1] + dM / 110574, spatialReference: { wkid: 4326 } }; }
+function figSiteProbes(site, center) { const g = site.boundary && site.boundary.geometry; const rings = g ? (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []) : []; return rings.length ? rings.flat() : [center]; }
+function figNearestFeature(features, probes, geomKey) {
+  let best = null;
+  features.forEach(f => ((f.geometry && f.geometry[geomKey]) || []).forEach(part => probes.forEach(v => { const n = figNearestOnRing(v, part); if (n && (!best || n.distFt < best.distFt)) best = Object.assign({ attrs: f.attributes }, n); })));
+  return best;
+}
+function figBearing(a, b) { const d = Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI; return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(((d + 360) % 360) / 45) % 8]; }
+function figSlug(proj) { return (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60); }
+async function figArcQuery(url, geometry, geometryType, extra) {
+  const params = new URLSearchParams(Object.assign({ f: 'json', geometry: JSON.stringify(geometry), geometryType, inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: '*', returnGeometry: 'false', outSR: '4326' }, extra || {}));
+  const j = await (await fetch(url + '/query?' + params)).json();
+  if (j.error) throw new Error(j.error.message || 'query failed');
+  return j.features || [];
+}
+
+// ===== WETLANDS FIGURE (EO 11990 / 24 CFR Part 55; §58.5(b)) =====
+// USFWS National Wetlands Inventory, drawn with the service's own symbology (no attribute codes).
+const NWI_SERVICE = 'https://www.fws.gov/wetlandsmapservice/rest/services/Wetlands/MapServer';
+const NWI_LAYER = 0;
+async function generateWetlandsFigure(authId) {
+  authId = authId || 'wetlands';
+  const statusEl = document.getElementById('autoStatus_' + authId);
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the wetlands figure.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  try {
+    say('Querying the USFWS National Wetlands Inventory…');
+    const probes = figSiteProbes(site, center);
+    const g = site.boundary && site.boundary.geometry;
+    const rings = g ? (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []) : [];
+    const siteGeom = rings.length ? { rings, spatialReference: { wkid: 4326 } } : { x: center[0], y: center[1], spatialReference: { wkid: 4326 } };
+    const siteType = rings.length ? 'esriGeometryPolygon' : 'esriGeometryPoint';
+    const nwiUrl = NWI_SERVICE + '/' + NWI_LAYER;
+    const onSite = await figArcQuery(nwiUrl, siteGeom, siteType, { outFields: 'WETLAND_TYPE,ATTRIBUTE,ACRES' });
+    const onSiteTypes = {}; onSite.forEach(f => { const k = f.attributes.WETLAND_TYPE || 'Wetland'; onSiteTypes[k] = (onSiteTypes[k] || 0) + 1; });
+    // Vicinity extent: smallest of 1,000 ft / 0.5 mi / 1 mi half-width whose inner 65% has mapped wetlands
+    let vicHalfFt = 2640;
+    for (const h of [1000, 2640, 5280]) { vicHalfFt = h; try { const f = await figArcQuery(nwiUrl, figEnvFt(center, h * 0.65), 'esriGeometryEnvelope', { outFields: 'OBJECTID', resultRecordCount: '1' }); if (f.length) break; } catch (e) { break; } }
+    // Nearest mapped wetland (when none on site)
+    let nearest = null;
+    if (!onSite.length) {
+      const tol = (vicHalfFt * 2 / 745) / FT_PER_M / 111320;
+      const polys = await figArcQuery(nwiUrl, figEnvFt(center, vicHalfFt * 1.1), 'esriGeometryEnvelope', { outFields: 'WETLAND_TYPE,ATTRIBUTE,ACRES', returnGeometry: 'true', maxAllowableOffset: String(tol) }).catch(() => []);
+      nearest = figNearestFeature(polys, probes, 'rings');
+    }
+    say('Rendering basemaps…');
+    const detailHalfM = figParcelHalfM(site, center, 2.5, 400, 2000);
+    let overlayOk = true;
+    const overlay = async base => { try { await figOverlayExport(base, NWI_SERVICE, String(NWI_LAYER), 0.75, { noLabels: true }); } catch (e) { overlayOk = false; } };
+    // Legend: service symbols for the wetland types present in the vicinity frame
+    let typesInFrame = [];
+    try { typesInFrame = (await figArcQuery(nwiUrl, figEnvFt(center, vicHalfFt), 'esriGeometryEnvelope', { outFields: 'WETLAND_TYPE', returnDistinctValues: 'true' })).map(f => f.attributes.WETLAND_TYPE).filter(Boolean); } catch (e) {}
+    const legend = [{ label: 'Subject Property — ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
+    try { const svc = await figServiceLegend(NWI_SERVICE, [NWI_LAYER]); svc.forEach(e => { if (!typesInFrame.length || typesInFrame.includes(e.label)) legend.push({ label: e.label + ' (NWI)', draw: e.draw }); }); } catch (e) {}
+    legend.push({ label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } });
+    const typeTxt = Object.keys(onSiteTypes).map(k => k + (onSiteTypes[k] > 1 ? ' ×' + onSiteTypes[k] : '')).join('; ');
+    const noteLines = onSite.length
+      ? ['NWI maps wetland(s) ON the Subject Property: ' + typeTxt, 'Mapped acreage intersecting the parcel(s): ' + onSite.reduce((s, f) => s + (f.attributes.ACRES || 0), 0).toFixed(2) + ' ac (whole-polygon acres; verify in the field)']
+      : [nearest ? 'No NWI wetlands mapped on the Subject Property · nearest: ' + (nearest.attrs.WETLAND_TYPE || 'wetland') + ' — ' + figFmtFt(nearest.distFt) + ' ' + figBearing(center, nearest.pt) : 'No NWI wetlands mapped on the Subject Property or within the vicinity frame'];
+    const { cv } = await figSplitPane({
+      site, center, detailHalfM, vicHalfFt,
+      title: 'Wetlands Map', meta: figProjectMeta(proj, center),
+      subtitle: 'Executive Order 11990 · 24 CFR Part 55 · §58.5(b) · USFWS National Wetlands Inventory' + (overlayOk ? '' : ' (overlay unavailable at generation time)'),
+      detailCaption: 'Subject Property boundary and NWI-mapped wetlands', vicCaption: 'NWI-mapped wetlands and waters',
+      detailTags: [{ text: onSite.length ? 'NWI wetland(s) mapped on the Subject Property' : 'No NWI wetlands mapped on the Subject Property', color: onSite.length ? '#b91c1c' : '#166534' }].concat(onSite.length ? [{ text: typeTxt, color: '#1e3a8a' }] : []),
+      noteLines, legend,
+      drawDetail: overlay, drawVicinity: overlay
+    });
+    let finding, status;
+    if (onSite.length) { finding = 'NWI maps wetlands on the Subject Property (' + typeTxt + '). Check the 24 CFR 55.12 exclusions (Write Up 3); otherwise verify on the site visit — not present → Write Up 4; present → Write Up 5 (8-Step / 5-Step process).'; status = 'followup'; }
+    else { finding = 'NWI shows no wetlands on the Subject Property' + (nearest ? ' (nearest mapped wetland ' + figFmtFt(nearest.distFt) + ' ' + figBearing(center, nearest.pt) + ', ' + (nearest.attrs.WETLAND_TYPE || '') + ')' : '') + ' → Write Up 2 (confirm on the site visit; NWI is a desktop screen, not a delineation).'; status = 'compliant'; }
+    const slug = figSlug(proj);
+    figAttach(authId, cv, slug + '_Wetlands_Map.jpg', finding);
+    figFillSourceRef(authId, 'USFWS National Wetlands Inventory (Wetlands Mapper service)', onSite.length ? typeTxt : 'No NWI wetlands on site');
+    figDownloadPdf(cv, slug + '_Wetlands_Map.pdf');
+    say('✓ Wetlands figure generated — PDF downloaded and attached to Supporting Documents. ' + finding, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
+    return { finding, status, onSite: onSite.map(f => f.attributes), nearest: nearest ? { type: nearest.attrs.WETLAND_TYPE, distFt: nearest.distFt } : null, vicHalfFt };
+  } catch (e) {
+    console.warn('[Wetlands figure]', e);
+    say('✗ Wetlands figure failed: ' + e.message, 'var(--red,#c00)');
+  }
+}
+
+// ===== WILD & SCENIC RIVERS FIGURE (16 U.S.C. 1271–1287; §58.5(f)) =====
+// Designated rivers: EPA NEPAssist Water service layer 9 (NWSRS). NRI segments: NPS Nationwide Rivers Inventory
+// (official feature service, includes WSR_Study / Study_Type for study rivers). Screening distance: 0.25 mile.
+const WSR_SERVICE = 'https://geopub.epa.gov/ArcGIS/rest/services/NEPAssist/Water/MapServer/9';
+const NRI_SERVICE = 'https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/Nationwide_Rivers_Inventory_Official/FeatureServer/0';
+const WSR_PROXIMATE_FT = 1320;
+async function generateWSRFigure(authId) {
+  authId = authId || 'wsr';
+  const statusEl = document.getElementById('autoStatus_' + authId);
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the Wild & Scenic Rivers figure.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  try {
+    say('Querying the National Wild & Scenic Rivers System and the NPS Nationwide Rivers Inventory…');
+    const probes = figSiteProbes(site, center);
+    // Vicinity extent: smallest of 1 / 2 / 5 / 10 mi half-width whose inner 65% contains a designated or NRI river
+    let vicHalfFt = 5 * 5280, any = false;
+    for (const mi of [1, 2, 5, 10]) {
+      vicHalfFt = mi * 5280; const env = figEnvFt(center, vicHalfFt * 0.65);
+      const [a, b] = await Promise.all([
+        figArcQuery(WSR_SERVICE, env, 'esriGeometryEnvelope', { outFields: 'OBJECTID', resultRecordCount: '1' }).catch(() => []),
+        figArcQuery(NRI_SERVICE, env, 'esriGeometryEnvelope', { outFields: 'OBJECTID', resultRecordCount: '1' }).catch(() => [])
+      ]);
+      if (a.length || b.length) { any = true; break; }
+    }
+    if (!any) vicHalfFt = 5 * 5280;
+    const tol = (vicHalfFt * 2 / 745) / FT_PER_M / 111320;
+    const env = figEnvFt(center, vicHalfFt * 1.2);
+    const [wsr, nri] = await Promise.all([
+      figArcQuery(WSR_SERVICE, env, 'esriGeometryEnvelope', { outFields: 'WSR_RIVER_,WSR_RIVE_1,STATE,AGENCY,RIVERCATEG,MANAGING_E', returnGeometry: 'true', maxAllowableOffset: String(tol) }).catch(() => []),
+      figArcQuery(NRI_SERVICE, env, 'esriGeometryEnvelope', { outFields: 'NRI_ID,River,Reach,GNIS_Name,ORV,WSR_Study,Study_Type,Management_Entity_Fed1,YR_Listed', returnGeometry: 'true', maxAllowableOffset: String(tol) }).catch(() => [])
+    ]);
+    const nearWSR = figNearestFeature(wsr, probes, 'paths'), nearNRI = figNearestFeature(nri, probes, 'paths');
+    const study = nri.filter(f => f.attributes.WSR_Study || f.attributes.Study_Type);
+    const nearStudy = figNearestFeature(study, probes, 'paths');
+    say('Rendering basemaps…');
+    const detailHalfM = figParcelHalfM(site, center, 2.5, 500, 2000);
+    const drawRivers = (base, label) => {
+      const { ctx, toPx } = base;
+      const draw = (feats, color, width, dash) => feats.forEach(f => ((f.geometry && f.geometry.paths) || []).forEach(path => { ctx.save(); if (dash) ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.beginPath(); path.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); ctx.restore(); }));
+      draw(nri, '#0f766e', 4, [10, 6]); draw(wsr, '#7c3aed', 5, null);
+      if (label) {
+        const placed = [];
+        const lab = (feats, nameOf, color) => feats.forEach(f => { const name = nameOf(f.attributes); if (!name || placed.includes(name)) return; let best = null; ((f.geometry && f.geometry.paths) || []).forEach(path => path.forEach(q => { const p = toPx(q); if (p[0] > 40 && p[0] < base.PW - 40 && p[1] > 70 && p[1] < base.PH - 100) { const d = Math.hypot(p[0] - base.PW / 2, p[1] - base.PH / 2); if (!best || d < best.d) best = { p, d }; } })); if (!best) return; placed.push(name); ctx.font = 'bold 12px Arial'; ctx.textAlign = 'left'; const w = ctx.measureText(name).width; const lx = Math.min(best.p[0] + 8, base.PW - w - 10), ly = best.p[1] - 8; ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(lx - 3, ly - 12, w + 6, 16); ctx.fillStyle = color; ctx.fillText(name, lx, ly); });
+        lab(wsr, a => a.WSR_RIVER_ || a.WSR_RIVE_1, '#5b21b6'); lab(nri, a => (a.River || a.GNIS_Name || '') + ' (NRI)', '#115e59');
+      }
+    };
+    const legend = [
+      { label: 'Subject Property — ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
+      { label: 'Designated Wild & Scenic River (NWSRS)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); } },
+      { label: 'Nationwide Rivers Inventory segment (NPS NRI; incl. study rivers)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); ctx.restore(); } },
+      { label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }
+    ];
+    const fmtNear = (n, nameOf) => n ? nameOf(n.attrs) + ' — ' + figFmtFt(n.distFt) + ' ' + figBearing(center, n.pt) : null;
+    const wsrTxt = fmtNear(nearWSR, a => a.WSR_RIVER_ || a.WSR_RIVE_1), nriTxt = fmtNear(nearNRI, a => (a.River || a.GNIS_Name || 'NRI segment') + (a.Reach ? ' (' + a.Reach + ')' : '')), studyTxt = fmtNear(nearStudy, a => (a.River || a.GNIS_Name) + ' — study river');
+    const noteLines = [
+      'Nearest designated Wild & Scenic River: ' + (wsrTxt || 'none within ' + (vicHalfFt * 1.2 / 5280).toFixed(0) + ' miles'),
+      'Nearest NRI-listed segment: ' + (nriTxt || 'none within ' + (vicHalfFt * 1.2 / 5280).toFixed(0) + ' miles'),
+      'Study river: ' + (studyTxt || 'none within the frame (confirm current studies at rivers.gov/study-rivers)')
+    ];
+    const proximate = [nearWSR, nearNRI].filter(n => n && n.distFt <= WSR_PROXIMATE_FT);
+    const { cv } = await figSplitPane({
+      site, center, detailHalfM, vicHalfFt,
+      title: 'Wild and Scenic Rivers Map', meta: figProjectMeta(proj, center),
+      subtitle: 'Wild and Scenic Rivers Act, 16 U.S.C. 1271–1287 · §58.5(f) · National Wild & Scenic Rivers System (NWSRS) · NPS Nationwide Rivers Inventory (NRI)',
+      detailCaption: 'Subject Property boundary' + (proximate.length ? ' and proximate river segment(s)' : ''), vicCaption: 'Designated and NRI-listed rivers',
+      detailTags: [{ text: proximate.length ? 'Subject Property is within ' + figFmtFt(WSR_PROXIMATE_FT) + ' of a listed river segment' : 'No designated or NRI-listed river within ' + figFmtFt(WSR_PROXIMATE_FT) + ' of the Subject Property', color: proximate.length ? '#b91c1c' : '#166534' }],
+      noteLines, legend,
+      drawDetail: b => drawRivers(b, false), drawVicinity: b => drawRivers(b, true)
+    });
+    let finding, status;
+    if (proximate.length) { finding = 'Subject Property is proximate (≤ ' + figFmtFt(WSR_PROXIMATE_FT) + ') to a listed river: ' + [wsrTxt, nriTxt].filter(Boolean).join('; ') + '. Minor scope (interior / no ground disturbance) → Write Up 2; new construction, substantial exterior work, ground disturbance or EA → consult the managing agency → Write Up 3.'; status = 'followup'; }
+    else { finding = 'No designated Wild & Scenic River, study river, or NRI segment within ' + figFmtFt(WSR_PROXIMATE_FT) + ' of the Subject Property' + (nriTxt || wsrTxt ? ' (nearest: ' + [wsrTxt, nriTxt].filter(Boolean).join('; ') + ')' : '') + ' → Write Up 1.'; status = 'compliant'; }
+    const slug = figSlug(proj);
+    figAttach(authId, cv, slug + '_Wild_Scenic_Rivers_Map.jpg', finding);
+    figFillSourceRef(authId, 'National Wild & Scenic Rivers System (NEPAssist) and NPS Nationwide Rivers Inventory', proximate.length ? [wsrTxt, nriTxt].filter(Boolean).join('; ') : 'No proximate W&S / Study / NRI river');
+    figDownloadPdf(cv, slug + '_Wild_Scenic_Rivers_Map.pdf');
+    say('✓ Wild & Scenic Rivers figure generated — PDF downloaded and attached to Supporting Documents. ' + finding, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
+    return { finding, status, nearWSR: wsrTxt, nearNRI: nriTxt, study: studyTxt, vicHalfFt, counts: { wsr: wsr.length, nri: nri.length } };
+  } catch (e) {
+    console.warn('[WSR figure]', e);
+    say('✗ Wild & Scenic Rivers figure failed: ' + e.message, 'var(--red,#c00)');
+  }
+}
 // ===== AIR QUALITY — GENERAL CONFORMITY EVALUATION ATTACHMENT (Clean Air Act §176(c); §58.5(g)) =====
 // Queries EPA's Green Book nonattainment-area service for every current NAAQS at the site, applies the
 // 40 CFR 93.153(b) de minimis thresholds, and writes a letter-format PDF (same header standard as the
@@ -4477,6 +4707,8 @@ const MAP_GENERATORS = {
   air:       { fn: 'generateAirQualityAttachment', label: '📄 General Conformity Attachment (EPA Green Book)' },
   farm:      { fn: 'generateFarmlandFigure', label: '🗺 Farmland Figure (NRCS soils + Urban Area)' },
   aquifer:   { fn: 'generateSSAFigure', label: '🗺 SSA Figure (EPA Sole Source Aquifers)' },
+  wetlands:  { fn: 'generateWetlandsFigure', label: '🗺 Wetlands Figure (USFWS NWI)' },
+  wsr:       { fn: 'generateWSRFigure', label: '🗺 Wild & Scenic Rivers Figure (NWSRS + NPS NRI)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -10531,7 +10763,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v120 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v121 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
