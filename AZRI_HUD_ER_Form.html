@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v111</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v112</div>
   </div>
 </header>
 
@@ -9175,7 +9175,7 @@ async function testParcelService() {
   alert(`${pack.name} parcel service test:\n\n${results.join('\n\n')}`);
 }
 
-function pushSiteToForm() {
+async function pushSiteToForm() {
   if (!parcelFeatures.length) {
     alert('Draw or select at least one parcel first.');
     return;
@@ -9216,7 +9216,39 @@ function pushSiteToForm() {
     addrEl.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  alert(`Pushed to Project Info:\n• Site Address: ${addrSummary || '(none)'}\n• APN(s): ${apnList.join('; ') || '(none)'}\n• Lat/Long: ${centroidLatLng ? centroidLatLng[1].toFixed(6) + ', ' + centroidLatLng[0].toFixed(6) : '(none)'}\n${parcelFeatures.length>=2 ? '\nCoordinates are the centroid of the COMBINED site boundary.' : ''}`);
+  // Street / City / State / Zip — parcel layers rarely carry all four (DE FirstMap has no address at
+  // all; MD SDAT gives the street but not the city/zip), so reverse-geocode the site centroid and fill
+  // whatever is still blank. Existing entries are never overwritten.
+  const addrEl = document.querySelector('[data-field="siteAddress"]');
+  const cityEl = document.querySelector('[data-field="siteCity"]');
+  const stateEl = document.querySelector('select[data-field="siteState"]');
+  const zipEl = document.querySelector('[data-field="siteZip"]');
+  let geoNote = '';
+  const needsGeo = centroidLatLng && ((addrEl && !addrEl.value.trim()) || (cityEl && !cityEl.value.trim()) || (zipEl && !zipEl.value.trim()));
+  if (needsGeo) {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${centroidLatLng[1]}&lon=${centroidLatLng[0]}&zoom=18&addressdetails=1`);
+      const j = await r.json(); const a = (j && j.address) || {};
+      // Nominatim's house number is interpolated from nearby address points and is often wrong
+      // (Dover test: it returned 294 for the 230 W. Division parcel) — fill the ROAD only and flag it.
+      const street = a.road || '';
+      const city = a.city || a.town || a.village || a.hamlet || a.municipality || a.county || '';
+      const filled = [];
+      let streetNote = '';
+      if (addrEl && !addrEl.value.trim() && street) { addrEl.value = street; addrEl.dispatchEvent(new Event('input', { bubbles: true })); filled.push('Street (road name only)'); streetNote = '\n• ⚠ Parcel data had no site address — add the house number to the Street field.'; }
+      if (cityEl && !cityEl.value.trim() && city) { cityEl.value = city; cityEl.dispatchEvent(new Event('input', { bubbles: true })); filled.push('City'); }
+      if (stateEl && a.state && Array.from(stateEl.options).some(o => o.value === a.state || o.text === a.state)) {
+        const cur = stateEl.value;
+        if (cur !== a.state) { stateEl.value = a.state; stateEl.dispatchEvent(new Event('change', { bubbles: true })); filled.push('State'); }
+      }
+      if (zipEl && !zipEl.value.trim() && a.postcode) { zipEl.value = a.postcode.slice(0, 10); zipEl.dispatchEvent(new Event('input', { bubbles: true })); filled.push('Zip'); }
+      geoNote = (filled.length ? `\n• From reverse geocode: ${filled.join(', ')} (verify against the deed / tax record)` : '\n• Reverse geocode returned nothing new') + streetNote;
+    } catch (e) { geoNote = '\n• Reverse geocode unavailable — enter City / Zip manually'; }
+  }
+  const finalAddr = addrEl ? addrEl.value : addrSummary;
+  const finalCity = cityEl ? cityEl.value : '';
+  const finalZip = zipEl ? zipEl.value : '';
+  alert(`Pushed to Project Info:\n• Site Address: ${[finalAddr, finalCity, stateEl ? stateEl.value : '', finalZip].filter(Boolean).join(', ') || '(none)'}\n• APN(s): ${apnList.join('; ') || '(none)'}\n• Lat/Long: ${centroidLatLng ? centroidLatLng[1].toFixed(6) + ', ' + centroidLatLng[0].toFixed(6) : '(none)'}${geoNote}`);
 }
 
 function copyParcelGeoJSON() {
@@ -9620,7 +9652,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v111 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v112 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v112: "Push site address & coordinates" now reverse-geocodes the site centroid to fill blank Street / City / State / Zip (DE FirstMap parcels carry no address; MD SDAT carries no city/zip). Existing entries are never overwritten; the confirmation says which fields came from the geocoder.');
   console.log('  v111: FIGURE STANDARD — every figure is external-facing (HUD / RE / client): header carries project name, site location and Grant No. (or HEROS No.); NO findings/instructions footer on the PDF; findings go only to the status line, Source/Ref and the Supporting Doc caption.');
   console.log('  v110: CBRS figure — USFWS/USGS CBRS Mapper service: in-unit / buffer-zone / nearest-unit distance, official symbology overlay + legend, PDF + Supporting Documents; figure engine gained shared overlay/legend/site helpers.');
   console.log('  SOP: Airport Hazards step-by-step rewritten around the in-app figure — FAA NASR data, runway-end measuring point, heliports + private strips screened as civil, joint-use as military, NEPAssist kept as fallback.');
