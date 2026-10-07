@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v122</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v123</div>
   </div>
 </header>
 
@@ -9536,17 +9536,20 @@ function buildMirrorPanels() {
   const host = document.getElementById('rqMirror1311');
   if (!host || typeof EXEMPTION_CHECKS === 'undefined') return;
   let html = '';
-  Object.keys(EXEMPTION_CHECKS).forEach(id => {
+  // (v123) Same order as the Compliance Summary / Section 2005 cards (the AUTHORITIES list), full authority names
+  const order = (typeof AUTHORITIES !== 'undefined' ? AUTHORITIES.map(a => a.id) : []).filter(id => EXEMPTION_CHECKS[id]).concat(Object.keys(EXEMPTION_CHECKS).filter(id => typeof AUTHORITIES === 'undefined' || !AUTHORITIES.some(a => a.id === id)));
+  order.forEach(id => {
     const cfg = EXEMPTION_CHECKS[id];
-    const name = (typeof authName === 'function') ? authName(id) : id;
+    const auth = (typeof AUTHORITIES !== 'undefined') ? AUTHORITIES.find(a => a.id === id) : null;
+    const name = auth ? auth.name.replace(/&amp;/g, '&') + (auth.cite ? ' <span style="font-weight:400;color:#64748b;font-size:11.5px;">— ' + auth.cite + '</span>' : '') : id;
     html += '<div style="border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:10px;">';
     html += '<div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);margin-bottom:4px;">' + name + '</div>';
     html += '<div style="font-size:11.5px;color:#4a5568;margin-bottom:8px;line-height:1.5;">' + cfg.intro
       + ' <em>(Mirrored with this authority’s Section 2005 Review Questions — editable in either place.)</em></div>';
     cfg.questions.forEach(q => {
-      html += '<div style="margin-bottom:8px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#2d3748;">' + q.label + '</div>';
+      html += '<div style="margin-bottom:8px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#2d3748;text-transform:none;letter-spacing:0;">' + q.label + '</div>';
       q.options.forEach(o => {
-        html += '<label style="display:block;font-size:12px;line-height:1.4;margin:3px 0;cursor:pointer;font-weight:400;color:#2d3748;"><input type="radio" name="exqM_' + id + '_' + q.id + '" value="' + o.v + '" style="margin-right:6px;">' + o.t + '</label>';
+        html += '<label style="display:block;font-size:12px;line-height:1.4;margin:3px 0;cursor:pointer;font-weight:400;color:#2d3748;text-transform:none;letter-spacing:0;"><input type="radio" name="exqM_' + id + '_' + q.id + '" value="' + o.v + '" style="margin-right:6px;">' + o.t + '</label>';
       });
       html += '</div>';
     });
@@ -10882,7 +10885,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v122 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v123 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
