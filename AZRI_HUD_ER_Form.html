@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v125</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v126</div>
   </div>
 </header>
 
@@ -936,11 +936,11 @@
       <details class="no-print" id="packetInputs" style="margin:14px 0 6px 0;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
         <summary style="cursor:pointer;font-weight:600;font-size:12.5px;color:var(--azri-navy);">📦 Project Packet for Agency Review — shared inputs <span style="font-weight:400;color:var(--gray);">(used by the ESA, Section 106, CZM and other consultation packets; fill once per project)</span></summary>
         <div class="field-grid" style="margin-top:10px;">
-          <div class="full"><label>Project description (2–4 sentences: what is being built / rehabbed, units, footprint, height)</label><textarea data-field="packet_description" style="min-height:64px;" placeholder="e.g., Demolition of a vacant single-family dwelling and construction of a 3-story, 24-unit affordable apartment building with surface parking…"></textarea></div>
+          <div class="full" style="font-size:11.5px;color:#4a5568;background:#eef2f7;border-radius:4px;padding:6px 10px;">Pulled automatically: <b>Project Description</b> (1125 Project Description), <b>Applicant / developer</b> (1101 Applicant organization + point of contact), <b>Responsible Entity</b>, activities, level of review, parcel data and the KML boundary. Dwelling units default to the Air Quality inputs and year built to the parcel record when the fields below are blank. Use <b>Scan plans</b> after uploading plan sheets to pre-fill the site data from their text.</div>
           <div><label>Dwelling units</label><input type="text" data-field="packet_units" placeholder="e.g., 24"></div>
           <div><label>Building footprint (sq ft)</label><input type="text" data-field="packet_footprintSqft" placeholder="e.g., 9,800"></div>
           <div><label>Building height</label><input type="text" data-field="packet_height" placeholder="e.g., 3 stories / 38 ft"></div>
-          <div><label>Applicant / developer</label><input type="text" data-field="packet_applicant" placeholder="Name, organization, phone/email"></div>
+          <div><label>Applicant / developer contact (phone / email, optional)</label><input type="text" data-field="packet_applicantContact" placeholder="e.g., 410-555-0100 · jdoe@developer.org"></div>
           <div><label>Ground disturbance (acres)</label><input type="text" data-field="packet_disturbedAcres" placeholder="e.g., 0.6"></div>
           <div><label>Max excavation depth (ft)</label><input type="text" data-field="packet_excavDepthFt" placeholder="e.g., 8"></div>
           <div><label>Tree clearing (acres; 0 / none if no trees removed)</label><input type="text" data-field="packet_treeClearingAcres" placeholder="e.g., 0"></div>
@@ -956,6 +956,8 @@
           <div class="full" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;">
             <div style="flex:1;min-width:260px;"><label>Plans &amp; drawings <span style="font-weight:400;color:var(--gray);">(site plan, elevations — PDF or image; images embed in the packet, PDFs are listed and attached separately)</span></label>
               <button type="button" onclick="uploadSupportingDoc('packet_plans')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;">⬆ Upload plans / drawings</button>
+              <button type="button" onclick="packetScanPlans()" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;margin-left:6px;">🔍 Scan plans for site data</button>
+              <div id="packetScanResults" style="margin-top:6px;font-size:11.5px;"></div>
               <div id="docs_packet_plans" style="margin-top:6px;"></div></div>
             <div style="flex:1;min-width:260px;"><label>Site photographs <span style="font-weight:400;color:var(--gray);">(JPG/PNG; file name is used as the caption)</span></label>
               <button type="button" onclick="uploadSupportingDoc('packet_photos')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;">⬆ Upload photos</button>
@@ -4911,17 +4913,28 @@ function packetContext() {
   const summary = (typeof siteSummaryForLetter === 'function') ? siteSummaryForLetter() : {};
   const level = (proj.reviewLevel || '').trim();
   const reviewer = (document.querySelector('input[data-field="reviewer"]') || {}).value || proj.hudPreparer || 'Scott Rifkin';
-  return { proj, site, center, meta, stateAbbr, acts, summary, level, reviewer, g: k => (proj[k] || '').trim() };
+  // Pull-through from the worksheet (1125 / 1101 / Air inputs / parcel record) with packet_* fields as overrides
+  const pulled = {
+    packet_description: (proj.projectDescription || '').trim(),
+    packet_applicant: [(proj.applicant || '').trim(), (proj.applicantPOC || '').trim(), (proj.packet_applicantContact || '').trim()].filter(Boolean).join(' - '),
+    packet_units: (proj.packet_units || '').trim() || (proj.air_units || '').trim(),
+    packet_footprintSqft: (proj.packet_footprintSqft || '').trim() || (proj.air_sqft || '').trim(),
+    packet_yearBuilt: (proj.packet_yearBuilt || '').trim() || (proj.yearBuilt || '').trim(),
+    packet_durationMonths: (proj.packet_durationMonths || '').trim() || (proj.air_constMonths || '').trim()
+  };
+  return { proj, site, center, meta, stateAbbr, acts, summary, level, reviewer, g: k => (pulled[k] != null ? pulled[k] : (proj[k] || '')).trim() };
 }
 const ACTIVITY_WORDS = { newconst: 'new construction', rehab: 'rehabilitation', demo: 'demolition', acq: 'acquisition', lease: 'leasing', dispo: 'disposition', maint: 'maintenance', soft: 'non-construction (services / soft costs)', infra: 'infrastructure' };
 function packetDescriptionText(C) {
   const g = C.g; const parts = [];
-  if (g('packet_description')) parts.push(g('packet_description'));
+  const desc = g('packet_description');
+  if (desc) parts.push(desc);
   else parts.push('The proposed project consists of ' + ((C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ') || '[describe the proposed action]') + ' at the Subject Property.');
+  const mentioned = re => re.test(desc);
   const facts = [];
-  if (g('packet_units')) facts.push(g('packet_units') + ' dwelling unit(s)');
-  if (g('packet_footprintSqft')) facts.push('building footprint of approximately ' + g('packet_footprintSqft') + ' sq ft');
-  if (g('packet_height')) facts.push('building height of ' + g('packet_height'));
+  if (g('packet_units') && !mentioned(/\bunits?\b/i)) facts.push(g('packet_units') + ' dwelling unit(s)');
+  if (g('packet_footprintSqft') && !mentioned(/footprint|sq\.?\s*ft|square feet/i)) facts.push('building footprint of approximately ' + g('packet_footprintSqft') + ' sq ft');
+  if (g('packet_height') && !mentioned(/stor(y|ies)|height/i)) facts.push('building height of ' + g('packet_height'));
   if (facts.length) parts.push('The project includes ' + facts.join(', ') + '.');
   const dist = [];
   if (g('packet_disturbedAcres')) dist.push('approximately ' + g('packet_disturbedAcres') + ' acre(s) of ground disturbance');
@@ -5196,6 +5209,57 @@ async function generateCZMConsultation(authId) {
     figFillSourceRef(authId, 'CZMA federal consistency packet (' + recip.agency + ')', (C.g('czm_type') || 'Consistency determination') + ' submitted ' + new Date().toLocaleDateString());
     say('✓ CZM consistency packet generated — PDF downloaded and attached. Mark Awaiting Response until the program responds (Write Up 4/5 or the DE submission write-ups).', 'var(--azri-navy)');
   } catch (e) { console.warn('[CZM packet]', e); say('✗ CZM packet failed: ' + e.message, 'var(--red,#c00)'); }
+}
+
+
+// ---------- Plan-sheet scanner: pull site data out of uploaded plan PDFs (text layer) ----------
+const PDFJS_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js', PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+function pkLoadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = PDFJS_URL; sc.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; } catch (e) {} res(window.pdfjsLib); }; sc.onerror = () => rej(new Error('pdf.js could not be loaded (offline?)')); document.head.appendChild(sc); });
+}
+async function pkPdfText(dataUrl, maxPages) {
+  const lib = await pkLoadPdfJs(); const bin = atob(dataUrl.split(',')[1]); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  const pdf = await lib.getDocument({ data: arr }).promise; let out = '';
+  for (let p = 1; p <= Math.min(pdf.numPages, maxPages || 12); p++) { const page = await pdf.getPage(p); const tc = await page.getTextContent(); out += '\n' + tc.items.map(it => it.str).join(' '); }
+  return out.replace(/\s+/g, ' ');
+}
+// Each pattern: field to fill, regex (value in group `v`, unit in group `u`), label, and whether the field wants acres
+const PLAN_PATTERNS = [
+  { field: 'packet_units', label: 'Dwelling units', re: /\b(?<v>\d{1,4})\s*(?:dwelling\s*|residential\s*|apartment\s*)?units?\b/i },
+  { field: 'packet_footprintSqft', label: 'Building footprint / area', re: /(?:building|bldg\.?)\s*(?:footprint|area|coverage)[^0-9]{0,40}?(?<v>[\d,]{3,9}(?:\.\d+)?)\s*(?<u>s\.?f\.?|sq\.?\s*ft\.?|square feet)/i },
+  { field: 'packet_height', label: 'Building height', re: /(?:building\s*|max(?:imum)?\s*)?height[^0-9]{0,30}?(?<v>\d{1,3}(?:\.\d+)?)\s*(?<u>'|ft\.?|feet)/i },
+  { field: 'packet_height', label: 'Stories', re: /\b(?<v>\d{1,2})\s*-?\s*(?<u>stor(?:y|ies))\b/i },
+  { field: 'packet_disturbedAcres', label: 'Limit / area of disturbance', acres: true, re: /(?:limits?\s*of|total|area\s*of|proposed)\s*disturbance[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet)/i },
+  { field: 'packet_imperviousChange', label: 'Impervious area (proposed)', re: /proposed\s*impervious(?:\s*(?:area|surface|cover))?[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet|%)/i },
+  { field: 'packet_imperviousChange', label: 'Impervious area', re: /impervious(?:\s*(?:area|surface|cover))?[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet|%)/i },
+  { field: 'packet_treeClearingAcres', label: 'Forest / tree clearing', acres: true, re: /(?:forest|tree|woodland)s?\s*(?:clearing|removal|to be removed|cleared)[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?)/i },
+  { field: 'packet_siteAcres', label: 'Site / lot area', acres: true, re: /(?:total\s*)?(?:site|lot|parcel|tract)\s*area[^0-9]{0,30}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet)/i },
+  { field: 'packet_zoning', label: 'Zoning', re: /\bzon(?:e|ing)(?:\s*district|\s*classification)?\s*[:\-]?\s*(?<v>[A-Z]{1,3}-?\d{0,3}[A-Z]?)\b/i }
+];
+function pkToAcres(v, u) { const n = parseFloat(String(v).replace(/,/g, '')); if (isNaN(n)) return null; if (/^(ac|acre)/i.test(u || '')) return n; if (/s\.?f|sq|square/i.test(u || '')) return +(n / 43560).toFixed(2); return n; }
+async function packetScanPlans() {
+  const host = document.getElementById('packetScanResults'); const plans = (typeof supportingDocs !== 'undefined' && supportingDocs.packet_plans) || [];
+  const pdfs = plans.filter(d => /pdf$/i.test(d.type));
+  if (!host) return; if (!pdfs.length) { host.innerHTML = '<em style="color:var(--gray);">Upload at least one plan PDF first (images cannot be text-scanned).</em>'; return; }
+  host.innerHTML = '<em style="color:var(--gray);">Reading plan text…</em>';
+  try {
+    let text = ''; for (const d of pdfs) { try { text += ' ' + await pkPdfText(d.data, 12); } catch (e) { console.warn('[plan scan]', d.name, e); } }
+    if (!text.trim()) { host.innerHTML = '<em style="color:#9b2c2c;">No text layer found — the plans are scanned images. Enter the site data manually.</em>'; return; }
+    const found = []; PLAN_PATTERNS.forEach(pt => { if (found.some(f => f.pt.field === pt.field && pt.field !== 'packet_height')) return; const m = text.match(pt.re); if (!m || !m.groups) return; let val = m.groups.v, unit = m.groups.u || ''; if (pt.acres) { const ac = pkToAcres(val, unit); if (ac == null) return; val = String(ac); unit = 'ac'; } else if (/stor/i.test(unit)) { val = val + ' stories'; unit = ''; } else if (pt.field === 'packet_height') { val = val + ' ft'; unit = ''; } else if (pt.field === 'packet_imperviousChange') { val = (String(val) + ' ' + unit).trim(); unit = ''; } const i0 = Math.max(0, m.index - 40); found.push({ pt, val: val.replace(/,(\d{3})\b/g, '$1'), unit, snippet: text.slice(i0, m.index + m[0].length + 20).trim() }); });
+    if (!found.length) { host.innerHTML = '<em style="color:var(--gray);">No recognizable site-data labels found in the plan text (looked for units, footprint, height, disturbance, impervious, tree clearing, lot area, zoning).</em>'; return; }
+    window._planScan = found;
+    host.innerHTML = '<div style="font-weight:600;color:var(--azri-navy);margin-bottom:4px;">Suggested from the plan sheets — click Use to fill a field (review each one):</div>' + found.map((f, i) => `<div style="display:flex;gap:8px;align-items:center;margin:3px 0;flex-wrap:wrap;"><button type="button" onclick="packetUseScan(${i})" style="font-size:11px;background:var(--azri-navy);color:#fff;border:none;border-radius:3px;padding:2px 8px;cursor:pointer;">Use</button><b>${f.pt.label}:</b> <span>${f.val}${f.unit ? ' ' + f.unit : ''}</span><span style="color:var(--gray);">— “…${f.snippet.replace(/</g, '&lt;')}…”</span></div>`).join('');
+  } catch (e) { host.innerHTML = '<em style="color:#9b2c2c;">Scan failed: ' + e.message + '</em>'; }
+}
+function packetUseScan(i) {
+  const f = (window._planScan || [])[i]; if (!f) return;
+  const valTxt = f.val + (f.unit ? ' ' + f.unit : '');
+  let el = document.querySelector('[data-field="' + f.pt.field + '"]');
+  if (!el) { el = document.querySelector('[data-field="packet_vegCover"]'); if (!el) return; el.value = (el.value ? el.value + '; ' : '') + f.pt.label + ': ' + valTxt; }   // site acres / zoning → existing-conditions line
+  else if (f.pt.field === 'packet_height') { const cur = el.value.trim(); const isStories = /stories/.test(f.val); if (!cur) el.value = f.val; else if (isStories && /ft/.test(cur) && !/stories/.test(cur)) el.value = f.val + ' / ' + cur; else if (!isStories && /stories/.test(cur) && !/ft/.test(cur)) el.value = cur + ' / ' + f.val; else el.value = f.val; }
+  else el.value = f.val;
+  el.dispatchEvent(new Event('input', { bubbles: true })); el.style.outline = '2px solid #2f855a'; setTimeout(() => { el.style.outline = ''; }, 1500);
 }
 // ===== MAP GENERATOR REGISTRY (per authority) =====
 const MAP_GENERATORS = {
@@ -11306,7 +11370,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v125 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v126 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
