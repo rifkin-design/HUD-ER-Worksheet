@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v127</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v128</div>
   </div>
 </header>
 
@@ -932,44 +932,18 @@
         <input type="file" id="locationUploadInput" multiple style="display:none;" onchange="handleLocationUpload(event)">
         <span id="locationUploadList" style="font-size:11px;color:var(--gray);margin-left:10px;"></span>
       </div>
-      <!-- PROJECT PACKET FOR AGENCY REVIEW — shared inputs (v125) -->
-      <details class="no-print" id="packetInputs" style="margin:14px 0 6px 0;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
-        <summary style="cursor:pointer;font-weight:600;font-size:12.5px;color:var(--azri-navy);">📦 Project Packet for Agency Review — shared inputs <span style="font-weight:400;color:var(--gray);">(used by the ESA, Section 106, CZM and other consultation packets; fill once per project)</span></summary>
-        <div class="field-grid" style="margin-top:10px;">
-          <div class="full" style="font-size:11.5px;color:#4a5568;background:#eef2f7;border-radius:4px;padding:6px 10px;">Pulled automatically: <b>Project Description</b> (1125 Project Description), <b>Applicant / developer</b> (1101 Applicant organization + point of contact), <b>Responsible Entity</b>, activities, level of review, parcel data and the KML boundary. Dwelling units default to the Air Quality inputs and year built to the parcel record when the fields below are blank. Use <b>Scan plans</b> after uploading plan sheets to pre-fill the site data from their text.</div>
-          <div><label>Dwelling units</label><input type="text" data-field="packet_units" placeholder="e.g., 24"></div>
-          <div><label>Building footprint (sq ft)</label><input type="text" data-field="packet_footprintSqft" placeholder="e.g., 9,800"></div>
-          <div><label>Building height</label><input type="text" data-field="packet_height" placeholder="e.g., 3 stories / 38 ft"></div>
-          <div><label>Applicant / developer contact (phone / email, optional)</label><input type="text" data-field="packet_applicantContact" placeholder="e.g., 410-555-0100 · jdoe@developer.org"></div>
-          <div><label>Ground disturbance (acres)</label><input type="text" data-field="packet_disturbedAcres" placeholder="e.g., 0.6"></div>
-          <div><label>Max excavation depth (ft)</label><input type="text" data-field="packet_excavDepthFt" placeholder="e.g., 8"></div>
-          <div><label>Tree clearing (acres; 0 / none if no trees removed)</label><input type="text" data-field="packet_treeClearingAcres" placeholder="e.g., 0"></div>
-          <div><label>Net impervious change</label><input type="text" data-field="packet_imperviousChange" placeholder="e.g., +0.3 acre / no change"></div>
-          <div><label>Construction start</label><input type="text" data-field="packet_startDate" placeholder="e.g., Spring 2027"></div>
-          <div><label>Construction duration (months)</label><input type="text" data-field="packet_durationMonths" placeholder="e.g., 14"></div>
-          <div><label>Current use / existing conditions</label><input type="text" data-field="packet_existingUse" placeholder="e.g., vacant 2-story commercial building with paved lot"></div>
-          <div><label>Year built (existing structures)</label><input type="text" data-field="packet_yearBuilt" placeholder="e.g., 1952"></div>
-          <div class="full"><label>Vegetative cover</label><input type="text" data-field="packet_vegCover" placeholder="e.g., mowed lawn and ornamental plantings; no forest; no wetlands"></div>
-          <div><label>Preparer title</label><input type="text" data-field="packet_preparerTitle" placeholder="e.g., Environmental Professional"></div>
-          <div><label>Preparer phone</label><input type="text" data-field="packet_preparerPhone"></div>
-          <div><label>Preparer email</label><input type="text" data-field="packet_preparerEmail"></div>
-          <div class="full" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;">
-            <div style="flex:1;min-width:260px;"><label>Plans &amp; drawings <span style="font-weight:400;color:var(--gray);">(site plan, elevations — PDF or image; images embed in the packet, PDFs are listed and attached separately)</span></label>
-              <button type="button" onclick="uploadSupportingDoc('packet_plans')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;">⬆ Upload plans / drawings</button>
-              <button type="button" onclick="packetScanPlans()" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;margin-left:6px;">🔍 Scan plans for site data</button>
-              <div id="packetScanResults" style="margin-top:6px;font-size:11.5px;"></div>
-              <div id="docs_packet_plans" style="margin-top:6px;"></div></div>
-            <div style="flex:1;min-width:260px;"><label>Site photographs <span style="font-weight:400;color:var(--gray);">(JPG/PNG; file name is used as the caption)</span></label>
-              <button type="button" onclick="uploadSupportingDoc('packet_photos')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;">⬆ Upload photos</button>
-              <div id="docs_packet_photos" style="margin-top:6px;"></div></div>
-          </div>
-          <div class="full" style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <button type="button" onclick="generateProjectPacket()" style="background:var(--azri-navy);color:white;border:none;padding:7px 14px;border-radius:4px;font-size:12.5px;cursor:pointer;font-weight:600;">📦 Generate Project Packet (core)</button>
-            <span id="packetStatus" style="font-size:11.5px;color:var(--gray);"></span>
-          </div>
-          <div class="full"><div id="docs_packet" style="margin-top:4px;"></div></div>
+      <!-- PROJECT FIGURES & PLANS — uploads used by the authority-level consultation packets (v128) -->
+      <div class="no-print" id="packetInputs" style="margin:14px 0 6px 0;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:10px 14px;">
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);margin-bottom:6px;">Project figures &amp; plans <span style="font-weight:400;color:var(--gray);">— attached to the ESA / Section 106 / CZM consultation packets generated in each authority card (PDF pages are rendered into the packet; images embed directly)</span></div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:260px;"><label style="font-size:12px;font-weight:600;">Figure 1 — Site Location <span style="font-weight:400;color:var(--gray);">(from the Phase I / limited ESA; PDF or image)</span></label>
+            <div><button type="button" onclick="uploadSupportingDoc('packet_fig1')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;margin-top:4px;">⬆ Upload Figure 1</button></div>
+            <div id="docs_packet_fig1" style="margin-top:6px;"></div></div>
+          <div style="flex:1;min-width:260px;"><label style="font-size:12px;font-weight:600;">Plans &amp; drawings <span style="font-weight:400;color:var(--gray);">(site plan, elevations; PDF or image)</span></label>
+            <div><button type="button" onclick="uploadSupportingDoc('packet_plans')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;margin-top:4px;">⬆ Upload plans / drawings</button></div>
+            <div id="docs_packet_plans" style="margin-top:6px;"></div></div>
         </div>
-      </details>
+      </div>
       <!-- PROJECT LOCATION MAP (relocated from former Screen 1120) -->
     <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px 0;font-size:13px;font-weight:500;">
       <span style="font-weight:600;color:var(--azri-navy);">Parcel data &amp; state resources:</span>
@@ -3112,7 +3086,7 @@ function renderSupportingDocs(authId) {
 
 function renderAllSupportingDocs() {
   AUTHORITIES.forEach(a => renderSupportingDocs(a.id));
-  ['packet_plans', 'packet_photos', 'packet'].forEach(renderSupportingDocs);
+  ['packet_fig1', 'packet_plans', 'packet_photos'].forEach(renderSupportingDocs);
   if (typeof esaRenderTable === 'function') esaRenderTable();
 }
 
@@ -4917,13 +4891,15 @@ function packetContext() {
   const level = (proj.reviewLevel || '').trim();
   const reviewer = (document.querySelector('input[data-field="reviewer"]') || {}).value || proj.hudPreparer || 'Scott Rifkin';
   // Pull-through from the worksheet (1125 / 1101 / Air inputs / parcel record) with packet_* fields as overrides
+  const v = k => (proj[k] || '').trim();
   const pulled = {
-    packet_description: (proj.projectDescription || '').trim(),
-    packet_applicant: [(proj.applicant || '').trim(), (proj.applicantPOC || '').trim(), (proj.packet_applicantContact || '').trim()].filter(Boolean).join(' - '),
-    packet_units: (proj.packet_units || '').trim() || (proj.air_units || '').trim(),
-    packet_footprintSqft: (proj.packet_footprintSqft || '').trim() || (proj.air_sqft || '').trim(),
-    packet_yearBuilt: (proj.packet_yearBuilt || '').trim() || (proj.yearBuilt || '').trim(),
-    packet_durationMonths: (proj.packet_durationMonths || '').trim() || (proj.air_constMonths || '').trim()
+    packet_description: v('projectDescription'),
+    packet_applicant: [v('applicant'), v('applicantPOC')].filter(Boolean).join(' - '),
+    packet_units: v('air_units'), packet_footprintSqft: v('air_sqft'), packet_durationMonths: v('air_constMonths'),
+    packet_yearBuilt: v('hist_yearBuilt') || v('yearBuilt'),
+    packet_disturbedAcres: v('hist_disturbedAcres') || v('esa_disturbedAcres'), packet_excavDepthFt: v('hist_excavDepthFt'),
+    packet_treeClearingAcres: v('esa_treeClearingAcres'), packet_existingUse: v('esa_existingUse'),
+    packet_preparerTitle: 'Environmental Professional'
   };
   return { proj, site, center, meta, stateAbbr, acts, summary, level, reviewer, g: k => (pulled[k] != null ? pulled[k] : (proj[k] || '')).trim() };
 }
@@ -4975,20 +4951,14 @@ async function packetCorePages(P, C, figures, opts) {
     ['Parcel / account ID(s)', C.summary.acctids || ''], ['Parcel area (GIS)', C.summary.acres && C.summary.acres !== '(unknown)' ? C.summary.acres + ' acres' : ''],
     ['Jurisdiction', [C.proj.siteCity, C.proj.siteState].filter(Boolean).join(', ')], ['Current use', g('packet_existingUse')], ['Year built', g('packet_yearBuilt')]
   ]);
-  if (figures) {
-    if (figures.location) pkImagePage(P, pkCanvasToJpeg(figures.location.cv), figures.location.cv.width, figures.location.cv.height, 'Figure: Site location - Subject Property boundary (site detail and vicinity).');
-    if (figures.aerial) pkImagePage(P, pkCanvasToJpeg(figures.aerial.cv), figures.aerial.cv.width, figures.aerial.cv.height, 'Figure: Aerial imagery with Subject Property boundary.');
-    if (figures.topo) pkImagePage(P, pkCanvasToJpeg(figures.topo.cv), figures.topo.cv.width, figures.topo.cv.height, 'Figure: USGS topographic map with Subject Property boundary.');
-  }
-  // Plans & drawings (images embedded; PDFs listed and transmitted as separate attachments)
+  // Figure 1 — the uploaded Phase I / limited ESA site location figure (PDF pages rendered via pdf.js, images direct);
+  // falls back to the generated location map when nothing has been uploaded
+  const fig1 = (typeof supportingDocs !== 'undefined' && supportingDocs.packet_fig1) || [];
+  if (fig1.length) { for (const d of fig1) await pkEmbedDoc(P, d, 'Figure 1 - Site Location (' + d.name + ')'); }
+  else if (figures && figures.location) pkImagePage(P, pkCanvasToJpeg(figures.location.cv), figures.location.cv.width, figures.location.cv.height, 'Figure 1 - Site location: Subject Property boundary (site detail and vicinity).');
+  // Plans & drawings — every page of each PDF rendered, images embedded
   const plans = (typeof supportingDocs !== 'undefined' && supportingDocs.packet_plans) || [];
-  if (plans.length) {
-    const pdfs = plans.filter(d => /pdf$/i.test(d.type)), imgs = plans.filter(d => /^image\//i.test(d.type));
-    pkFooter(P); P.doc.addPage(); pkHeader(P, false);
-    pkH1(P, (o.sectionPrefix || '') + 'Plans and Drawings');
-    if (pdfs.length) { pkP(P, 'The following plan sheets accompany this packet as separate PDF attachments:'); pkBullets(P, pdfs.map(d => d.name + (d.caption ? ' - ' + d.caption : ''))); }
-    for (const d of imgs) { try { const im = await figDataUrlImg(d.data); pkImagePage(P, d.data, im.width, im.height, 'Plan / drawing: ' + d.name + (d.caption ? ' - ' + d.caption : '')); } catch (e) {} }
-  }
+  for (const d of plans) await pkEmbedDoc(P, d, 'Plan / drawing: ' + d.name);
   // Photos — two per page
   const photos = ((typeof supportingDocs !== 'undefined' && supportingDocs.packet_photos) || []).filter(d => /^image\//i.test(d.type));
   if (photos.length) {
@@ -5012,37 +4982,30 @@ async function packetCorePages(P, C, figures, opts) {
 // Standard figures for the packet: location (split pane, streets), aerial (imagery, parcel-tight), topo (USGS, ~1 mi)
 async function packetFigures(C, say) {
   const { site, center, proj } = C; if (!site) return null; const meta = C.meta;
+  if (((typeof supportingDocs !== 'undefined' && supportingDocs.packet_fig1) || []).length) return {};   // uploaded Figure 1 is used instead
   const legend = [{ label: 'Subject Property - ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
   say && say('Rendering site location figure…');
-  const location = await figSplitPane({ site, center, detailHalfM: figParcelHalfM(site, center, 2.5, 400, 2000), vicHalfFt: 5280, title: 'Site Location Map', meta, subtitle: 'Project Packet for Agency Review - Subject Property boundary (site detail and 2-mile vicinity)', detailCaption: 'Subject Property boundary', vicCaption: 'Vicinity', legend: legend.concat([{ label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }]) });
-  say && say('Rendering aerial figure…');
-  const aerial = await figBuildBase(center, figParcelHalfM(site, center, 2.2, 300, 1500), { basemap: 'imagery' }); figDrawSite(aerial, site, center);
-  await figFurnish(aerial, { title: 'Aerial Imagery', meta, subtitle: 'Project Packet for Agency Review - Esri World Imagery', legend });
-  say && say('Rendering USGS topographic figure…');
-  const topo = await figBuildBase(center, 2640 / FT_PER_M, { basemap: 'topo' }); figDrawSite(topo, site, center);
-  await figFurnish(topo, { title: 'USGS Topographic Map', meta, subtitle: 'Project Packet for Agency Review - USGS The National Map (topo)', legend });
-  return { location, aerial, topo };
+  const location = await figSplitPane({ site, center, detailHalfM: figParcelHalfM(site, center, 2.5, 400, 2000), vicHalfFt: 5280, title: 'Site Location Map', meta, subtitle: 'Subject Property boundary (site detail and 2-mile vicinity)', detailCaption: 'Subject Property boundary', vicCaption: 'Vicinity', legend: legend.concat([{ label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }]) });
+  return { location };
+}
+// Embed an uploaded document: images directly, PDFs page-by-page via pdf.js (rendered at ~150 dpi)
+async function pkEmbedDoc(P, d, caption) {
+  try {
+    if (/^image\//i.test(d.type)) { const im = await figDataUrlImg(d.data); pkImagePage(P, d.data, im.width, im.height, caption); return; }
+    if (/pdf$/i.test(d.type)) {
+      const lib = await pkLoadPdfJs(); const bin = atob(d.data.split(',')[1]); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const pdf = await lib.getDocument({ data: arr }).promise;
+      for (let p = 1; p <= Math.min(pdf.numPages, 10); p++) {
+        const page = await pdf.getPage(p); const vp = page.getViewport({ scale: 2 }); const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+        await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+        pkImagePage(P, cv.toDataURL('image/jpeg', 0.85), cv.width, cv.height, caption + (pdf.numPages > 1 ? ' - sheet ' + p + ' of ' + pdf.numPages : ''));
+      }
+      return;
+    }
+    pkP(P, caption + ' - attached separately (' + d.type + ').', { italic: true, size: 9 });
+  } catch (e) { console.warn('[packet embed]', d.name, e); pkP(P, caption + ' - could not be rendered; transmitted as a separate attachment.', { italic: true, size: 9 }); }
 }
 function packetSay(id) { const el = document.getElementById(id); return (t, c) => { if (el) { el.textContent = t; el.style.color = c || 'var(--azri-navy)'; } }; }
-
-// ---------- 1) Core packet (stand-alone) ----------
-async function generateProjectPacket() {
-  const say = packetSay('packetStatus');
-  const C = packetContext();
-  if (!C.site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the packet.'); return; }
-  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
-  try {
-    const figures = await packetFigures(C, say);
-    say('Writing the packet…');
-    const P = await pkNewDoc('Project Packet for Agency Review', C.meta);
-    pkP(P, 'This packet provides the project information commonly requested by federal, state and tribal agencies during environmental review consultations under 24 CFR Part 58 (HUD). It is intended to accompany authority-specific requests (e.g., ESA Section 7, NHPA Section 106, CZMA federal consistency).', { italic: true, size: 9 });
-    await packetCorePages(P, C, figures);
-    const doc = pkFinish(P); const slug = figSlug(C.proj);
-    pkAttachPdf('packet', doc, slug + '_Project_Packet.pdf', 'Project Packet for Agency Review (core)');
-    doc.save(slug + '_Project_Packet.pdf');
-    say('✓ Project Packet generated — PDF downloaded and listed below.', 'var(--green,#2f855a)');
-  } catch (e) { console.warn('[Packet]', e); say('✗ Packet failed: ' + e.message, 'var(--red,#c00)'); }
-}
 
 // ---------- 2) ESA Section 7 ----------
 const ESA_STATUS_RE = /\b(Proposed Endangered|Proposed Threatened|Endangered|Threatened|Candidate|Similarity of Appearance \(Threatened\)|Experimental Population, Non-Essential|Proposed Similarity of Appearance|Under Review)\b/i;
@@ -5128,11 +5091,11 @@ async function generateESAConsultation(authId) {
     pkH1(P, 'Conclusion and Requested Action');
     if (anyNLAA) pkP(P, 'Based on the above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' has determined that the project may affect, but is not likely to adversely affect, ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ', and will have no effect on the remaining species listed above' + (critHab && !/none/i.test(critHab) ? ' and no effect on designated critical habitat' : '') + '. We respectfully request the Service\'s written concurrence with this determination pursuant to 50 CFR 402.13. The project will not proceed with activities affecting the species\' habitat until concurrence is received.');
     else pkP(P, 'Based on the above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' has determined that the project will have no effect on federally listed, proposed or candidate species' + (critHab && !/none/i.test(critHab) ? ' or designated critical habitat' : ', and no critical habitat is designated in the project area') + '. A "no effect" determination does not require the Service\'s concurrence (50 CFR 402.14(a)); this documentation and the IPaC official species list will be retained in the Environmental Review Record. Please contact us if the Service has information that would alter this determination.');
-    pkP(P, 'The attached Project Packet provides the project description, site information, figures, plans and photographs. Please contact the undersigned with any questions.');
+    pkP(P, 'The attached project information, Figure 1 (site location) and plan sheets describe the project and site. Please contact the undersigned with any questions.');
     pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : '') + (C.g('packet_preparerPhone') ? ' - ' + C.g('packet_preparerPhone') : ''));
-    pkP(P, 'Attachments: Project Packet for Agency Review (following pages); IPaC Official Species List (separate PDF).', { italic: true, size: 9 });
+    pkP(P, 'Attachments: Project information, Figure 1 and plans (following pages); IPaC Official Species List (separate PDF).', { italic: true, size: 9 });
     pkFooter(P); P.doc.addPage(); pkHeader(P, false);
-    pkP(P, 'ATTACHMENT - PROJECT PACKET FOR AGENCY REVIEW', { bold: true, size: 12, after: 10 });
+    pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_ESA_Section7_Packet.pdf';
     const finding = anyNLAA ? 'NLAA determination for ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ' — concurrence requested from ' + recip.agency + ' → Write Up 3 (pending); switch to Write Up 3 (received) when the response arrives.' : 'No effect for all ' + det.length + ' IPaC species; no concurrence required → Write Up 2 (retain IPaC list + this documentation in the ERR).';
@@ -5170,10 +5133,10 @@ async function generateHistoricConsultation(authId) {
     pkH1(P, 'Finding and Requested Action');
     pkP(P, C.g('hist_finding') || ('Based on the identification efforts described above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' proposes a finding of ' + (age === 'yes' ? '"no adverse effect" on historic properties' : '"no historic properties affected"') + ' (36 CFR 800.4(d)/800.5). We request the SHPO\'s concurrence within the 30-day review period.'));
     if (recip.portal) pkP(P, 'Submittal: ' + recip.portal, { size: 9, italic: true });
-    pkP(P, 'Attachments: APE figure; Project Packet for Agency Review (project description, site data, location/aerial/topographic figures, plans and photographs).', { italic: true, size: 9 });
+    pkP(P, 'Attachments: APE figure; project information, Figure 1 (site location) and plan sheets (following pages).', { italic: true, size: 9 });
     pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : ''));
     pkImagePage(P, pkCanvasToJpeg(apeFig.cv), apeFig.cv.width, apeFig.cv.height, 'Figure: Area of Potential Effects.');
-    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT PACKET FOR AGENCY REVIEW', { bold: true, size: 12, after: 10 });
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_Section106_Packet.pdf';
     pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency + ' - APE ' + apeFt + ' ft'); doc.save(name);
@@ -5203,9 +5166,9 @@ async function generateCZMConsultation(authId) {
     pkH1(P, 'Determination and Requested Action');
     pkP(P, C.g('czm_determination') || ((C.proj.responsibleEntity || 'The Responsible Entity') + ' has determined that the project is consistent to the maximum extent practicable with the enforceable policies of the ' + recip.agency + '. We request the program\'s concurrence' + (/negative/i.test(C.g('czm_type')) ? ' with this negative determination' : '') + ' within the review period provided by 15 CFR 930.41.'));
     if (recip.portal) pkP(P, 'Submittal: ' + recip.portal, { size: 9, italic: true });
-    pkP(P, 'Attachments: Project Packet for Agency Review (project description, site data, location/aerial/topographic figures, plans and photographs)' + (supportingDocs && supportingDocs.flood_ins && supportingDocs.flood_ins.length ? '; FIRM figure' : '') + '.', { italic: true, size: 9 });
+    pkP(P, 'Attachments: project information, Figure 1 (site location) and plan sheets (following pages)' + (supportingDocs && supportingDocs.flood_ins && supportingDocs.flood_ins.length ? '; FIRM figure' : '') + '.', { italic: true, size: 9 });
     pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : ''));
-    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT PACKET FOR AGENCY REVIEW', { bold: true, size: 12, after: 10 });
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_CZM_Consistency_Packet.pdf';
     pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); doc.save(name);
@@ -5226,43 +5189,6 @@ async function pkPdfText(dataUrl, maxPages) {
   const pdf = await lib.getDocument({ data: arr }).promise; let out = '';
   for (let p = 1; p <= Math.min(pdf.numPages, maxPages || 12); p++) { const page = await pdf.getPage(p); const tc = await page.getTextContent(); out += '\n' + tc.items.map(it => it.str).join(' '); }
   return out.replace(/\s+/g, ' ');
-}
-// Each pattern: field to fill, regex (value in group `v`, unit in group `u`), label, and whether the field wants acres
-const PLAN_PATTERNS = [
-  { field: 'packet_units', label: 'Dwelling units', re: /\b(?<v>\d{1,4})\s*(?:dwelling\s*|residential\s*|apartment\s*)?units?\b/i },
-  { field: 'packet_footprintSqft', label: 'Building footprint / area', re: /(?:building|bldg\.?)\s*(?:footprint|area|coverage)[^0-9]{0,40}?(?<v>[\d,]{3,9}(?:\.\d+)?)\s*(?<u>s\.?f\.?|sq\.?\s*ft\.?|square feet)/i },
-  { field: 'packet_height', label: 'Building height', re: /(?:building\s*|max(?:imum)?\s*)?height[^0-9]{0,30}?(?<v>\d{1,3}(?:\.\d+)?)\s*(?<u>'|ft\.?|feet)/i },
-  { field: 'packet_height', label: 'Stories', re: /\b(?<v>\d{1,2})\s*-?\s*(?<u>stor(?:y|ies))\b/i },
-  { field: 'packet_disturbedAcres', label: 'Limit / area of disturbance', acres: true, re: /(?:limits?\s*of|total|area\s*of|proposed)\s*disturbance[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet)/i },
-  { field: 'packet_imperviousChange', label: 'Impervious area (proposed)', re: /proposed\s*impervious(?:\s*(?:area|surface|cover))?[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet|%)/i },
-  { field: 'packet_imperviousChange', label: 'Impervious area', re: /impervious(?:\s*(?:area|surface|cover))?[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet|%)/i },
-  { field: 'packet_treeClearingAcres', label: 'Forest / tree clearing', acres: true, re: /(?:forest|tree|woodland)s?\s*(?:clearing|removal|to be removed|cleared)[^0-9]{0,40}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?)/i },
-  { field: 'packet_siteAcres', label: 'Site / lot area', acres: true, re: /(?:total\s*)?(?:site|lot|parcel|tract)\s*area[^0-9]{0,30}?(?<v>[\d,]+(?:\.\d+)?)\s*(?<u>ac\.?|acres?|s\.?f\.?|sq\.?\s*ft\.?|square feet)/i },
-  { field: 'packet_zoning', label: 'Zoning', re: /\bzon(?:e|ing)(?:\s*district|\s*classification)?\s*[:\-]?\s*(?<v>[A-Z]{1,3}-?\d{0,3}[A-Z]?)\b/i }
-];
-function pkToAcres(v, u) { const n = parseFloat(String(v).replace(/,/g, '')); if (isNaN(n)) return null; if (/^(ac|acre)/i.test(u || '')) return n; if (/s\.?f|sq|square/i.test(u || '')) return +(n / 43560).toFixed(2); return n; }
-async function packetScanPlans() {
-  const host = document.getElementById('packetScanResults'); const plans = (typeof supportingDocs !== 'undefined' && supportingDocs.packet_plans) || [];
-  const pdfs = plans.filter(d => /pdf$/i.test(d.type));
-  if (!host) return; if (!pdfs.length) { host.innerHTML = '<em style="color:var(--gray);">Upload at least one plan PDF first (images cannot be text-scanned).</em>'; return; }
-  host.innerHTML = '<em style="color:var(--gray);">Reading plan text…</em>';
-  try {
-    let text = ''; for (const d of pdfs) { try { text += ' ' + await pkPdfText(d.data, 12); } catch (e) { console.warn('[plan scan]', d.name, e); } }
-    if (!text.trim()) { host.innerHTML = '<em style="color:#9b2c2c;">No text layer found — the plans are scanned images. Enter the site data manually.</em>'; return; }
-    const found = []; PLAN_PATTERNS.forEach(pt => { if (found.some(f => f.pt.field === pt.field && pt.field !== 'packet_height')) return; const m = text.match(pt.re); if (!m || !m.groups) return; let val = m.groups.v, unit = m.groups.u || ''; if (pt.acres) { const ac = pkToAcres(val, unit); if (ac == null) return; val = String(ac); unit = 'ac'; } else if (/stor/i.test(unit)) { val = val + ' stories'; unit = ''; } else if (pt.field === 'packet_height') { val = val + ' ft'; unit = ''; } else if (pt.field === 'packet_imperviousChange') { val = (String(val) + ' ' + unit).trim(); unit = ''; } const i0 = Math.max(0, m.index - 40); found.push({ pt, val: val.replace(/,(\d{3})\b/g, '$1'), unit, snippet: text.slice(i0, m.index + m[0].length + 20).trim() }); });
-    if (!found.length) { host.innerHTML = '<em style="color:var(--gray);">No recognizable site-data labels found in the plan text (looked for units, footprint, height, disturbance, impervious, tree clearing, lot area, zoning).</em>'; return; }
-    window._planScan = found;
-    host.innerHTML = '<div style="font-weight:600;color:var(--azri-navy);margin-bottom:4px;">Suggested from the plan sheets — click Use to fill a field (review each one):</div>' + found.map((f, i) => `<div style="display:flex;gap:8px;align-items:center;margin:3px 0;flex-wrap:wrap;"><button type="button" onclick="packetUseScan(${i})" style="font-size:11px;background:var(--azri-navy);color:#fff;border:none;border-radius:3px;padding:2px 8px;cursor:pointer;">Use</button><b>${f.pt.label}:</b> <span>${f.val}${f.unit ? ' ' + f.unit : ''}</span><span style="color:var(--gray);">— “…${f.snippet.replace(/</g, '&lt;')}…”</span></div>`).join('');
-  } catch (e) { host.innerHTML = '<em style="color:#9b2c2c;">Scan failed: ' + e.message + '</em>'; }
-}
-function packetUseScan(i) {
-  const f = (window._planScan || [])[i]; if (!f) return;
-  const valTxt = f.val + (f.unit ? ' ' + f.unit : '');
-  let el = document.querySelector('[data-field="' + f.pt.field + '"]');
-  if (!el) { el = document.querySelector('[data-field="packet_vegCover"]'); if (!el) return; el.value = (el.value ? el.value + '; ' : '') + f.pt.label + ': ' + valTxt; }   // site acres / zoning → existing-conditions line
-  else if (f.pt.field === 'packet_height') { const cur = el.value.trim(); const isStories = /stories/.test(f.val); if (!cur) el.value = f.val; else if (isStories && /ft/.test(cur) && !/stories/.test(cur)) el.value = f.val + ' / ' + cur; else if (!isStories && /stories/.test(cur) && !/ft/.test(cur)) el.value = cur + ' / ' + f.val; else el.value = f.val; }
-  else el.value = f.val;
-  el.dispatchEvent(new Event('input', { bubbles: true })); el.style.outline = '2px solid #2f855a'; setTimeout(() => { el.style.outline = ''; }, 1500);
 }
 // ===== MAP GENERATOR REGISTRY (per authority) =====
 const MAP_GENERATORS = {
@@ -7313,6 +7239,9 @@ AUTHORITIES.forEach(a => {
         <div><label>IPaC project code</label><input type="text" data-field="esa_ipacCode" placeholder="e.g., 2026-0012345"></div>
         <div><label>IPaC list date</label><input type="text" data-field="esa_ipacDate" placeholder="e.g., October 7, 2026"></div>
         <div><label>In-water / stream work?</label><select data-field="esa_inWater"><option value="">— select —</option><option>No</option><option>Yes</option></select></div>
+        <div><label>Tree clearing (acres; 0 if none)</label><input type="text" data-field="esa_treeClearingAcres" placeholder="e.g., 0"></div>
+        <div><label>Ground disturbance (acres)</label><input type="text" data-field="esa_disturbedAcres" placeholder="e.g., 0.6"></div>
+        <div><label>Existing site conditions (one line)</label><input type="text" data-field="esa_existingUse" placeholder="e.g., vacant 2-story commercial building with paved lot; mowed lawn, no forest or wetlands"></div>
         <div><label>Designated critical habitat in project area</label><input type="text" data-field="esa_critHab" placeholder="auto-filled from IPaC when found; e.g., None designated"></div>
         <div class="full"><label>USFWS field office override <span style="font-weight:400;color:var(--gray);">(default from the project state: Chesapeake Bay / PA / VA ESFO)</span></label><input type="text" data-field="esa_fieldOffice"></div>
       </div>
@@ -7322,6 +7251,9 @@ AUTHORITIES.forEach(a => {
       <div class="field-grid" style="margin-top:10px;">
         <div><label>APE distance from boundary (ft)</label><input type="text" data-field="hist_apeFt" placeholder="250"></div>
         <div><label>APE note (optional)</label><input type="text" data-field="hist_apeNote" placeholder="e.g., one parcel in each direction / viewshed to the street"></div>
+        <div><label>Ground disturbance (acres)</label><input type="text" data-field="hist_disturbedAcres" placeholder="e.g., 0.6"></div>
+        <div><label>Max excavation depth (ft)</label><input type="text" data-field="hist_excavDepthFt" placeholder="e.g., 8"></div>
+        <div><label>Year built (existing structures)</label><input type="text" data-field="hist_yearBuilt" placeholder="defaults to the parcel record"></div>
         <div class="full"><label>NRHP-listed / eligible resources or historic districts in the APE (state inventory results)</label><input type="text" data-field="hist_nrhp" placeholder="e.g., None in MEDUSA / CHRIS / PA-SHARE within the APE; or list resource names and inventory numbers"></div>
         <div class="full"><label>Previous surveys / SHPO file numbers</label><input type="text" data-field="hist_priorSurvey"></div>
         <div class="full"><label>Consulting parties (local government, historical society, applicant)</label><input type="text" data-field="hist_parties"></div>
@@ -11373,7 +11305,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v127 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v128 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
