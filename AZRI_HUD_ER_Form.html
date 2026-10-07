@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v105</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v107</div>
   </div>
 </header>
 
@@ -607,24 +607,9 @@
   <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)">
   <button class="secondary" onclick="loadSample()">Load Sample Site</button>
   <button class="danger" onclick="resetForm()">Reset Form</button>
-  <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;margin-left:12px;">
-    State:
-    <select id="stateSelector" onchange="applyStatePack(this.value)" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
-      <option value="MD" selected>Maryland — statewide (parcels + owner + SDAT)</option>
-      <option value="DC">DC — citywide (parcels + owner)</option>
-      <option value="PA">Pennsylvania — Cumberland Co. (parcels + owner)</option>
-      <option value="VA">Virginia — Fairfax / Arlington / Alexandria (parcels)</option>
-      <option value="DE">Delaware — statewide (parcels)</option>
-      <option value="GENERIC">Generic / National</option>
-    </select>
-  </label>
   <label class="ea-toggle" title="EA sections (1366, 1370, 1375) auto-show when Level of Review = EA or EIS. Check this to force-show them regardless.">
     <input type="checkbox" id="eaToggle" onchange="toggleEA()">
     Force-show EA Sections <span style="color:var(--gray);font-weight:400;font-size:11px;">(auto when Level = EA/EIS)</span>
-  </label>
-  <label class="ea-toggle" title="Shows the Housing Requirements compliance factor (MAP Guide, Chapter 9: Lead-Based Paint, Radon, Asbestos, and Additional Nuisances and Hazards) in Screen 2005. Check this for HUD MAP (Multifamily Accelerated Processing) and other FHA-insured multifamily projects.">
-    <input type="checkbox" id="mapToggle" onchange="toggleMapSection()">
-    HUD MAP Project <span style="color:var(--gray);font-weight:400;font-size:11px;">(shows Housing Requirements)</span>
   </label>
 </div>
 
@@ -691,16 +676,34 @@
         <div style="font-size:12px;color:var(--gray);">When states, cities, tribes, or units of local government assume HUD's environmental review responsibilities (Responsible Entity). Authorities at 24 CFR §58.5 / §58.6.</div>
       </div>
     </label>
-    <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:#fff;">
+    <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:5px;margin-bottom:8px;cursor:pointer;background:#fff;">
       <input type="radio" name="reviewFrameworkRadio" value="50" onchange="setReviewFramework(this.value)" style="margin-top:3px;">
       <div>
-        <div style="font-weight:600;">Part 50</div>
-        <div style="font-size:12px;color:var(--gray);">When HUD staff is responsible for completion of the environmental review (FHA / Multifamily / when no RE is available). Authorities at 24 CFR §50.4.</div>
+        <div style="font-weight:600;">Part 50 — HUD program</div>
+        <div style="font-size:12px;color:var(--gray);">When HUD staff is responsible for the environmental review because the program itself is reviewed by HUD (FHA-insured / Multifamily / MAP, Section 202/811, etc.). Authorities at 24 CFR §50.4.</div>
+      </div>
+    </label>
+    <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:#fff;">
+      <input type="radio" name="reviewFrameworkRadio" value="50_58" onchange="setReviewFramework(this.value)" style="margin-top:3px;">
+      <div>
+        <div style="font-weight:600;">Part 50 — HUD performing a Part 58 program review <span style="font-weight:400;font-size:11px;color:var(--gray);">(no RE willing / able)</span></div>
+        <div style="font-size:12px;color:var(--gray);">A Part 58 program (CDBG, HOME, CoC, etc.) where no Responsible Entity has the legal capacity, or is willing, to assume the review, so HUD performs it under Part 50 per <a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-58/subpart-A/section-58.11" target="_blank" style="color:#2c5282;">24 CFR §58.11</a>. Authorities are cited at §50.4; the would-be grantee is recorded as the Grant Recipient on Screen 1105.</div>
       </div>
     </label>
     <div id="frameworkBadge" style="margin-top:12px;font-size:12px;color:var(--azri-navy);font-weight:600;">Selected framework: <span id="frameworkBadgeText">Part 58</span></div>
-    <!-- Hidden mirror input — preserves data-field binding for existing JS logic -->
+    <!-- Hidden mirror inputs — reviewFramework stays "58"/"50" for all existing logic; part50Basis records WHY it is Part 50 -->
     <input type="hidden" id="reviewFrameworkHidden" data-field="reviewFramework" value="58">
+    <input type="hidden" id="part50BasisHidden" data-field="part50Basis" value="">
+
+    <!-- PROJECT FLAGS tied to the review type -->
+    <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">
+      <div style="font-weight:600;font-size:12px;color:var(--azri-navy);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;">Project flags</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--azri-navy);cursor:pointer;" title="Shows the Housing Requirements compliance factor (MAP Guide, Chapter 9: Lead-Based Paint, Radon, Asbestos, and Additional Nuisances and Hazards) in Screen 2005. Check this for HUD MAP (Multifamily Accelerated Processing) and other FHA-insured multifamily projects.">
+        <input type="checkbox" id="mapToggle" onchange="toggleMapSection()" style="width:17px;height:17px;margin:0;">
+        HUD MAP Project <span style="color:var(--gray);font-weight:400;font-size:11px;">(FHA-insured multifamily — shows Housing Requirements in Screen 2005; normally a Part 50 — HUD program review)</span>
+      </label>
+      <div id="mapFlagHint" style="display:none;font-size:11.5px;color:#9b2c2c;margin-top:4px;">HUD MAP projects are FHA-insured multifamily reviews performed by HUD under Part 50 — confirm the framework selection above.</div>
+    </div>
   </div>
 </section>
 
@@ -814,6 +817,7 @@
     <div data-framework-block="50" style="display:none;">
       <div style="margin-top:20px;">
         <label style="font-weight:600;font-size:13px;color:var(--azri-navy);">HUD Office Details (Part 50)</label>
+        <div id="part50InLieuNote" style="display:none;font-size:12px;color:#2d3748;background:#fffbeb;border:1px solid #f6e05e;border-radius:4px;padding:8px 10px;margin-top:8px;line-height:1.5;">HUD is performing this review under Part 50 for a <strong>Part 58 program</strong> because no Responsible Entity is willing or able to assume it (24 CFR §58.11). Enter the HUD Field Office below and record the grantee / applicant as the <strong>Grant Recipient</strong> further down — there is no RE for this review.</div>
         <div class="field-grid" style="margin-top:10px;">
           <div><label>HUD Field Office</label><input type="text" data-field="hudFieldOffice" placeholder="e.g., Baltimore Field Office"></div>
           <div><label>HUD Approving Official</label><input type="text" data-field="hudApprovingOfficial" placeholder="Name, title"></div>
@@ -929,6 +933,18 @@
         <span id="locationUploadList" style="font-size:11px;color:var(--gray);margin-left:10px;"></span>
       </div>
       <!-- PROJECT LOCATION MAP (relocated from former Screen 1120) -->
+    <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 6px 0;font-size:13px;font-weight:500;">
+      <span style="font-weight:600;color:var(--azri-navy);">Parcel data &amp; state resources:</span>
+      <select id="stateSelector" onchange="applyStatePack(this.value, true)" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
+        <option value="MD" selected>Maryland — statewide (parcels + owner + SDAT)</option>
+        <option value="DC">DC — citywide (parcels + owner)</option>
+        <option value="PA">Pennsylvania — Cumberland Co. (parcels + owner)</option>
+        <option value="VA">Virginia — Fairfax / Arlington / Alexandria (parcels)</option>
+        <option value="DE">Delaware — statewide (parcels)</option>
+        <option value="GENERIC">Generic / National</option>
+      </select>
+      <span id="statePackHint" style="font-size:11px;color:var(--gray);font-weight:400;">Follows the State field above automatically; change it here only to override (controls the parcel layer, state viewer, state write-ups and Field Resources).</span>
+    </div>
     <div class="map-toolbar no-print">
       <div class="addr-search-wrap">
         <input type="text" id="addrSearch" placeholder="Type an address to fly the map there — then click the parcel(s)" autocomplete="off" oninput="onAddrInput()" onkeydown="onAddrKeydown(event)" onblur="setTimeout(hideSuggestions, 200)" style="width:100%;">
@@ -1027,89 +1043,11 @@
     <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-1311" style="color:white;">—</strong></span>
   </h2>
   <div class="card-body">
-    <!-- ===== SECTION 1 — QUESTIONS TO DETERMINE THE LEVEL OF REVIEW ===== -->
-    <div style="padding:8px 12px;background:var(--azri-navy);color:white;border-radius:5px 5px 0 0;font-weight:600;font-size:13px;">Section 1 — Questions to determine the level of review</div>
-    <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:14px 16px;margin-bottom:22px;">
-    <h3 style="margin-top:0;color:var(--azri-navy);font-size:15px;">Project Activities <span style="font-weight:400;color:var(--gray);font-size:12px;">— scope questions that inform the level of review</span></h3>
-    <div class="lora-grid">
-      <div class="lora-q full">
-        <div class="qtext">1. Primary activity type (select the dominant activity)</div>
-        <select name="loraActivity" id="loraActivity">
-          <option value="">— select —</option>
-          <option value="admin">Administrative / planning / research / fair housing / public services only</option>
-          <option value="tba">Tenant-based rental assistance, supportive services, or operating costs</option>
-          <option value="acq_only">Acquisition (or leasing) of an existing structure — no construction</option>
-          <option value="rehab">Rehabilitation of an existing structure</option>
-          <option value="infra">Infrastructure / public improvements (other than buildings)</option>
-          <option value="arch_barriers">Removal of architectural barriers (accessibility)</option>
-          <option value="newconst">New construction</option>
-          <option value="demo">Demolition</option>
-          <option value="conversion">Conversion (change in use of existing structure)</option>
-          <option value="combo_no_nc">Combination of CE activities — NO new construction</option>
-          <option value="combo_nc">Combination of activities — INCLUDES new construction</option>
-        </select>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">2. If residential, number of units</div>
-        <label><input type="radio" name="loraUnits" value="1to4"> 1–4 units</label>
-        <label><input type="radio" name="loraUnits" value="5plus"> 5+ units</label>
-        <label><input type="radio" name="loraUnits" value="na"> N/A (non-res)</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">3. Will the project expand the building footprint or envelope?</div>
-        <label><input type="radio" name="loraExpand" value="no"> No</label>
-        <label><input type="radio" name="loraExpand" value="yes"> Yes</label>
-        <label><input type="radio" name="loraExpand" value="na"> N/A</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">4. Will the project change land use?</div>
-        <label><input type="radio" name="loraUseChange" value="no"> No</label>
-        <label><input type="radio" name="loraUseChange" value="yes"> Yes</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">5. Will unit density change by more than 20%?</div>
-        <label><input type="radio" name="loraDensity" value="no"> No</label>
-        <label><input type="radio" name="loraDensity" value="yes"> Yes</label>
-        <label><input type="radio" name="loraDensity" value="na"> N/A</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">6. Is any structure 50+ years old or NRHP-eligible?</div>
-        <label><input type="radio" name="loraHistoric" value="no"> No</label>
-        <label><input type="radio" name="loraHistoric" value="yes"> Yes</label>
-        <label><input type="radio" name="loraHistoric" value="unknown"> Unknown</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">7. Any portion of site in 100-yr floodplain (Zone A/V)?</div>
-        <label><input type="radio" name="loraFlood" value="no"> No</label>
-        <label><input type="radio" name="loraFlood" value="yes"> Yes</label>
-        <label><input type="radio" name="loraFlood" value="unknown"> Unknown</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">8. Will project cause permanent displacement?</div>
-        <label><input type="radio" name="loraDisplace" value="no"> No</label>
-        <label><input type="radio" name="loraDisplace" value="yes"> Yes</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">9. Ground disturbance beyond utility tie-ins?</div>
-        <label><input type="radio" name="loraGround" value="no"> No</label>
-        <label><input type="radio" name="loraGround" value="yes"> Yes</label>
-      </div>
-      <div class="lora-q">
-        <div class="qtext">10. Likely to have a significant environmental impact (large scale, sensitive area)?</div>
-        <label><input type="radio" name="loraSignificant" value="no"> No</label>
-        <label><input type="radio" name="loraSignificant" value="yes"> Yes</label>
-      </div>
-    </div>
-    </div><!-- /Section 1 -->
+    <!-- Section 1 (Activity Questions 1–10) removed in v107: the level of review is set manually in the HEROS
+         picker below, and every scope answer the Auto-Determine engine needs is asked once, per authority, in the
+         Review Questions (Section 2 here ≡ each authority's Section 2005 row). Activity type comes from 1125. -->
 
-    <!-- ===== SECTION 2 — REVIEW QUESTIONS: HOW EACH AUTHORITY/SECTION IS HANDLED ===== -->
-    <div style="padding:8px 12px;background:var(--azri-navy);color:white;border-radius:5px 5px 0 0;font-weight:600;font-size:13px;">Section 2 — Review Questions: how each related law &amp; authority is handled</div>
-    <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:14px 16px;margin-bottom:22px;">
-      <div style="font-size:12px;color:#2d3748;line-height:1.5;margin-bottom:12px;">Answer the Review Questions for each related law &amp; authority below. <strong>These mirror the same questions in each authority's Section 2005 row — answering or editing here updates there, and vice-versa.</strong> Use <em>Apply Determination</em> to mark a section Exempt / Follow-Up and insert its write-up, or flag it for the client.</div>
-      <div id="rqMirror1311"><em style="font-size:12px;color:var(--gray);">Loading review questions…</em></div>
-    </div>
-
-    <!-- ===== SECTION 3 — HEROS 1311 LEVEL OF REVIEW SELECTION (manual) ===== -->
+    <!-- ===== HEROS 1311 LEVEL OF REVIEW SELECTION (manual) ===== -->
     <div style="padding:8px 12px;background:var(--azri-navy);color:white;border-radius:5px 5px 0 0;font-weight:600;font-size:13px;">Level of Review</div>
     <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:14px 16px;">
       <div style="font-weight:600;font-size:14px;color:#2d3748;margin-bottom:6px;">What level of review is required by the scope of the project?</div>
@@ -1219,6 +1157,20 @@
     </div>
   </div>
 </section>
+
+<!-- ===== AZ-RI — REVIEW QUESTIONS (scope each related law & authority; mirrors each 2005 row) — placed after 1344 so the
+     level of review is settled before the authorities are scoped (v107; formerly Section 2 of 1311) ===== -->
+<section class="card" id="review-questions-section">
+  <h2 style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
+    <span>Review Questions <span class="citation">(AZ-RI — scopes each §58.5 / §58.6 authority)</span></span>
+    <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-rq" style="color:white;">—</strong></span>
+  </h2>
+  <div class="card-body">
+      <div style="font-size:12px;color:#2d3748;line-height:1.5;margin-bottom:12px;">Answer the Review Questions for each related law &amp; authority below. <strong>These mirror the same questions in each authority's Section 2005 row — answering or editing here updates there, and vice-versa.</strong> Use <em>Apply Determination</em> to mark a section Exempt / Follow-Up and insert its write-up, or flag it for the client.</div>
+      <div id="rqMirror1311"><em style="font-size:12px;color:var(--gray);">Loading review questions…</em></div>
+  </div>
+</section>
+
 
 
 <!-- Hidden legacy fundingProgram + funding mirrors (back-compat with downstream save/load and exports) -->
@@ -1592,7 +1544,22 @@ const STATE_PACKS = {
 
 let CURRENT_STATE = 'MD';
 
-function applyStatePack(stateCode) {
+// Map the HEROS 1125 "State" field to a state pack. Anything not listed → GENERIC.
+const SITE_STATE_TO_PACK = { 'Maryland': 'MD', 'District of Columbia': 'DC', 'Pennsylvania': 'PA', 'Virginia': 'VA', 'Delaware': 'DE' };
+let statePackManual = false; // set when the reviewer picks a pack by hand; auto-follow then stops until the State field changes
+function syncStatePackToSiteState() {
+  const st = (document.querySelector('select[data-field="siteState"]') || {}).value || '';
+  const code = SITE_STATE_TO_PACK[st] || 'GENERIC';
+  if (!st || code === CURRENT_STATE) return;
+  const sel = document.getElementById('stateSelector');
+  if (sel) sel.value = code;
+  applyStatePack(code);
+}
+document.addEventListener('change', e => {
+  if (e.target && e.target.dataset && e.target.dataset.field === 'siteState') { statePackManual = false; syncStatePackToSiteState(); }
+});
+function applyStatePack(stateCode, manual) {
+  if (manual) statePackManual = true;
   CURRENT_STATE = stateCode;
   const pack = STATE_PACKS[stateCode] || STATE_PACKS.GENERIC;
   // Update viewer button
@@ -2023,6 +1990,32 @@ const AUTHORITY_SOP = {
   `
 };
 
+// ===== PROJECT SCOPE HELPERS (v107) =====
+// Activity flags come from the HEROS 1125 Activities checkboxes (the old free-text projectType field
+// has had no UI since v92 and was always blank, which made every "isNewConstruction" test false).
+function activityFlags() {
+  let acts = [];
+  try { acts = JSON.parse((document.querySelector('[data-field="herosActivities"]') || {}).value || '[]'); } catch (e) {}
+  if (!Array.isArray(acts)) acts = [];
+  const has = v => acts.includes(v);
+  return {
+    acts,
+    isNewConstruction: has('newconst'),
+    isRehab: has('rehab'),
+    isDemo: has('demo'),
+    isAcquisition: has('acq') || has('lease') || has('dispo'),
+    isMaintenance: has('maint'),
+    isSoft: has('soft'),
+    isTBA: has('soft') && acts.length === 1,
+    label: acts.length ? acts.join(', ') : '(no activity selected in 1125)'
+  };
+}
+// Read an authority's own Review Question (the exq_* radios shared with the 1311 mirror).
+function rq(authId, qId) {
+  const el = document.querySelector('input[name="exq_' + authId + '_' + qId + '"]:checked');
+  return el ? el.value : '';
+}
+
 // ===== AUTHORITIES WITHOUT A SCOPE-BASED EXEMPTION =====
 // The §58.6 "other requirements" (Airport Hazards, Flood Insurance, Coastal Barrier Resources)
 // ALWAYS apply regardless of activity type or scope of work — there is no scope-based exemption,
@@ -2232,20 +2225,20 @@ const AUTO_DETERMINERS = {
   //         - Wetlands confirmed → Write Up 5 (8-step required)
   wetlands: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
-    const expandRadio = document.querySelector('input[name="loraExpand"]:checked');
-    const expandsFootprint = expandRadio && expandRadio.value === 'yes';
-    const groundRadio = document.querySelector('input[name="loraGround"]:checked');
-    const hasGroundDisturbance = groundRadio && groundRadio.value === 'yes';
+    const af = activityFlags();
+    const isNewConstruction = af.isNewConstruction;
+    // Scope from this authority's Review Question (NC / footprint expansion / ground disturbance)
+    const scope = rq('wetlands', 'scope');
+    const expandsFootprint = scope === 'yes';
+    const hasGroundDisturbance = scope === 'yes';
 
     // EXEMPTION: no NC, no footprint expansion, no ground disturbance → Write Up 1
-    const requiresReview = isNewConstruction || expandsFootprint || hasGroundDisturbance;
+    const requiresReview = isNewConstruction || scope === 'yes';
     if (!requiresReview) {
       return {
         status: 'compliant',
         source: 'AZ-RI exemption (no NC, no footprint, no ground disturbance)',
-        ref: `Project type: ${proj.projectType || '(not specified)'}`,
+        ref: `Activities (1125): ${af.label}`,
         notes: `The project is not New Construction; will not expand a building's footprint; and does not involve ground disturbance. Therefore, the project is excluded from Executive Order 11990 and is in compliance with Wetlands Protection.\n\n[USER VERIFICATION: Confirm project does not involve new construction, footprint expansion, or ground disturbance. If any apply, NWI review is required.]`
       };
     }
@@ -2310,12 +2303,11 @@ const AUTO_DETERMINERS = {
   //   3. River near site + substantial work (NC, footprint expansion, or ground disturbance) → Write Up 3 (consultation)
   wsr: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
-    const groundRadio = document.querySelector('input[name="loraGround"]:checked');
-    const hasGroundDisturbance = groundRadio && groundRadio.value === 'yes';
-    const expandRadio = document.querySelector('input[name="loraExpand"]:checked');
-    const expandsFootprint = expandRadio && expandRadio.value === 'yes';
+    const af = activityFlags();
+    const isNewConstruction = af.isNewConstruction;
+    // Substantial work = NC, footprint expansion or ground disturbance → same Review Question Wetlands asks
+    const hasGroundDisturbance = rq('wetlands', 'scope') === 'yes';
+    const expandsFootprint = hasGroundDisturbance;
 
     const [lng, lat] = site.centroid;
     const buffer = 2640; // 0.5 mile in feet
@@ -2380,19 +2372,18 @@ const AUTO_DETERMINERS = {
   //      b. On SSA → Write Up 3 (EPA Region 3 review required)
   aquifer: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
-    const isRehab = projectType.includes('rehab');
-    const groundRadio = document.querySelector('input[name="loraGround"]:checked');
-    const hasGroundDisturbance = groundRadio && groundRadio.value === 'yes';
+    const af = activityFlags();
+    const isNewConstruction = af.isNewConstruction;
+    const isRehab = af.isRehab;
+    const hasGroundDisturbance = rq('aquifer', 'scope') === 'yes';
 
-    // EXEMPTION: not NC AND not (rehab + ground disturbance) → Write Up 1
-    const requiresReview = isNewConstruction || (isRehab && hasGroundDisturbance);
+    // EXEMPTION: not NC AND not (rehab + major ground disturbance) → Write Up 1
+    const requiresReview = isNewConstruction || hasGroundDisturbance;
     if (!requiresReview) {
       return {
         status: 'compliant',
         source: 'AZ-RI exemption (no NC, no major ground disturbance)',
-        ref: `Project type: ${proj.projectType || '(not specified)'}`,
+        ref: `Activities (1125): ${af.label}`,
         notes: `The Sole Source Aquifers authority applies to new construction or conversion activities only. Therefore this project is in compliance with Sole Source Aquifers.\n\n[USER VERIFICATION: Confirm project does not include new construction or rehabilitation with major ground disturbance. If either applies, SSA review is required.]`
       };
     }
@@ -2437,18 +2428,17 @@ const AUTO_DETERMINERS = {
   //      b. CH hit → Write Up 3 with auto-populated species list, Section 7 consultation required
   esa: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isAcquisition = projectType.includes('acquisition');
-    const isRehab = projectType.includes('rehab');
-    const isTBA = projectType.includes('tenant');
-    const groundRadio = document.querySelector('input[name="loraGround"]:checked');
-    const hasGroundDisturbance = groundRadio && groundRadio.value === 'yes';
-    const expandRadio = document.querySelector('input[name="loraExpand"]:checked');
-    const expandsFootprint = expandRadio && expandRadio.value === 'yes';
+    const af = activityFlags();
+    const isAcquisition = af.isAcquisition;
+    const isRehab = af.isRehab;
+    const isTBA = af.isTBA;
+    const scope = rq('esa', 'scope');
+    const hasGroundDisturbance = scope === 'beyond';
+    const expandsFootprint = scope === 'beyond';
 
-    // EXEMPTION: acquisition only, TBA, or rehab without ground disturbance / footprint expansion
+    // EXEMPTION: this authority's Review Question says "purchase / interior work / exterior paint or siding only"
     // (Per AZ-RI SOP: "purchasing existing buildings, completing interior renovations, or replacing exterior paint or siding")
-    const exempt = isAcquisition || isTBA || (isRehab && !hasGroundDisturbance && !expandsFootprint);
+    const exempt = scope === 'exempt' || (!scope && !af.isNewConstruction && !af.isDemo && (isAcquisition || isTBA));
     if (exempt) {
       return {
         status: 'compliant',
@@ -2501,13 +2491,13 @@ const AUTO_DETERMINERS = {
   //      b. Nonattainment/maintenance → Write Up 4 + state-specific addendum (4a/4b/4c)
   air: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
-    // Pull units answer from LORA questionnaire
-    const unitsRadio = document.querySelector('input[name="loraUnits"]:checked');
-    const units = unitsRadio ? unitsRadio.value : '';
+    const af = activityFlags();
+    // Scope from this authority's Review Question: deminimis / sf (≤4 units) / major (5+ units, commercial)
+    const scope = rq('air', 'scope');
+    const isNewConstruction = scope ? scope !== 'deminimis' : af.isNewConstruction;
+    const units = scope === 'sf' ? '1to4' : scope === 'major' ? '5plus' : '';
 
-    // ===== EXEMPTION PATH 1: Not new construction → Write Up 1 =====
+    // ===== EXEMPTION PATH 1: Not new construction / de minimis → Write Up 1 =====
     if (!isNewConstruction) {
       return {
         status: 'compliant',
@@ -2593,15 +2583,16 @@ const AUTO_DETERMINERS = {
   //      c. Has farmland + no exemption → Write Up 5 (AD-1006 required)
   farm: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
+    const af = activityFlags();
+    const scope = rq('farm', 'scope');
+    const isNewConstruction = scope ? scope === 'yes' : af.isNewConstruction;
 
     // EXEMPTION 1: Not new construction → Write Up 1
     if (!isNewConstruction) {
       return {
         status: 'compliant',
         source: 'AZ-RI exemption (not new construction)',
-        ref: `Project type: ${proj.projectType || '(not specified)'}`,
+        ref: `Activities (1125): ${af.label}`,
         notes: `The project does not involve new construction nor will the project result in a property use change that could result in irreversible conversion of farmland to nonagricultural uses. The project is in compliance with the Farmland Protection Policy Act.\n\n[USER VERIFICATION: Confirm project does not involve new construction or property use change. If either applies, urbanized area / farmland review is required.]`
       };
     }
@@ -2641,8 +2632,9 @@ const AUTO_DETERMINERS = {
     const proj = getProjectFields();
     const yr = parseInt(proj.yearBuilt, 10);
     const currentYear = new Date().getFullYear();
-    const isOld = !isNaN(yr) && (currentYear - yr) >= 50;
-    const ageUnknown = isNaN(yr) && (proj.projectType || '').toLowerCase().includes('rehab');
+    const ageAnswer = rq('historic', 'age');          // Review Question: structure 50+ yrs / NRHP-eligible?
+    const isOld = ageAnswer === 'yes' || (!isNaN(yr) && (currentYear - yr) >= 50);
+    const ageUnknown = ageAnswer === 'unknown' || (!ageAnswer && isNaN(yr) && activityFlags().isRehab);
     let nrhpHits = [];
     try {
       const features = await arcgisIntersect('https://services.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/National_Register_of_Historic_Places/FeatureServer', 0, lng, lat, 'PROPERTY_NAME,RESNAME,REFNUM,LISTED_DATE');
@@ -2721,11 +2713,10 @@ const AUTO_DETERMINERS = {
   //   5. FHA projects waiting on response → Write Up 5
   czm: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
-    const isRehab = projectType.includes('rehab');
-    const groundRadio = document.querySelector('input[name="loraGround"]:checked');
-    const hasGroundDisturbance = groundRadio && groundRadio.value === 'yes';
+    const af = activityFlags();
+    const isNewConstruction = af.isNewConstruction;
+    const isRehab = af.isRehab;
+    const hasGroundDisturbance = rq('wetlands', 'scope') === 'yes' || rq('aquifer', 'scope') === 'yes' || isNewConstruction;
     // CZM state list per AZ-RI SOP
     const czmStates = { MD: 'Maryland', DE: 'Delaware', PA: 'Pennsylvania', VA: 'Virginia' };
     const noCZMPStates = ['DC', 'WV'];
@@ -2806,15 +2797,16 @@ const AUTO_DETERMINERS = {
   //      b. Sources + new construction → Full Noise Assessment required → Write Up 4
   noise: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
+    const af = activityFlags();
+    const nc = rq('noise', 'nc');
+    const isNewConstruction = nc ? nc === 'yes' : af.isNewConstruction;
 
     // EXEMPTION: not new construction → Write Up 1 (with rehab/attenuation caveat → Write Up 1b)
     if (!isNewConstruction) {
       return {
         status: 'compliant',
         source: 'AZ-RI exemption (not new construction)',
-        ref: `Project type: ${proj.projectType || ''}`,
+        ref: `Activities (1125): ${af.label}`,
         notes: `According to HUD's noise standards (24 CFR Part 51, Subpart B; 24 CFR §58.5(i)), only new construction of noise-sensitive uses requires a full Noise Assessment. This project is not new construction (e.g. ${proj.projectType || 'rehabilitation/acquisition'}), and the proposed work does not constitute major or substantial rehabilitation in a noise-exposed area and does not reduce the noise-attenuating building materials of the existing structure (exterior walls, windows, or doors). Therefore, the project is in compliance with HUD's noise abatement standards.\n\n[USER VERIFICATION: If the rehab/modernization WILL alter noise-attenuating materials (e.g., replacing windows/exterior walls/doors) or is major/substantial rehab in a Normally Unacceptable/Unacceptable noise zone, switch to Write Up 1b and run the preliminary screening — per 24 CFR 51.101(a)(5), HUD encourages/seeks noise-attenuation features in such alterations.]`
       };
     }
@@ -2904,21 +2896,21 @@ const AUTO_DETERMINERS = {
   //   2. Otherwise: AST review required. Use AST Worksheet status dropdown to drive Write-Up.
   explos: async function(site) {
     const proj = getProjectFields();
-    const projectType = (proj.projectType || '').toLowerCase();
-    const isNewConstruction = projectType.includes('new construction');
-    const isRehab = projectType.includes('rehab');
-    const densityRadio = document.querySelector('input[name="loraDensity"]:checked');
-    const densityIncrease = densityRadio && densityRadio.value === 'yes';
+    const af = activityFlags();
+    const isNewConstruction = af.isNewConstruction;
+    const isRehab = af.isRehab;
+    const scope = rq('explos', 'scope');
+    const densityIncrease = scope === 'yes' && !isNewConstruction;
     const astStatusEl = document.getElementById('astWorksheetStatus');
     const astStatus = astStatusEl ? astStatusEl.value : '';
 
-    // EXEMPTION → Write Up 1
-    const requiresReview = isNewConstruction || (isRehab && densityIncrease);
+    // EXEMPTION → Write Up 1 (this authority's Review Question: NC, or rehab adding density / habitation)
+    const requiresReview = scope ? scope === 'yes' : isNewConstruction;
     if (!requiresReview) {
       return {
         status: 'compliant',
         source: 'AZ-RI exemption (no NC, no density increase)',
-        ref: `Project type: ${proj.projectType || '(not specified)'}`,
+        ref: `Activities (1125): ${af.label}`,
         notes: `The proposed project will not increase residential densities, convert the type of use of a building to habitation, or make a vacant building habitable. Therefore, the project is in compliance with 24 CFR Part 51, Subpart C, Explosives and Flammable Hazards.\n\n[USER VERIFICATION: Confirm the project does not include new construction OR a rehabilitation that increases residential density. If either applies, AST review is required and the exemption does not apply.]`
       };
     }
@@ -3113,7 +3105,7 @@ function requestQAReview(authId) {
   const checked = document.querySelector(`input[name="${authId}_status"]:checked`);
   const status = checked ? checked.value : 'NOT SET';
   const fw = (document.querySelector('[data-field="reviewFramework"]') || {}).value || '58';
-  const part = (fw === '50') ? 'Part 50' : 'Part 58';
+  const part = (fw === '50') ? (currentPart50Basis() === 'in_lieu_58' ? 'Part 50 (HUD performing a Part 58 program review in lieu of an RE, 24 CFR §58.11)' : 'Part 50') : 'Part 58';
   const procCite = (fw === '50') ? '§50.4' : '§58.5 / §58.6';
   const lvl = f.reviewLevel || 'CEST';
 
@@ -4590,6 +4582,25 @@ const EXEMPTION_CHECKS = {
       ? { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt. Sole Source Aquifer Write Up 1 inserted; marked Exempt.' }
       : { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Check the NEPAssist Sole Source Aquifer layer (Step 2) per the SOP, then insert the matching Write-Up.' }
   },
+  historic: {
+    intro: 'Historic Preservation (NHPA Section 106 / 36 CFR Part 800). Section 106 applies to every undertaking under AZ-RI\'s SOP — SHPO consultation is initiated in all cases; these answers set the scope of that consultation (APE, Tribal/THPO notification).',
+    questions: [
+      { id: 'age', label: 'Is any structure on the site 50+ years old, NRHP-listed/eligible, or within a historic district?', options: [
+        { v: 'no', t: 'No — all structures are under 50 years old and not listed/eligible (or the site is vacant)' },
+        { v: 'yes', t: 'Yes — a structure is 50+ years old, listed/eligible, or in a historic district' },
+        { v: 'unknown', t: 'Unknown — year built not confirmed' }
+      ]},
+      { id: 'ground', label: 'Does the project involve ground disturbance beyond utility tie-ins (new construction, excavation, grading, demolition)?', options: [
+        { v: 'no', t: 'No — no ground disturbance (interior / above-grade work only)' },
+        { v: 'yes', t: 'Yes — ground disturbance (triggers Tribal / THPO notification in addition to SHPO)' }
+      ]}
+    ],
+    evaluate: a => {
+      const tribal = a.ground === 'yes' ? ' Ground disturbance → include Tribal / THPO notification (36 CFR 800.2(c)(2)(ii)).' : '';
+      const age = a.age === 'yes' ? ' Structure 50+ yrs / listed-eligible → architectural-history review of the APE.' : (a.age === 'unknown' ? ' Confirm year built (SDAT / assessor) before submitting.' : '');
+      return { exempt: false, status: 'followup', writeUpIdx: 0, msg: 'Section 106 consultation required — marked Follow-Up and the SHPO Write Up 1 template inserted.' + age + tribal };
+    }
+  },
   noise: {
     intro: 'Noise Abatement (24 CFR 51 Subpart B). Only new construction of a noise-sensitive use requires a full assessment; rehab is exempt unless it reduces noise-attenuating materials (24 CFR 51.101(a)(5)).',
     questions: [
@@ -4611,31 +4622,29 @@ const EXEMPTION_CHECKS = {
 };
 
 // ===== 1310 REVIEW QUESTIONS (v94) =====
-// Only questions NOT already answered by Activity Questions 1–10 are asked here (Air Quality,
-// Endangered Species, Explosive & Flammable, Noise). Farmland, Wetlands, Sole Source Aquifers,
-// and the Section 106 Historic Preservation triggers are DERIVED automatically from the
-// Activity Question answers — nothing is asked twice. Answers sync both ways with the
-// per-authority ✔ Review Questions panels in Section 2005.
+// (v107) Activity Questions 1–10 were removed; every scope question is asked once per authority
+// here and in that authority's Section 2005 row (two-way synced). RQ_DERIVED below is retained
+// only for the legacy determineLevel() path, which has no UI button.
 
 // Authorities whose scope answers are fully derivable from Activity Questions (no duplicate
 // questions shown; the answers are computed when Determine Level of Review runs).
 const RQ_DERIVED = {
-  farm: { from: 'Activity Question 1', get: function () {
-    const a = (document.getElementById('loraActivity') || {}).value;
+  farm: { from: 'the 1125 Activities', get: function () {
+    const a = derivedLoraActivity();
     if (!a) return null;
     return { scope: (a === 'newconst' || a === 'combo_nc') ? 'yes' : 'no' };
   }},
-  wetlands: { from: 'Activity Questions 1, 3 & 9', get: function () {
-    const a = (document.getElementById('loraActivity') || {}).value;
-    const x = (document.querySelector('input[name="loraExpand"]:checked') || {}).value;
-    const g = (document.querySelector('input[name="loraGround"]:checked') || {}).value;
+  wetlands: { from: 'the 1125 Activities and the Wetlands Review Question', get: function () {
+    const a = derivedLoraActivity();
+    const x = rq('wetlands', 'scope');
+    const g = rq('wetlands', 'scope');
     if (a === 'newconst' || a === 'combo_nc' || x === 'yes' || g === 'yes') return { scope: 'yes' };
     if (!a || !g) return null;
     return { scope: 'no' };
   }},
-  aquifer: { from: 'Activity Questions 1 & 9', get: function () {
-    const a = (document.getElementById('loraActivity') || {}).value;
-    const g = (document.querySelector('input[name="loraGround"]:checked') || {}).value;
+  aquifer: { from: 'the 1125 Activities and the Sole Source Aquifer Review Question', get: function () {
+    const a = derivedLoraActivity();
+    const g = rq('aquifer', 'scope');
     if (a === 'newconst' || a === 'combo_nc') return { scope: 'yes' };
     if (!a || !g) return null;
     return { scope: (g === 'yes' && (a === 'rehab' || a === 'combo_no_nc' || a === 'infra' || a === 'demo')) ? 'yes' : 'no' };
@@ -4920,9 +4929,9 @@ function applyAllReviewQuestions() {
     applyEJNotApplicable();
     summary.push('Environmental Justice → Not Applicable (EO 12898 revoked by EO 14173, Jan 21, 2025) — write-up inserted.');
   } catch (e) { console.warn('applyEJNotApplicable failed:', e); }
-  // Section 106 triggers — derived from Activity Questions 6 & 9 (loraHistoric / loraGround)
-  const a50 = document.querySelector('input[name="loraHistoric"]:checked');
-  const grd = document.querySelector('input[name="loraGround"]:checked');
+  // Section 106 triggers — from the Historic Preservation Review Questions (age / ground disturbance)
+  const a50 = document.querySelector('input[name="exq_historic_age"]:checked');
+  const grd = document.querySelector('input[name="exq_historic_ground"]:checked');
   let histMsg = '';
   if ((a50 && a50.value !== 'no') || (grd && grd.value === 'yes')) {
     const radio = document.querySelector('input[name="historic_status"][value="followup"]');
@@ -5741,8 +5750,15 @@ function isMapProject() {
   const t = document.getElementById('mapToggle');
   return !!(t && t.checked);
 }
+function updateMapFlagHint() {
+  const hint = document.getElementById('mapFlagHint');
+  if (!hint) return;
+  const fw = (document.getElementById('reviewFrameworkHidden') || {}).value || '58';
+  hint.style.display = (isMapProject() && !(fw === '50' && currentPart50Basis() === 'program')) ? '' : 'none';
+}
 function toggleMapSection() {
   const on = isMapProject();
+  updateMapFlagHint();
   document.querySelectorAll('.map-section').forEach(s => s.classList.toggle('visible', on));
   if (typeof updateMatrix === 'function') updateMatrix();
   if (typeof buildSideNav === 'function') buildSideNav();
@@ -5777,7 +5793,7 @@ document.addEventListener('change', e => {
 // Live update Project Name context indicators on HEROS-style headers
 function syncProjectNameContext() {
   const pn = (document.querySelector('input[data-field="projectName"]') || {}).value || '—';
-  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1311', 'proj-name-context-1344', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000'].forEach(id => {
+  ['proj-name-context-1120', 'proj-name-context-1125', 'proj-name-context-1311', 'proj-name-context-1344', 'proj-name-context-rq', 'proj-name-context-1340', 'proj-name-context-1366', 'proj-name-context-2005', 'proj-name-context-4010', 'proj-name-context-4030', 'proj-name-context-5000'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = pn;
   });
 }
@@ -5794,6 +5810,17 @@ const HEROS_ACTIVITY_TO_LORA = {
   rehab: 'rehab', newconst: 'newconst', demo: 'demo',
   dispo: 'acq_only', arch_barriers: 'arch_barriers', soft: 'admin'
 };
+// Primary-activity code derived from the 1125 Activities checkboxes (the #loraActivity select was
+// removed with Section 1 in v107; this keeps the citation pre-checks and legacy level logic fed).
+function derivedLoraActivity() {
+  const checked = activityFlags().acts;
+  if (!checked.length) return '';
+  if (checked.includes('newconst') && checked.includes('rehab')) return 'combo_nc';
+  if (checked.includes('newconst')) return 'newconst';
+  if (checked.includes('demo')) return 'demo';
+  if (checked.includes('rehab') && checked.length > 1) return 'combo_no_nc';
+  return HEROS_ACTIVITY_TO_LORA[checked[0]] || '';
+}
 function syncActivitiesToLora() {
   const checked = Array.from(document.querySelectorAll('input[name="herosActivity"]:checked')).map(c => c.value);
   // Mirror to hidden field for save/load
@@ -5925,6 +5952,7 @@ document.addEventListener('change', e => {
       if (stateEl && !stateEl.value && parts.state) {
         const stateName = { MD: 'Maryland', DE: 'Delaware', DC: 'District of Columbia', PA: 'Pennsylvania', VA: 'Virginia' }[parts.state] || parts.state;
         stateEl.value = stateName;
+        stateEl.dispatchEvent(new Event('change', { bubbles: true }));
       }
       if (zipEl && !zipEl.value && parts.zip) zipEl.value = parts.zip;
       // Replace siteAddress with just the street portion if it was a full address
@@ -6057,7 +6085,7 @@ function gatherData() {
     const c = document.querySelector(`input[name="${n}"]:checked`);
     data.lora[n] = c ? c.value : null;
   });
-  data.lora.loraActivity = document.getElementById('loraActivity') ? document.getElementById('loraActivity').value : '';
+  data.lora.loraActivity = derivedLoraActivity();
   // Parcels
   if (typeof parcelFeatures !== 'undefined' && parcelFeatures.length) {
     data.parcels = { type: 'FeatureCollection', features: parcelFeatures };
@@ -6213,6 +6241,9 @@ function loadJSON(event) {
         if (sel) sel.value = data.state;
         applyStatePack(data.state);
       }
+      // Prefer the review's own State field (1125) when it maps to a pack — older saves carried the
+      // toolbar default (MD) regardless of where the site actually is.
+      syncStatePackToSiteState();
       // AST worksheet restore
       if (Array.isArray(data.astRows)) { astRows = data.astRows.slice(); renderASTRows(); }
       // Supporting documents restore
@@ -6584,7 +6615,7 @@ function generateClientReport() {
     }
   } catch (e) {}
 
-  const frameworkLabel = f.reviewFramework === '50' ? 'Part 50 — HUD direct review' : (f.reviewFramework === '58' ? 'Part 58 — Responsible Entity' : '');
+  const frameworkLabel = frameworkLabelText(f.reviewFramework, f.part50Basis || currentPart50Basis());
   const siteFull = [f.siteAddress, f.siteCity, [f.siteState, f.siteZip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
   // HEROS 1105 — Initial Screen / Project Setup
@@ -7453,8 +7484,22 @@ const PART50_CITES = {
   wsr:       'WSRA, §50.4(f)',
   ej:        'EO 12898, §50.4(l)'
 };
+// Radio values: '58' (RE review), '50' (HUD program review, e.g. FHA/MAP), '50_58' (HUD performs a
+// Part 58 program's review under Part 50 because no RE is willing/able — 24 CFR §58.11).
+// reviewFramework is always normalized to '58' / '50' so every downstream cite/section rule still works;
+// part50Basis ('program' | 'in_lieu_58' | '') records the reason and drives labels + the 1105 note.
+function frameworkLabelText(fw, basis) {
+  if (fw === '50') return basis === 'in_lieu_58'
+    ? 'Part 50 — HUD performing the review for a Part 58 program (no RE; 24 CFR §58.11)'
+    : 'Part 50 — HUD program review';
+  return fw === '58' ? 'Part 58 — Responsible Entity' : '';
+}
+function currentPart50Basis() { return (document.getElementById('part50BasisHidden') || {}).value || ''; }
 function setReviewFramework(value) {
-  const v = (value === '50') ? '50' : '58';
+  const v = (value === '50' || value === '50_58') ? '50' : '58';
+  const basis = value === '50_58' ? 'in_lieu_58' : (value === '50' ? 'program' : '');
+  const basisEl = document.getElementById('part50BasisHidden');
+  if (basisEl) basisEl.value = basis;
   // Update hidden mirror input (preserves existing data-field="reviewFramework" wiring)
   const hidden = document.getElementById('reviewFrameworkHidden');
   if (hidden) {
@@ -7463,7 +7508,10 @@ function setReviewFramework(value) {
   }
   // Update visible badge
   const badge = document.getElementById('frameworkBadgeText');
-  if (badge) badge.textContent = (v === '50') ? 'Part 50 — HUD direct review' : 'Part 58 — Responsible Entity';
+  if (badge) badge.textContent = frameworkLabelText(v, basis);
+  const note = document.getElementById('part50InLieuNote');
+  if (note) note.style.display = basis === 'in_lieu_58' ? '' : 'none';
+  if (typeof updateMapFlagHint === 'function') updateMapFlagHint();
   // Toggle Part 58 vs Part 50 contact blocks on Screen 1105
   document.querySelectorAll('[data-framework-block]').forEach(el => {
     el.style.display = (el.getAttribute('data-framework-block') === v) ? '' : 'none';
@@ -8739,7 +8787,7 @@ function getLora(name) {
 }
 
 function determineLevel() {
-  const a = document.getElementById('loraActivity').value;
+  const a = derivedLoraActivity();
   const units = getLora('loraUnits');
   const expand = getLora('loraExpand');
   const useChange = getLora('loraUseChange');
@@ -9006,7 +9054,7 @@ const LEVEL_CITATIONS = {
 // Pre-select citations based on the LORA SOW answers
 function preselectCitationIds(framework) {
   const fw = framework === '50' ? '50' : '58';
-  const activity = (document.getElementById('loraActivity') || {}).value || '';
+  const activity = derivedLoraActivity();
   const units = (document.querySelector('input[name="loraUnits"]:checked') || {}).value || '';
   const expand = (document.querySelector('input[name="loraExpand"]:checked') || {}).value || '';
   const useChange = (document.querySelector('input[name="loraUseChange"]:checked') || {}).value || '';
@@ -9084,7 +9132,9 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v105 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v107 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  1311: Section 1 Activity Questions removed — scope now lives in the per-authority Review Questions (Historic Preservation gained its own: 50+ yr structure / ground disturbance). Auto-Determine reads those answers plus the 1125 Activities (fixes projectType always-blank bug from v92).');
+  console.log('  1101: third Review Type option — Part 50 performed by HUD for a Part 58 program when no RE is willing/able (24 CFR §58.11); stored as reviewFramework=50 + part50Basis=in_lieu_58. HUD MAP Project flag moved from the toolbar into 1101. State pack selector moved from the toolbar into 1125 Project Location and now follows the State field automatically.');
   console.log('  MAP: Basemaps switched off OpenStreetMap (which blocks tile requests with no Referer, i.e. when the file is opened locally) to Esri World Imagery / Esri World Street Map / USGS Topo — same set as the Phase I ESA Worksheet.');
   console.log('  STRUCTURE: Reorganized sections to match HEROS sidebar order — 1101 Review Type → 1105 Initial Screen → 1120 Project Location → 1125 Project Summary → 1340 Cooperating Agency Agreement (EA only, NEW) → 1366 Project Justification → 2005 Related Laws & Authorities → 4010 EA Factors (was 1370) → 4030 EA Analysis (was 1375 + 1380 merged) → 5000 Mitigation Measures and Conditions (was 1390) → 6205 Preparer Notification / Final Screen (NEW).');
   console.log('  INSTRUCTIONS: HEROS-verbatim instructional text added to 4010 EA Factors (impact codes legend + directions paragraph), 5000 Mitigation (Project Mitigation Plan + the "before proceeding" warning), 6205 Final Screen (Partner User warning + reassignment guidance).');
@@ -9094,6 +9144,7 @@ window.addEventListener('load', () => {
   // Apply default state pack (MD is selected in the dropdown by default)
   const sel = document.getElementById('stateSelector');
   if (sel) applyStatePack(sel.value);
+  syncStatePackToSiteState();
   // Make hyperlinks inside the editable SOP panels clickable. A contenteditable region swallows
   // link clicks (it just places the cursor), so we intercept clicks on SOP links and open them.
   document.addEventListener('click', (e) => {
