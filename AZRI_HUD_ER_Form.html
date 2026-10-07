@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v114</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v115</div>
   </div>
 </header>
 
@@ -3216,6 +3216,7 @@ async function runAutoAll() {
 }
 
 
+
 // ===== AZ-RI FIGURE ENGINE (v108) =====
 // Canvas-based figure generator ported from the Phase I ESA Worksheet so both tools draw figures
 // the same way: stitch basemap tiles (fetched as blobs so the canvas never taints — works from
@@ -3825,6 +3826,117 @@ async function generateFloodFigure(authId) {
   }
 }
 
+
+// ===== FARMLAND PROTECTION FIGURE (FPPA, 7 CFR Part 658; §58.5(h)) =====
+// Two questions on one map: is the site in a Census Urban Area (FPPA "already committed to urban development"
+// exemption), and what NRCS farmland classification do the soil map units on the site carry.
+// Sources: Census TIGERweb Urban Areas (current vintage) and USDA-NRCS Soil Data Access (SSURGO) queried live.
+const TIGER_URBAN = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Urban/MapServer';
+const TIGER_URBAN_LAYER = 8;   // "Urban Areas" (current)
+const SDA_URL = 'https://sdmdataaccess.sc.egov.usda.gov/Tabular/post.rest';
+const FARMLAND_STYLE = [
+  { test: c => /^all areas are prime/i.test(c), key: 'prime', label: 'Prime farmland', fill: 'rgba(21,128,61,0.55)', stroke: '#14532d' },
+  { test: c => /^prime farmland if/i.test(c), key: 'prime_if', label: 'Prime farmland (conditional — if drained / irrigated / protected)', fill: 'rgba(74,222,128,0.5)', stroke: '#15803d' },
+  { test: c => /unique/i.test(c), key: 'unique', label: 'Unique farmland', fill: 'rgba(168,85,247,0.45)', stroke: '#6b21a8' },
+  { test: c => /statewide/i.test(c), key: 'statewide', label: 'Farmland of statewide importance', fill: 'rgba(234,179,8,0.5)', stroke: '#a16207' },
+  { test: c => /local/i.test(c), key: 'local', label: 'Farmland of local importance', fill: 'rgba(249,115,22,0.45)', stroke: '#c2410c' },
+  { test: c => /not prime/i.test(c), key: 'not', label: 'Not prime farmland', fill: 'rgba(148,163,184,0.25)', stroke: '#64748b' }
+];
+function farmlandStyle(cls) { return FARMLAND_STYLE.find(st => st.test(String(cls || ''))) || { key: 'unk', label: 'Farmland class not rated', fill: 'rgba(255,255,255,0.0)', stroke: '#94a3b8' }; }
+function farmlandImportant(cls) { const k = farmlandStyle(cls).key; return ['prime', 'prime_if', 'unique', 'statewide', 'local'].includes(k); }
+// Minimal WKT → rings parser for POLYGON / MULTIPOLYGON (outer rings only)
+function wktRings(wkt) {
+  const rings = []; if (!wkt) return rings;
+  const polys = wkt.match(/\(\(([^()]+(?:\)\s*,\s*\([^()]+)*)\)\)/g) || [];
+  polys.forEach(p => { const outer = p.replace(/^\(\(/, '').split(')')[0]; rings.push(outer.split(',').map(pt => pt.trim().split(/\s+/).map(Number)).filter(c => c.length >= 2 && !isNaN(c[0]))); });
+  return rings;
+}
+function wktPolygonFromRing(ring) { const r = ring.slice(); if (r[0][0] !== r[r.length - 1][0] || r[0][1] !== r[r.length - 1][1]) r.push(r[0]); return 'POLYGON((' + r.map(c => c[0] + ' ' + c[1]).join(', ') + '))'; }
+async function sdaQuery(sql) {
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null; const t = ctrl ? setTimeout(() => ctrl.abort(), 45000) : null;
+  const r = await fetch(SDA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql, format: 'JSON+COLUMNNAME' }), signal: ctrl ? ctrl.signal : undefined });
+  if (t) clearTimeout(t); const j = await r.json(); const rows = (j.Table || []); const head = rows[0] || []; return rows.slice(1).map(r => Object.fromEntries(head.map((h, i) => [h, r[i]])));
+}
+async function generateFarmlandFigure(authId) {
+  authId = authId || 'farm';
+  const statusEl = document.getElementById('autoStatus_' + authId);
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the Farmland figure.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  try {
+    // Site geometry as WKT (parcel polygon, else a 50-ft square around the point)
+    const g = site.boundary && site.boundary.geometry;
+    const siteRings = g ? (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []) : [];
+    const d = 0.00015; const fallbackRing = [[center[0] - d, center[1] - d], [center[0] + d, center[1] - d], [center[0] + d, center[1] + d], [center[0] - d, center[1] + d]];
+    const siteWkt = siteRings.length === 1 ? wktPolygonFromRing(siteRings[0]) : siteRings.length > 1 ? 'MULTIPOLYGON(' + siteRings.map(r => wktPolygonFromRing(r).replace(/^POLYGON/, '')).join(',') + ')' : wktPolygonFromRing(fallbackRing);
+    say('Checking Census Urban Area and NRCS soils…');
+    const base = await figBuildBase(center, figParcelHalfM(site, center, 3.0, 600, 2000), { basemap: 'streets' });
+    if (!base.tilesOk) throw new Error('basemap tiles could not be loaded');
+    const { ctx, toPx, W, H } = base;
+    // Frame envelope in WGS84 for the soils query
+    const inv = m => [m[0] / 6378137 * 180 / Math.PI, (2 * Math.atan(Math.exp(m[1] / 6378137)) - Math.PI / 2) * 180 / Math.PI];
+    const [xmin, ymin, xmax, ymax] = base.bbox; const ll = inv([xmin, ymin]), ur = inv([xmax, ymax]);
+    const frameWkt = `POLYGON((${ll[0]} ${ll[1]}, ${ur[0]} ${ll[1]}, ${ur[0]} ${ur[1]}, ${ll[0]} ${ur[1]}, ${ll[0]} ${ll[1]}))`;
+    const [urban, soilsFrame, soilsSite] = await Promise.all([
+      fetch(`${TIGER_URBAN}/${TIGER_URBAN_LAYER}/query?f=json&geometry=${encodeURIComponent(JSON.stringify({ rings: siteRings.length ? siteRings : [fallbackRing], spatialReference: { wkid: 4326 } }))}&geometryType=esriGeometryPolygon&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=NAME,GEOID&returnGeometry=false`).then(r => r.json()).then(j => (j.features || []).map(f => f.attributes)).catch(() => null),
+      sdaQuery(`SELECT p.mupolygonkey, p.mukey, m.musym, m.muname, m.farmlndcl, p.mupolygongeo.STIntersection(geometry::STGeomFromText('${frameWkt}',4326)).STAsText() AS wkt FROM mupolygon p INNER JOIN mapunit m ON m.mukey=p.mukey WHERE p.mupolygongeo.STIntersects(geometry::STGeomFromText('${frameWkt}',4326)) = 1`),
+      sdaQuery(`SELECT DISTINCT m.mukey, m.musym, m.muname, m.farmlndcl, ROUND(SUM(p.mupolygongeo.STIntersection(geometry::STGeomFromText('${siteWkt}',4326)).STArea()) / NULLIF(geometry::STGeomFromText('${siteWkt}',4326).STArea(),0) * 100, 1) AS pct FROM mupolygon p INNER JOIN mapunit m ON m.mukey=p.mukey WHERE p.mupolygongeo.STIntersects(geometry::STGeomFromText('${siteWkt}',4326)) = 1 GROUP BY m.mukey, m.musym, m.muname, m.farmlndcl`)
+    ]);
+    const inUrban = Array.isArray(urban) && urban.length > 0; const urbanName = inUrban ? urban[0].NAME : '';
+    // Draw soil map units colored by farmland class
+    const seen = {};
+    soilsFrame.forEach(row => {
+      const st = farmlandStyle(row.farmlndcl); seen[st.key] = st;
+      wktRings(row.wkt).forEach(ring => {
+        ctx.beginPath(); ring.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath();
+        ctx.fillStyle = st.fill; ctx.fill(); ctx.strokeStyle = st.stroke; ctx.lineWidth = 1.5; ctx.stroke();
+        // map-unit symbol at ring centroid
+        let cx = 0, cy = 0; ring.forEach(q => { cx += q[0]; cy += q[1]; }); const cp = toPx([cx / ring.length, cy / ring.length]);
+        if (cp[0] > 10 && cp[0] < W - 10 && cp[1] > 110 && cp[1] < H - 10) { ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; const w = ctx.measureText(row.musym).width; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(cp[0] - w / 2 - 3, cp[1] - 10, w + 6, 14); ctx.fillStyle = '#1f2937'; ctx.fillText(row.musym, cp[0], cp[1] + 1); }
+      });
+    });
+    // Urban Area boundary (Census symbology via export) — only when the site is near/inside one
+    let urbanOverlay = false;
+    try { await figOverlayExport(base, TIGER_URBAN, String(TIGER_URBAN_LAYER), 0.18); urbanOverlay = true; } catch (e) {}
+    figDrawSite(base, site, center);
+    const c = toPx(center);
+    ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+    const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), W - w - 12), ly = Math.min(Math.max(110, y), H - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
+    tag(inUrban ? 'Subject Property is within the ' + urbanName : 'Subject Property is outside any Census Urban Area', c[0] + 16, c[1] - 26, inUrban ? '#1e3a8a' : '#92400e');
+    const siteClasses = soilsSite.map(r => r.musym + ' — ' + (r.farmlndcl || 'not rated') + (r.pct != null ? ' (' + r.pct + '%)' : ''));
+    if (siteClasses.length) tag('Soils on site: ' + siteClasses.join('; '), c[0] + 16, c[1] - 4, '#1f2937');
+    // Legend
+    const siteLabel = figSiteLabel(proj, center);
+    const legend = [{ label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
+    FARMLAND_STYLE.forEach(st => { if (seen[st.key]) legend.push({ label: st.label + ' (NRCS)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = st.fill; ctx.fillRect(x, y, w, h); ctx.strokeStyle = st.stroke; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); } }); });
+    if (seen.unk) legend.push({ label: 'Farmland class not rated (NRCS)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); } });
+    legend.push({ label: 'Soil map unit boundary with map-unit symbol', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); ctx.font = 'bold 9px Arial'; ctx.fillStyle = '#1f2937'; ctx.textAlign = 'center'; ctx.fillText('HkB', x + w / 2, y + h / 2 + 3); } });
+    if (urbanOverlay) legend.push({ label: 'Census Urban Area (2020) — shaded', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(0,170,200,0.3)'; ctx.fillRect(x, y, w, h); } });
+    await figFurnish(base, {
+      title: 'Farmland Protection Map',
+      meta: figProjectMeta(proj, center),
+      subtitle: 'Farmland Protection Policy Act, 7 CFR Part 658 · §58.5(h) · USDA-NRCS SSURGO farmland classification · U.S. Census Urban Areas',
+      legend
+    });
+    // Findings
+    const important = soilsSite.filter(r => farmlandImportant(r.farmlndcl));
+    let finding, status;
+    if (inUrban) { finding = 'Subject Property is within the ' + urbanName + ' — land already committed to urban development; FPPA does not apply (7 CFR 658.2(a)) → Write Up 2 (Compliant).' + (important.length ? ' (NRCS maps ' + important.map(r => r.musym + ' ' + r.farmlndcl).join('; ') + ' on site, but the urban-area exemption controls.)' : ''); status = 'compliant'; }
+    else if (!important.length) { finding = 'Subject Property is outside any Census Urban Area; NRCS soils on site (' + (siteClasses.join('; ') || 'none mapped') + ') are not prime, unique, or of statewide/local importance → Write Up 3 (Compliant).'; status = 'compliant'; }
+    else { finding = 'Subject Property is outside any Census Urban Area and NRCS maps important farmland on site: ' + important.map(r => r.musym + ' — ' + r.farmlndcl + (r.pct != null ? ' (' + r.pct + '%)' : '')).join('; ') + '. Check the on-farm / water-storage / minor-structure exemptions (Write Up 4); otherwise Form AD-1006 with NRCS is required (Write Up 5).'; status = 'followup'; }
+    const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
+    figAttach(authId, base.cv, slug + '_Farmland_Map.jpg', finding);
+    figFillSourceRef(authId, 'USDA-NRCS Web Soil Survey / SSURGO; U.S. Census Urban Areas — Farmland Protection Map', inUrban ? urbanName : (siteClasses.join('; ') || 'No soils mapped'));
+    figDownloadPdf(base.cv, slug + '_Farmland_Map.pdf');
+    say('✓ Farmland figure generated — PDF downloaded and attached to Supporting Documents. ' + finding, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
+    return { finding, status, inUrban, urbanName, soilsSite };
+  } catch (e) {
+    console.warn('[Farmland figure]', e);
+    say('✗ Farmland figure failed: ' + e.message, 'var(--red,#c00)');
+  }
+}
 // ===== AIR QUALITY — GENERAL CONFORMITY EVALUATION ATTACHMENT (Clean Air Act §176(c); §58.5(g)) =====
 // Queries EPA's Green Book nonattainment-area service for every current NAAQS at the site, applies the
 // 40 CFR 93.153(b) de minimis thresholds, and writes a letter-format PDF (same header standard as the
@@ -4078,6 +4190,7 @@ const MAP_GENERATORS = {
   flood_ins: { fn: 'generateFloodFigure', label: '🗺 FIRM Figure (FEMA NFHL)' },
   flood_mgt: { fn: 'generateFloodFigure', label: '🗺 Floodplain Figure (FEMA NFHL)' },
   air:       { fn: 'generateAirQualityAttachment', label: '📄 General Conformity Attachment (EPA Green Book)' },
+  farm:      { fn: 'generateFarmlandFigure', label: '🗺 Farmland Figure (NRCS soils + Urban Area)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -10048,7 +10161,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v114 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v115 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
   console.log('  v113: FEMA flood figure (FIRM / Floodplain Management) from the NFHL — zones on the actual parcel, FIRM panel + effective date, LOMR/LOMA check, FEMA symbology with a legend limited to zones present in the frame. Also fixed the auto-determiners querying FIRM Panels from NFHL layer 16 (that is Base Flood Elevations) — panels are layer 3, so FIRM panel refs were always blank.');
