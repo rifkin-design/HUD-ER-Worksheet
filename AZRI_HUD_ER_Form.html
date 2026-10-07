@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v116</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v117</div>
   </div>
 </header>
 
@@ -3219,6 +3219,8 @@ async function runAutoAll() {
 
 
 
+
+
 // ===== AZ-RI FIGURE ENGINE (v108) =====
 // Canvas-based figure generator ported from the Phase I ESA Worksheet so both tools draw figures
 // the same way: stitch basemap tiles (fetched as blobs so the canvas never taints — works from
@@ -3810,13 +3812,53 @@ async function generateFloodFigure(authId) {
     const sfhaCount = async halfFt => {
       const dM = halfFt / FT_PER_M, lat0 = center[1] * Math.PI / 180;
       const env = { xmin: center[0] - dM / (111320 * Math.cos(lat0)), xmax: center[0] + dM / (111320 * Math.cos(lat0)), ymin: center[1] - dM / 110574, ymax: center[1] + dM / 110574, spatialReference: { wkid: 4326 } };
-      const f = await nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "SFHA_TF='T'", outFields: 'FLD_ZONE', resultRecordCount: '1' });
+      const f = await nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: isMgmt ? "SFHA_TF='T' OR ZONE_SUBTY LIKE '0.2 PCT%'" : "SFHA_TF='T'", outFields: 'FLD_ZONE', resultRecordCount: '1' });
       return f.length;
     };
     // Pick the smallest vicinity extent that contains an SFHA (so the map actually shows floodplain), 0.5–3 mi half-width
     let vicHalfFt = 2640;
     // (test the inner 65% of each candidate frame so the floodplain lands well inside the panel, not just at a corner)
     for (const h of [2640, 5280, 10560, 15840]) { vicHalfFt = h; try { if (await sfhaCount(h * 0.65)) break; } catch (e) { break; } }
+    // Floodplain Management (FFRMS) extras: distance from the parcel to the nearest SFHA and nearest 0.2% zone,
+    // nearest BFE, and site ground elevation (USGS 3DEP) for the Freeboard Value comparison.
+    let prox = null;
+    if (isMgmt) {
+      say('Measuring distance to the nearest floodplain / BFE…');
+      prox = { sfha: null, x500: null, bfe: null, elevFt: null };
+      try {
+        const dM = (vicHalfFt * 1.2) / FT_PER_M, lat0 = center[1] * Math.PI / 180;
+        const env = { xmin: center[0] - dM / (111320 * Math.cos(lat0)), xmax: center[0] + dM / (111320 * Math.cos(lat0)), ymin: center[1] - dM / 110574, ymax: center[1] + dM / 110574, spatialReference: { wkid: 4326 } };
+        const parcelRings = siteType === 'esriGeometryPolygon' ? siteGeom.rings : [[center, center]];
+        const nearest = polys => {
+          let best = null;
+          polys.forEach(f => (f.geometry && f.geometry.rings || []).forEach(zr => {
+            parcelRings.forEach(pr => {
+              pr.forEach(v => { const n = figNearestOnRing(v, zr); if (n && (!best || n.distFt < best.distFt)) best = Object.assign({ attrs: f.attributes }, n); });
+              zr.forEach(v => { const n = figNearestOnRing(v, pr); if (n && (!best || n.distFt < best.distFt)) best = { distFt: n.distFt, pt: v, attrs: f.attributes }; });
+            });
+          }));
+          return best;
+        };
+        const [sfhaPolys, x500Polys, bfeLines] = await Promise.all([
+          nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "SFHA_TF='T'", outFields: 'FLD_ZONE,ZONE_SUBTY,STATIC_BFE', returnGeometry: 'true', maxAllowableOffset: '0.00002' }).catch(() => []),
+          nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "ZONE_SUBTY LIKE '0.2 PCT%'", outFields: 'FLD_ZONE,ZONE_SUBTY', returnGeometry: 'true', maxAllowableOffset: '0.00002' }).catch(() => []),
+          nfhlQuery(NFHL_LAYER.bfe, env, 'esriGeometryEnvelope', { outFields: 'ELEV,LEN_UNIT,V_DATUM', returnGeometry: 'true' }).catch(() => [])
+        ]);
+        prox.sfha = inSFHA ? { distFt: 0 } : nearest(sfhaPolys);
+        prox.x500 = (inSFHA || in500) ? { distFt: 0 } : nearest(x500Polys);
+        // Nearest BFE line (treat each polyline path like a ring for the distance helper)
+        let bb = null;
+        bfeLines.forEach(f => (f.geometry && f.geometry.paths || []).forEach(path => parcelRings.forEach(pr => pr.forEach(v => { const n = figNearestOnRing(v, path); if (n && (!bb || n.distFt < bb.distFt)) bb = Object.assign({ attrs: f.attributes }, n); }))));
+        if (!bb) { const sb = sfhaPolys.map(f => f.attributes.STATIC_BFE).filter(v => v != null && v > -9000); if (sb.length && prox.sfha && prox.sfha.attrs && prox.sfha.attrs.STATIC_BFE > -9000) bb = { distFt: prox.sfha.distFt, attrs: { ELEV: prox.sfha.attrs.STATIC_BFE, LEN_UNIT: 'FEET', V_DATUM: 'NAVD88', static: true } }; }
+        prox.bfe = bb;
+        try {
+          const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
+          const ej = await (await fetch('https://epqs.nationalmap.gov/v1/json?x=' + center[0] + '&y=' + center[1] + '&units=Feet&wkid=4326&includeDate=false', { signal: ctrl.signal })).json();
+          clearTimeout(t); const ev = parseFloat(ej.value); if (!isNaN(ev) && ev > -1000) prox.elevFt = ev;
+        } catch (e) {}
+      } catch (e) { console.warn('[Floodplain proximity]', e); }
+    }
+    const bearing = (a, b) => { const d = Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI; return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(((d + 360) % 360) / 45) % 8]; };
     const [detail, vic] = await Promise.all([
       figBuildBase(center, detailHalfM, { basemap: 'streets', W: PW, H: PH }),
       figBuildBase(center, vicHalfFt / FT_PER_M, { basemap: 'streets', W: PW, H: PH })
@@ -3834,7 +3876,8 @@ async function generateFloodFigure(authId) {
       const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), PW - w - 12), ly = Math.min(Math.max(60, y), PH - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
       tag('Subject Property: ' + (noData ? 'no NFHL flood zone data mapped' : 'Zone ' + zonesOnSite.join('; ')), c[0] + 16, c[1] - 24, inSFHA ? '#b91c1c' : '#1e3a8a');
       if (firmRef) tag('FIRM Panel ' + firmRef, c[0] + 16, c[1] - 2, '#1f2937');
-      figPanelCaption(ctx, 10, 10, 'Site Detail', 'Subject Property boundary and mapped flood zones');
+      if (isMgmt) tag(inSFHA ? 'Within the 1% annual chance floodplain (SFHA)' : in500 ? 'Within the 0.2% annual chance (500-yr) floodplain' : 'Outside the 1% and 0.2% annual chance floodplains', c[0] + 16, c[1] + 20, (inSFHA || in500) ? '#b91c1c' : '#166534');
+      figPanelCaption(ctx, 10, 10, 'Site Detail', isMgmt ? 'Subject Property boundary · 1% (SFHA) and 0.2% floodplains' : 'Subject Property boundary and mapped flood zones');
       figDrawScale(ctx, detail.fpp, 20, PH - 36);
     }
     // Vicinity panel: site marker + ring, the detail-panel extent outlined, caption, scale, north arrow
@@ -3849,8 +3892,24 @@ async function generateFloodFigure(authId) {
       ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
       const lblX = Math.min(Math.max(8, c[0] + 28), PW - 150), lblY = Math.min(Math.max(70, c[1] - 26), PH - 14);
       const w = ctx.measureText('Subject Property').width; ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lblX - 4, lblY - 14, w + 8, 19); ctx.fillStyle = '#b91c1c'; ctx.fillText('Subject Property', lblX, lblY);
+      if (prox) {
+        const lines = [];
+        if (prox.sfha && prox.sfha.distFt > 0) lines.push('Nearest SFHA (Zone ' + ((prox.sfha.attrs || {}).FLD_ZONE || '') + '): ' + figFmtFt(prox.sfha.distFt) + ' ' + bearing(center, prox.sfha.pt));
+        else if (prox.sfha && prox.sfha.distFt === 0) lines.push('Subject Property is within the SFHA');
+        else lines.push('No SFHA mapped within the vicinity frame');
+        if (prox.x500 && prox.x500.distFt > 0) lines.push('Nearest 0.2% (500-yr) floodplain: ' + figFmtFt(prox.x500.distFt) + ' ' + bearing(center, prox.x500.pt));
+        else if (prox.x500 && prox.x500.distFt === 0) lines.push('Subject Property is within the 0.2% floodplain');
+        else lines.push('No 0.2% floodplain mapped within the vicinity frame');
+        if (prox.bfe && prox.bfe.attrs && prox.bfe.attrs.ELEV != null) lines.push('Nearest BFE: ' + Math.round(prox.bfe.attrs.ELEV) + ' ft ' + (prox.bfe.attrs.V_DATUM || 'NAVD88') + (prox.bfe.attrs.static ? ' (static)' : '') + ' · ' + figFmtFt(prox.bfe.distFt) + ' away');
+        if (prox.elevFt != null) lines.push('Site ground elevation (USGS 3DEP): ≈ ' + Math.round(prox.elevFt) + ' ft NAVD88' + (prox.bfe && prox.bfe.attrs && prox.bfe.attrs.ELEV != null ? ' (' + (prox.elevFt - prox.bfe.attrs.ELEV >= 0 ? '+' : '') + (prox.elevFt - prox.bfe.attrs.ELEV).toFixed(1) + ' ft vs. nearest BFE)' : ''));
+        ctx.font = '12px Arial';
+        const bw = Math.max(...lines.map(t => ctx.measureText(t).width)) + 16, bh = lines.length * 17 + 10;
+        const bx = PW - bw - 10, by = PH - bh - 10;   // bottom-right of the vicinity panel, clear of the site and the scale bar
+        ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
+        ctx.fillStyle = '#1f2937'; lines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
+      }
       const vicMi = (vicHalfFt * 2 / 5280);
-      figPanelCaption(ctx, 10, 10, 'Vicinity', 'Mapped flood hazard areas within approx. ' + (vicMi >= 1 ? vicMi.toFixed(0) + ' mile' + (vicMi > 1 ? 's' : '') : '0.5 mile') + ' · dashed box = Site Detail extent');
+      figPanelCaption(ctx, 10, 10, 'Vicinity', (isMgmt ? 'FFRMS screening — 1% (SFHA) and 0.2% floodplains within approx. ' : 'Mapped flood hazard areas within approx. ') + (vicMi >= 1 ? vicMi.toFixed(0) + ' mile' + (vicMi > 1 ? 's' : '') : '0.5 mile') + ' · dashed box = Site Detail extent');
       figDrawScale(ctx, vic.fpp, 20, PH - 36);
       figDrawNorth(ctx, PW - 52, 100);
     }
@@ -3891,6 +3950,14 @@ async function generateFloodFigure(authId) {
     else if (inSFHA) { finding = 'Subject Property is IN a Special Flood Hazard Area (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies — 8-Step (or 5-Step) process required; Write Up 2a.' : ' Flood insurance required; confirm NFIP participation in the Community Status Book → Write Up 3 (or cannot proceed if the community is not participating).') + lomrTxt + lomaTxt; status = 'followup'; }
     else if (in500) { finding = 'Subject Property is NOT in an SFHA but IS in the 0.2% annual chance (500-yr) floodplain (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies via the 500-year approach — Write Up 2b.' : ' Flood insurance not required under §58.6(a) → Write Up 1 (still check preliminary / pending products at the MSC).') + lomrTxt + lomaTxt; status = isMgmt ? 'followup' : 'compliant'; }
     else { finding = 'Subject Property is NOT in an SFHA (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' Not in the 500-year floodplain → Write Up 1a (confirm no preliminary / pending products move it).' : ' Flood insurance not required → Write Up 1 after confirming no preliminary / pending products at the MSC.') + lomrTxt + lomaTxt; status = 'compliant'; }
+    if (prox) {
+      const bits = [];
+      if (prox.sfha && prox.sfha.distFt > 0) bits.push('nearest SFHA ' + figFmtFt(prox.sfha.distFt) + ' ' + bearing(center, prox.sfha.pt));
+      if (prox.x500 && prox.x500.distFt > 0) bits.push('nearest 0.2% floodplain ' + figFmtFt(prox.x500.distFt) + ' ' + bearing(center, prox.x500.pt));
+      if (prox.bfe && prox.bfe.attrs && prox.bfe.attrs.ELEV != null) bits.push('nearest BFE ' + Math.round(prox.bfe.attrs.ELEV) + ' ft');
+      if (prox.elevFt != null) bits.push('site ground ≈ ' + Math.round(prox.elevFt) + ' ft (3DEP)' + (prox.bfe && prox.bfe.attrs && prox.bfe.attrs.ELEV != null ? ', ' + (prox.elevFt - prox.bfe.attrs.ELEV).toFixed(1) + ' ft relative to BFE' + ((prox.elevFt - prox.bfe.attrs.ELEV) < 2 ? ' — within 2 ft of BFE: FFRMS via Freeboard Value approach (Write Up 2c)' : ' — ≥2 ft above BFE') : ''));
+      if (bits.length) finding += ' FFRMS screening: ' + bits.join('; ') + '.';
+    }
     const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
     const fileBase = isMgmt ? '_Floodplain_Management_Map' : '_FIRM_Map';
     figAttach(authId, base.cv, slug + fileBase + '.jpg', finding);
@@ -10239,7 +10306,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v116 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v117 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
