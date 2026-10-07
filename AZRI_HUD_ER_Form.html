@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v119</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v120</div>
   </div>
 </header>
 
@@ -2023,7 +2023,7 @@ function rq(authId, qId) {
 // The §58.6 "other requirements" (Airport Hazards, Flood Insurance, Coastal Barrier Resources)
 // ALWAYS apply regardless of activity type or scope of work — there is no scope-based exemption,
 // so no "Determine if Exempt" / Auto-Determine button is shown for them.
-const NO_AUTO_DETERMINE = ['airport', 'cbra', 'flood_ins'];
+const NO_AUTO_DETERMINE = ['airport', 'cbra', 'flood_ins'];   // (v120) airport/flood_ins now have scope Review Questions; cbra has none (location-only)
 // Authorities whose per-card "📄 Letter" button is suppressed (template kept for save/load back-compat).
 const NO_LETTER = ['czm'];
 
@@ -5258,7 +5258,8 @@ const BOILERPLATE = {
   flood_ins: [
     { label: 'Write Up 1 — Not in SFHA, no preliminary/pending products (compliant)', text: 'Based on a review of the FEMA Flood Insurance Rate Map (FIRM) for the subject Site, the structure or insurable property is not located in a FEMA-Designated Special Flood Hazard Area (SFHA). In addition, no pending or preliminary "products" were identified. Flood insurance is not required under the Flood Disaster Protection Act of 1973, as amended (42 U.S.C. 4012a; 24 CFR §58.6(a)).' },
     { label: 'Write Up 2 — Not in SFHA, preliminary/pending exist but no status change (compliant)', text: 'Based on a review of the FEMA Flood Insurance Rate Map (FIRM) for the subject Site, the structure or insurable property is not located in a FEMA-Designated Special Flood Hazard Area (SFHA). Pending and/or preliminary products were identified and reviewed. It was determined that the proposed changes to the floodplain will not change the current status of the project.\n\nThe project is in compliance with flood insurance requirements. While flood insurance may not be mandatory in this instance, HUD recommends that all insurable structures maintain flood insurance under the National Flood Insurance Program (NFIP).' },
-    { label: 'Write Up 3 — In SFHA OR pending changes will result in SFHA (mitigation required)', text: 'Based on a review of the FEMA Flood Insurance Rate Map (FIRM) for the subject Site, the structure or insurable property is located in a FEMA-Designated Special Flood Hazard Area (SFHA). -OR- Based on a review of the FEMA Flood Insurance Rate Map (FIRM) for the subject Site, the structure or insurable property is not located in a FEMA-Designated Special Flood Hazard Area (SFHA). Pending and/or preliminary products were identified and reviewed. It was determined that the proposed changes to the floodplain will change the current status of the project and it will result in the project being in a SFHA.\n\nRequired Follow up (Mitigation): A review of the FEMA Community Status Book Report indicates that the Subject Property is in a community that is participating in the National Flood Insurance Program (NFIP);\n\nFor FHA Loans In order to proceed, for loans, loan insurance or guarantees, the amount of flood insurance coverage must at least equal the outstanding principal balance of the loan or the maximum limit of coverage made available under the National Flood Insurance Program, whichever is less.\n\nFor Grants For grants and other non-loan forms of financial assistance, flood insurance coverage must be continued for the life of the building irrespective of the transfer of ownership. The amount of coverage must at least equal the total project cost or the maximum coverage limit of the National Flood Insurance Program, whichever is less.' }
+    { label: 'Write Up 3 — In SFHA OR pending changes will result in SFHA (mitigation required)', text: 'Based on a review of the FEMA Flood Insurance Rate Map (FIRM) for the subject Site, the structure or insurable property is located in a FEMA-Designated Special Flood Hazard Area (SFHA). -OR- Based on a review of the FEMA Flood Insurance Rate Map (FIRM) for the subject Site, the structure or insurable property is not located in a FEMA-Designated Special Flood Hazard Area (SFHA). Pending and/or preliminary products were identified and reviewed. It was determined that the proposed changes to the floodplain will change the current status of the project and it will result in the project being in a SFHA.\n\nRequired Follow up (Mitigation): A review of the FEMA Community Status Book Report indicates that the Subject Property is in a community that is participating in the National Flood Insurance Program (NFIP);\n\nFor FHA Loans In order to proceed, for loans, loan insurance or guarantees, the amount of flood insurance coverage must at least equal the outstanding principal balance of the loan or the maximum limit of coverage made available under the National Flood Insurance Program, whichever is less.\n\nFor Grants For grants and other non-loan forms of financial assistance, flood insurance coverage must be continued for the life of the building irrespective of the transfer of ownership. The amount of coverage must at least equal the total project cost or the maximum coverage limit of the National Flood Insurance Program, whichever is less.' },
+    { label: 'Write Up 4 — Not applicable (assistance not for acquisition/construction, or no insurable structure)', text: 'The Flood Disaster Protection Act of 1973, as amended (42 U.S.C. 4001–4128), and 24 CFR §58.6(a) require flood insurance only where HUD assistance is used for the acquisition, construction, or rehabilitation of a building or other insurable structure. The HUD-assisted activity for this project does not include acquisition, construction, or rehabilitation of an insurable structure [describe: e.g., tenant-based rental assistance / public services / planning / vacant land with no structure]. Therefore, the flood insurance purchase requirement does not apply to this project. [If the Subject Property is in a Special Flood Hazard Area, note the FIRM panel and zone here for the record.]' }
   ],
   air: [
     { label: 'Write Up 1 — Not new construction (de minimis)', text: 'According to HUD, direct and indirect emissions from projects that do not include new construction or conversion of land use facilitating the development of public, commercial, industrial facilities OR five or more dwelling units are assumed to be de minimis (40 CFR 93.153(b)). Therefore, this project is in compliance with the Clean Air Act (42 U.S.C. 7401 et seq.; 24 CFR §58.5(g)).' },
@@ -5766,8 +5767,8 @@ const EXEMPTION_CHECKS = {
     ],
     evaluate: a => {
       if (a.scope === 'deminimis') return { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt — de minimis (40 CFR 93.153(b)). Air Write Up 1 inserted; marked Exempt.' };
-      if (a.scope === 'sf') return { exempt: true, status: 'exempt', writeUpIdx: 1, msg: 'Exempt — Individual Action Exemption (single-family). Air Write Up 2 inserted; marked Exempt.' };
-      return { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Complete Step 2 (EPA Green Book attainment) per the SOP, then insert the matching Write-Up.' };
+      if (a.scope === 'sf') return { exempt: true, status: 'exempt', writeUpIdx: 1, msg: 'Exempt — Individual Action Exemption (single-family). Air Write Up 2 inserted; marked Exempt. Cross-check: this scope is also the §58.35(a)(4)(i) CEST "individual action on up to four dwelling units" cite in 1311, and the 1–4 unit answer in the Contamination Review Questions.' };
+      return { exempt: false, status: 'followup', msg: 'Not exempt — marked Follow-Up. Complete Step 2 (EPA Green Book attainment) per the SOP, then insert the matching Write-Up (or run the General Conformity Attachment). Cross-check: 5+ units / commercial new construction is EA-level under §58.36 unless a §58.35(a)(4)(ii) scattered-site cite applies.' };
     }
   },
   esa: {
@@ -5880,6 +5881,79 @@ const EXEMPTION_CHECKS = {
       if (a.nc === 'yes') return { exempt: false, status: 'followup', runAnalysis: false, msg: 'Not exempt — new construction of a noise-sensitive use requires the preliminary screening and (if triggered) a full Noise Assessment per the SOP.' };
       if (a.atten === 'yes') return { exempt: false, status: 'followup', writeUpIdx: 1, runAnalysis: false, msg: 'Not exempt — rehab affects noise-attenuating materials. Write Up 1b inserted; complete the screening + attenuation note (24 CFR 51.101(a)(5)).' };
       return { exempt: true, status: 'exempt', writeUpIdx: 0, msg: 'Exempt — not new construction and no impact to noise-attenuating materials. Noise Write Up 1 inserted; marked Exempt.' };
+    }
+  },
+  // ---- (v120) Scope questions for the remaining authorities. Most of these cannot make the
+  // authority EXEMPT (location decides), but the answer changes the PROCESS / write-up, so it is
+  // asked once here and mirrored in Review Questions like the others. noExemptRadio hides the
+  // "Exempt" status option where no scope-based exemption exists in the regulation.
+  flood_ins: {
+    intro: 'Flood Insurance (Flood Disaster Protection Act; 24 CFR §58.6(a)). Applies only when HUD assistance is for <b>acquisition, construction, or rehabilitation</b> (incl. of a structure) — i.e., there is an insurable building/structure. Where the assistance is not for acquisition/construction (services, operating/rental subsidy, TBRA) or no insurable structure exists, §58.6(a) does not apply. Location in an SFHA is determined by the FIRM figure.',
+    questions: [
+      { id: 'scope', label: 'Is HUD assistance being used for acquisition, construction, or rehabilitation of a building or other insurable structure?', options: [
+        { v: 'yes', t: 'Yes — acquisition, new construction, or rehab of a building / insurable structure (incl. FHA mortgage insurance, grants for construction or rehab)' },
+        { v: 'no', t: 'No — assistance is not for acquisition/construction (services, operating or rental subsidy, TBRA, planning) OR there is no insurable structure (vacant land only, no building)' }
+      ]}
+    ],
+    evaluate: a => a.scope === 'no'
+      ? { exempt: true, status: 'exempt', writeUpIdx: 3, msg: 'Not applicable — §58.6(a) applies only to assistance for acquisition/construction of an insurable structure. Flood Insurance Write Up 4 inserted; marked Exempt (N/A).' }
+      : { exempt: false, status: 'followup', msg: 'Applies — run the FIRM Figure (zoom + vicinity) and the FEMA MSC preliminary/pending check per the SOP, then insert Write Up 1, 2 or 3.' }
+  },
+  flood_mgt: {
+    intro: 'Floodplain Management (EO 11988 / 24 CFR Part 55). Whether the site is in the FFRMS floodplain is a location question (Floodplain Figure). The <b>scope</b> of work decides which Part 55 track applies if it is: §55.12(c) inapplicability (no physical action / non-construction assistance), §55.12(a) 5-Step (repair, rehab, modernization or improvement of an existing structure with no footprint increase and not substantial improvement), or the full 8-Step (new construction, substantial improvement, footprint increase, demolition/rebuild).',
+    questions: [
+      { id: 'scope', label: 'Which best describes the HUD-assisted activity for Part 55 purposes?', options: [
+        { v: 'none', t: 'No physical action in the floodplain — acquisition/leasing of an existing structure without rehab, services, operating or rental subsidy, TBRA, or other non-construction assistance (§55.12(c))' },
+        { v: 'minor', t: 'Repair, rehabilitation, modernization, weatherization or improvement of an EXISTING structure — no footprint increase, not a substantial improvement (§55.12(a) 5-Step candidate)' },
+        { v: 'major', t: 'New construction, substantial improvement, footprint increase, or demolition and rebuild (full 8-Step if in the FFRMS floodplain)' }
+      ]}
+    ],
+    evaluate: a => {
+      if (a.scope === 'none') return { exempt: true, status: 'exempt', writeUpIdx: 5, msg: 'Part 55 decision-making inapplicable under §55.12(c) for this activity — Write Up 3a inserted (edit the cite to the specific §55.12(c) paragraph); marked Exempt. Still run the Floodplain Figure so the ERR documents the floodplain status.' };
+      if (a.scope === 'minor') return { exempt: false, status: 'followup', msg: 'Existing-structure work — if the Floodplain Figure places the site in the FFRMS floodplain, the §55.12(a) 5-Step process applies (Write Up 3b); if outside, Write Up 1a/1b.' };
+      return { exempt: false, status: 'followup', msg: 'New construction / substantial improvement — if in the FFRMS floodplain the full 8-Step process applies (Write Up 3c); Critical Actions (hospitals, nursing homes, emergency facilities) use the 0.2% floodplain. If outside, Write Up 1a/1b.' };
+    }
+  },
+  airport: {
+    noExemptRadio: true,
+    intro: 'Airport Hazards (24 CFR 51 Subpart D; §58.6(d)). Always applies — proximity is settled by the Airport Hazards Figure (civil 2,500 ft / military 15,000 ft from the runway end). The scope answer below decides the outcome if the site is INSIDE a zone: new construction / substantial rehab in a civil RPZ or military Clear Zone cannot proceed (§51.303(a)(1)); acquisition or rehab of an existing structure can proceed with the buyer/tenant notice (§51.303(a)(2) / Write Ups 3 & 7); in an APZ the use must be generally consistent with DoD land-use guidelines (Write Up 5).',
+    questions: [
+      { id: 'scope', label: 'Which best describes the project?', options: [
+        { v: 'existing', t: 'Acquisition, or rehab/modernization of an EXISTING structure with no increase in the number of people on site' },
+        { v: 'nc', t: 'New construction, substantial rehab adding occupants/footprint, or conversion to a use with more people on site' }
+      ]}
+    ],
+    evaluate: a => a.scope === 'existing'
+      ? { exempt: false, status: 'followup', msg: 'Existing structure / acquisition — run the Airport Hazards Figure. Outside all zones → Write Up 1/2/4; inside a civil RPZ or military CZ → Write Up 3 or 7 (notice required); inside an APZ → Write Up 5 (consistency finding).' }
+      : { exempt: false, status: 'followup', msg: 'New construction / substantial rehab — run the Airport Hazards Figure. Outside all zones → Write Up 1/2/4; inside a civil RPZ or military Clear Zone the project CANNOT proceed (§51.303(a)(1)); inside an APZ → Write Up 5 only with the Certifying Officer\'s "generally consistent" finding.' }
+  },
+  wsr: {
+    noExemptRadio: true,
+    intro: 'Wild and Scenic Rivers Act (16 U.S.C. 1271–1287; §58.5(f)). Always applies — proximity to a designated, Study, or NRI river is checked per the SOP. If the site is near a river, the scope decides the write-up: minor work (interior / minimal exterior, no ground disturbance, no change in use) → Write Up 2; new construction, substantial exterior work, ground disturbance, or an EA-level project → consultation with the managing agency (NPS/USFS/BLM/USFWS or state) → Write Up 3.',
+    questions: [
+      { id: 'scope', label: 'If the site is on or near a river, which best describes the work?', options: [
+        { v: 'minor', t: 'Interior renovation / minimal exterior work, no ground disturbance, no change in use (CEST)' },
+        { v: 'major', t: 'New construction, substantial exterior work or ground disturbance, change in use, or an EA-level project' }
+      ]}
+    ],
+    evaluate: a => a.scope === 'minor'
+      ? { exempt: false, status: 'followup', msg: 'Check the NWSRS and NPS NRI mappers per the SOP. No proximate river → Write Up 1; near a river with this minor scope → Write Up 2 (no consultation).' }
+      : { exempt: false, status: 'followup', msg: 'Check the NWSRS and NPS NRI mappers per the SOP. No proximate river → Write Up 1; near a river with this scope → consult the river-managing agency → Write Up 3.' }
+  },
+  contam: {
+    noExemptRadio: true,
+    intro: 'Contamination &amp; Toxic Substances (§58.5(i)(2)). Always considered. The property type sets the depth of review HUD expects: a <b>Phase I ESA (ASTM E1527-21)</b> for multifamily (5+ units) and non-residential property; for 1–4 unit residential, HUD does not mandate a Phase I but still requires a site-specific contamination review (database/records search, site visit). The Radon, Lead-Based Paint and Asbestos subsections below have their own questions.',
+    questions: [
+      { id: 'type', label: 'Which best describes the property / project?', options: [
+        { v: 'sf', t: '1–4 unit residential (incl. scattered-site single-family) — matches the Air Quality "Individual Action" answer' },
+        { v: 'mf', t: 'Multifamily (5+ units), mixed-use, commercial/industrial, or institutional / public facility' },
+        { v: 'land', t: 'Vacant / undeveloped land or new construction on a cleared site' }
+      ]}
+    ],
+    evaluate: a => {
+      if (a.type === 'sf') return { exempt: false, status: 'followup', msg: '1–4 unit residential — HUD requires a site-specific contamination review (Phase I ESA not mandated but AZ-RI\'s proposal governs). Complete the Radon / LBP (pre-1978) / Asbestos subsections.' };
+      if (a.type === 'land') return { exempt: false, status: 'followup', msg: 'Undeveloped land / cleared site — Phase I ESA required for the new construction; LBP and asbestos do not apply (no existing structure) — radon is considered for the new building(s) (Q2/Q3 in the Radon subsection).' };
+      return { exempt: false, status: 'followup', msg: 'Multifamily / non-residential — Phase I ESA (ASTM E1527-21) required; complete the Radon / LBP (pre-1978 residential) / Asbestos (pre-1981 or demolition) subsections.' };
     }
   }
 };
@@ -6286,7 +6360,12 @@ const CLIENT_QUESTIONS = {
   farm:     'Will the project involve new construction or otherwise disturb or convert previously undeveloped land?',
   wetlands: 'Will the project involve new construction, expand the building’s footprint, or disturb the ground in any way?',
   aquifer:  'Will the project involve new construction or a rehabilitation that includes major ground disturbance?',
-  noise:    'Is this new construction of a residential or other noise-sensitive use? If it is a rehabilitation, will it replace or alter exterior walls, windows, or doors?'
+  noise:    'Is this new construction of a residential or other noise-sensitive use? If it is a rehabilitation, will it replace or alter exterior walls, windows, or doors?',
+  flood_ins: 'Is the HUD assistance being used to acquire, build, or rehabilitate a building (or other insurable structure), or is it for services, rental assistance, or land only?',
+  flood_mgt: 'Will the project add to the building footprint, be a substantial improvement (≥50% of the structure’s value), or involve new construction / demolition and rebuild — or is it limited to repair, rehabilitation or modernization of the existing structure?',
+  airport:  'Is this new construction or a rehabilitation that adds occupants or floor area, or is it acquisition / rehab of an existing building with no increase in the number of people on site?',
+  wsr:      'Will the work be limited to interior renovation and minimal exterior work with no ground disturbance, or will it involve new construction, substantial exterior work, or ground disturbance?',
+  contam:   'How many dwelling units will the property have (1–4, or 5 or more), is any part commercial/industrial, and what year was each existing building constructed?'
 };
 let CLIENT_QUESTION_FLAGS = {};
 
@@ -6390,7 +6469,7 @@ AUTHORITIES.forEach(a => {
           <label><input type="radio" name="${a.id}_status" value="followup" data-auth="${a.id}"><span>Follow-Up</span></label>
           <label><input type="radio" name="${a.id}_status" value="awaiting" data-auth="${a.id}"><span>Awaiting</span></label>
           <label><input type="radio" name="${a.id}_status" value="na" data-auth="${a.id}"><span>N/A</span></label>
-          ${EXEMPTION_CHECKS[a.id] ? `<label><input type="radio" name="${a.id}_status" value="exempt" data-auth="${a.id}"><span>Exempt</span></label>` : ''}
+          ${(EXEMPTION_CHECKS[a.id] && !EXEMPTION_CHECKS[a.id].noExemptRadio) ? `<label><input type="radio" name="${a.id}_status" value="exempt" data-auth="${a.id}"><span>Exempt</span></label>` : ''}
         </div>
         ${EXEMPTION_CHECKS[a.id]
             ? `<button class="no-print" onclick="toggleExemptionCheck('${a.id}')" id="exemptBtn_${a.id}" style="background:var(--azri-sand);border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✔ Review Questions</button>`
@@ -10452,7 +10531,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v119 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v120 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
