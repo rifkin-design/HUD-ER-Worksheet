@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v108</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v109</div>
   </div>
 </header>
 
@@ -3290,12 +3290,21 @@ async function figBuildBase(center, halfM, opts) {
 // Standard furniture: title band, north arrow, scale bar, sources line, AZ-RI logo, legend.
 async function figFurnish(base, o) {
   const { ctx, W, H } = base;
-  // Title band
-  ctx.fillStyle = 'rgba(15,42,68,0.95)'; ctx.fillRect(0, 0, W, 54);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'left'; ctx.fillText(o.title, 20, 35);
-  if (o.subtitle) { ctx.font = '14px Arial'; ctx.textAlign = 'right'; ctx.fillText(o.subtitle, W - 20, 34); }
+  // Header border strip (white) — logo at left so it never sits over the map, title beside it, date at right
+  const HB = 72;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, HB);
+  ctx.fillStyle = '#0f2a44'; ctx.fillRect(0, HB - 3, W, 3);
+  let tx = 20;
+  try {
+    const logo = await figDataUrlImg(window.AZRI_REPORT_LOGO);
+    const lh = 52, lw = lh * logo.width / logo.height;
+    ctx.drawImage(logo, 16, (HB - 3 - lh) / 2, lw, lh); tx = 16 + lw + 22;
+  } catch (e) {}
+  ctx.fillStyle = '#0f2a44'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'left'; ctx.fillText(o.title, tx, 32);
+  if (o.subtitle) { ctx.font = '14px Arial'; ctx.fillStyle = '#334155'; ctx.fillText(o.subtitle, tx, 55); }
+  ctx.font = '13px Arial'; ctx.fillStyle = '#334155'; ctx.textAlign = 'right'; ctx.fillText(new Date().toLocaleDateString(), W - 18, 43);
   // North arrow
-  ctx.save(); ctx.translate(W - 52, 110);
+  ctx.save(); ctx.translate(W - 52, HB + 48);
   ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.beginPath(); ctx.arc(0, 0, 34, 0, 7); ctx.fill();
   ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(11, 12); ctx.lineTo(0, 4); ctx.lineTo(-11, 12); ctx.closePath(); ctx.fill();
   ctx.font = 'bold 17px Arial'; ctx.textAlign = 'center'; ctx.fillText('N', 0, 28); ctx.restore();
@@ -3308,12 +3317,7 @@ async function figFurnish(base, o) {
   ctx.font = '12px Arial'; ctx.textAlign = 'left'; ctx.fillText('0', sbX + 6, sbY - 6);
   const lbl = ft >= 5280 ? (ft / 5280) + (ft === 5280 ? ' mile' : ' miles') : ft === 2640 ? '0.5 mile' : ft.toLocaleString() + ' ft';
   ctx.fillText(lbl, sbX + 8 + bw - 14, sbY - 6);
-  // Sources + date (bottom right)
-  ctx.font = '11px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#222';
-  const srcLines = [o.sources || ('Basemap: ' + base.src), 'Prepared by AZ-RI Consultants · ' + new Date().toLocaleDateString()];
-  const sw = Math.max(...srcLines.map(s => ctx.measureText(s).width));
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(W - sw - 28, H - 46, sw + 20, 38);
-  ctx.fillStyle = '#222'; srcLines.forEach((s, i) => ctx.fillText(s, W - 16, H - 30 + i * 15));
+  // (No sources / preparer footer — that text lives in the write-up.)
   // Legend (bottom-left above the scale bar, or wherever o.legendPos says)
   if (o.legend && o.legend.length) {
     ctx.font = '13px Arial'; ctx.textAlign = 'left';
@@ -3328,13 +3332,6 @@ async function figFurnish(base, o) {
       ctx.fillStyle = '#111'; ctx.font = '13px Arial'; ctx.textAlign = 'left'; ctx.fillText(e.label, lx + 48, sy + 13);
     });
   }
-  // Logo (top-right, under the title band)
-  try {
-    const logo = await figDataUrlImg(window.AZRI_REPORT_LOGO);
-    const lw = 190, lh = lw * logo.height / logo.width;
-    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(W - lw - 110, 62, lw + 12, lh + 10);
-    ctx.drawImage(logo, W - lw - 104, 67, lw, lh);
-  } catch (e) {}
 }
 
 // Export helpers: PDF download + attach JPEG to the authority's Supporting Documents (replacing a prior auto figure)
@@ -3446,7 +3443,7 @@ async function generateAirportFigure(authId) {
     ctx.lineWidth = 3; ctx.strokeStyle = '#c62828'; ctx.stroke();
     // Ring labels
     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#7f1d1d';
-    const lab = (txt, r) => { const w = ctx.measureText(txt).width; const yTop = c[1] - r; const y = yTop - 20 < 62 ? yTop + 8 : yTop - 20; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(c[0] - w / 2 - 4, y, w + 8, 18); ctx.fillStyle = '#7f1d1d'; ctx.fillText(txt, c[0], y + 14); };
+    const lab = (txt, r) => { const w = ctx.measureText(txt).width; const yTop = c[1] - r; const y = yTop - 20 >= 80 ? yTop - 20 : (yTop + 8 >= 80 ? yTop + 8 : c[1] + r - 26); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(c[0] - w / 2 - 4, y, w + 8, 18); ctx.fillStyle = '#7f1d1d'; ctx.fillText(txt, c[0], y + 14); };
     lab('Military airfield screen — 15,000 ft', rPx(AIRPORT_MIL_FT));
     lab('Civil airport screen — 2,500 ft', rPx(AIRPORT_CIVIL_FT));
     // Runway polygons
@@ -3456,28 +3453,26 @@ async function generateAirportFigure(authId) {
     }));
     // Airports
     const drawAirport = r => {
-      const p = toPx(r.pt), isHeli = (r.a.TYPE_CODE || '').toUpperCase() === 'HP', priv = r.a.PRIVATEUSE === 1 || r.a.PRIVATEUSE === '1';
-      const col = r.kind === 'civil' ? (priv ? '#6b7280' : '#d32f2f') : '#1d4ed8';
+      const p = toPx(r.pt);
+      if (p[0] < 0 || p[0] > W || p[1] < 80 || p[1] > H) return;   // off the map — the edge pointer handles the nearest ones
+      const col = r.kind === 'civil' ? '#d32f2f' : '#1d4ed8';
       ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.fillStyle = col;
-      if (isHeli) { ctx.beginPath(); ctx.arc(p[0], p[1], 9, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke(); ctx.fillStyle = col; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('H', p[0], p[1] + 4); }
-      else { ctx.beginPath(); ctx.moveTo(p[0] - 9, p[1]); ctx.lineTo(p[0] + 9, p[1]); ctx.moveTo(p[0], p[1] - 9); ctx.lineTo(p[0], p[1] + 9); ctx.stroke(); }
-      const txt = (r.a.NAME || r.a.IDENT) + (r.a.IDENT ? ' (' + r.a.IDENT + ')' : '') + ' — ' + figFmtFt(r.distFt);
+      ctx.beginPath(); ctx.moveTo(p[0] - 9, p[1]); ctx.lineTo(p[0] + 9, p[1]); ctx.moveTo(p[0], p[1] - 9); ctx.lineTo(p[0], p[1] + 9); ctx.stroke();
+      const txt = (r.a.NAME || r.a.IDENT) + (r.a.IDENT ? ' (' + r.a.IDENT + ')' : '') + ' — ' + figFmtFt(r.distFt) + (r.runwayFt != null ? ' to runway end' : ' to reference point');
       ctx.font = '12px Arial'; ctx.textAlign = 'left'; const w = ctx.measureText(txt).width;
       // keep the label on the canvas: flip to the left of the symbol near the right edge, clamp vertically
       const lx = (p[0] + 15 + w > W - 6) ? p[0] - 15 - w : p[0] + 15;
-      const ly = Math.max(66, Math.min(H - 12, p[1] + 4));
+      const ly = Math.max(88, Math.min(H - 12, p[1] + 4));
       ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(lx - 4, ly - 13, w + 8, 17);
       ctx.fillStyle = '#111'; ctx.fillText(txt, lx, ly);
     };
     rows.forEach(drawAirport);
-    // Distance lines to the nearest civil + nearest military runway end
-    const line = (r, col) => { if (!r) return; const q = toPx(r.runwayPt || r.pt); ctx.setLineDash([8, 6]); ctx.lineWidth = 2.5; ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q[0], q[1], 5, 0, 7); ctx.fill(); };
-    line(nearestCivil, '#d32f2f'); if (nearestMil && nearestMil !== nearestCivil) line(nearestMil, '#1d4ed8');
+    // (Distance lines removed — the distance to the runway end is carried in each airport label.)
     // If the nearest airport's reference point is off the map, add an edge pointer so it's still labelled
     const edgePointer = (r, col) => {
       if (!r) return; const p = toPx(r.pt);
-      if (p[0] >= 0 && p[0] <= W && p[1] >= 60 && p[1] <= H) return;
-      const dx = p[0] - c[0], dy = p[1] - c[1]; const t = Math.min((dx > 0 ? (W - 30 - c[0]) : (30 - c[0])) / (dx || 1e-9), (dy > 0 ? (H - 90 - c[1]) : (90 - c[1])) / (dy || 1e-9));
+      if (p[0] >= 0 && p[0] <= W && p[1] >= 80 && p[1] <= H) return;
+      const dx = p[0] - c[0], dy = p[1] - c[1]; const t = Math.min((dx > 0 ? (W - 30 - c[0]) : (30 - c[0])) / (dx || 1e-9), (dy > 0 ? (H - 90 - c[1]) : (100 - c[1])) / (dy || 1e-9));
       const ex = c[0] + dx * Math.max(0, Math.min(t, 1)), ey = c[1] + dy * Math.max(0, Math.min(t, 1));
       const ang = Math.atan2(dy, dx);
       ctx.save(); ctx.translate(ex, ey); ctx.rotate(ang); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-6, -9); ctx.lineTo(-6, 9); ctx.closePath(); ctx.fill(); ctx.restore();
@@ -3500,19 +3495,16 @@ async function generateAirportFigure(authId) {
     const siteLabel = [proj.siteAddress, proj.siteCity, proj.siteState, proj.siteZip].filter(Boolean).join(', ') || (center[1].toFixed(5) + ', ' + center[0].toFixed(5));
     const legend = [
       { label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
-      { label: 'Civil airport screening distance — 2,500 ft from runway end', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(255,214,0,0.40)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#c62828'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
-      { label: 'Military airfield screening distance — 15,000 ft from runway end', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(255,235,59,0.22)'; ctx.fillRect(x, y, w, h); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#c62828'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); ctx.setLineDash([]); } },
-      { label: 'Civil airport (public use)  /  grey = private use', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
-      { label: 'Military / joint-use airfield', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
-      { label: 'Heliport', draw: (ctx, x, y, w, h) => { ctx.beginPath(); ctx.arc(x + 14, y + h / 2, 8, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = '#d32f2f'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillText('H', x + 14, y + h / 2 + 4); } },
-      { label: 'FAA runway / helipad', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(55,65,81,0.85)'; ctx.fillRect(x, y + 3, w, h - 6); } },
-      { label: 'Distance to nearest runway end', draw: (ctx, x, y, w, h) => { ctx.setLineDash([6, 4]); ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); ctx.setLineDash([]); } }
+      { label: 'Civil airport screen — 2,500 ft', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(255,214,0,0.40)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#c62828'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
+      { label: 'Military airfield screen — 15,000 ft', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(255,235,59,0.22)'; ctx.fillRect(x, y, w, h); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#c62828'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); ctx.setLineDash([]); } },
+      { label: 'Civil airport / heliport', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
+      { label: 'Military airfield', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
+      { label: 'Runway (FAA)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(55,65,81,0.85)'; ctx.fillRect(x, y + 3, w, h - 6); } }
     ];
     await figFurnish(base, {
       title: 'Airport Hazards Map — ' + (proj.projectName || siteLabel),
-      subtitle: '24 CFR Part 51 Subpart D · §58.6(d) · civil 2,500 ft / military 15,000 ft',
-      legend,
-      sources: 'Sources: FAA NASR Airports & Runways (ADIP); Esri World Street Map. Distances measured from the Subject Property to the nearest FAA runway end.'
+      subtitle: '24 CFR Part 51 Subpart D · §58.6(d) · distances from the Subject Property to the nearest runway end',
+      legend
     });
     // Findings text
     const fmtRow = r => r ? `${r.a.NAME}${r.a.IDENT ? ' (' + r.a.IDENT + ')' : ''}, ${airportTypeLabel(r.a).toLowerCase()}${r.a.PRIVATEUSE == 1 ? ', private use' : ''} — ${figFmtFt(r.distFt)} to nearest ${r.basis}` : 'none within the mapped area';
@@ -9460,7 +9452,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v108 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v109 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v109: Airport Hazards figure simplified per Scott — logo in a white header border, no distance lines (distance to runway end is in each label), civil vs military symbols only, no sources footer.');
   console.log('  FIGURES: new canvas figure engine (ported from the Phase I worksheet) + Airport Hazards figure — one map, 2,500 ft civil / 15,000 ft military rings, FAA NASR airports (incl. heliports & private strips) and runway polygons, distances to the nearest runway end, AZ-RI logo; PDF download + auto-attach to Supporting Documents.');
   console.log('  1311: Section 1 Activity Questions removed — scope now lives in the per-authority Review Questions (Historic Preservation gained its own: 50+ yr structure / ground disturbance). Auto-Determine reads those answers plus the 1125 Activities (fixes projectType always-blank bug from v92).');
   console.log('  1101: third Review Type option — Part 50 performed by HUD for a Part 58 program when no RE is willing/able (24 CFR §58.11); stored as reviewFramework=50 + part50Basis=in_lieu_58. HUD MAP Project flag moved from the toolbar into 1101. State pack selector moved from the toolbar into 1125 Project Location and now follows the State field automatically.');
