@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v104</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v105</div>
   </div>
 </header>
 
@@ -937,8 +937,9 @@
       <button onclick="geocodeSearch()">Go to Address</button>
       <button class="secondary" onclick="useMyLocation()">Use My Location</button>
       <select id="basemapToggle" onchange="setBasemap()">
-        <option value="osm">Streets</option>
         <option value="sat" selected>Satellite</option>
+        <option value="osm">Streets</option>
+        <option value="topo">USGS Topo</option>
       </select>
       <button class="secondary" onclick="toggleClickSelect()" id="clickSelectBtn" title="Click any parcel on the map to add it. Click an already-selected parcel to remove. Multi-parcel supported.">Click-to-Select Parcels</button>
       <button class="secondary" onclick="testParcelService()" title="Test reachability of the state parcel service from your browser">Test Service</button>
@@ -3362,7 +3363,7 @@ async function generateAirportMapForType(kind) {
   const inRange = closest && closest.d <= triggerFt;
 
   // Switch basemap to satellite for a clean printable map regardless of UI state
-  const prevBasemap = (document.getElementById('basemapToggle') || {}).value || 'osm';
+  const prevBasemap = (document.getElementById('basemapToggle') || {}).value || 'sat';
 
   // Build temp layers
   const tempLayers = [];
@@ -6794,16 +6795,26 @@ function generateClientReport() {
 }
 
 // ===== INTERACTIVE MAP =====
-let map, drawnItems, basemapStreet, basemapSat;
+let map, drawnItems, basemapStreet, basemapSat, basemapTopo;
 let parcelFeatures = [];
 
+// Basemaps — identical set to the Phase I ESA Worksheet. No OpenStreetMap tiles: OSM serves an
+// "Access blocked" tile to any request without an HTTP Referer, which is exactly what happens when
+// this file is opened locally (file://) instead of from GitHub Pages. Esri + USGS have no such rule.
+const BASEMAP_DEFS = {
+  sat:  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',   attribution: 'Esri World Imagery',    maxZoom: 20, maxNativeZoom: 19 },
+  osm:  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: 'Esri World Street Map', maxZoom: 20, maxNativeZoom: 19 },
+  topo: { url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',          attribution: 'USGS The National Map', maxZoom: 20, maxNativeZoom: 16 }
+};
+function makeBasemap(key) {
+  const d = BASEMAP_DEFS[key];
+  return L.tileLayer(d.url, { attribution: d.attribution, maxZoom: d.maxZoom, maxNativeZoom: d.maxNativeZoom, crossOrigin: 'anonymous' });
+}
+
 function initMap() {
-  basemapStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19
-  });
-  basemapSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Esri World Imagery', maxZoom: 19
-  });
+  basemapSat    = makeBasemap('sat');
+  basemapStreet = makeBasemap('osm');
+  basemapTopo   = makeBasemap('topo');
   map = L.map('map', { center: [39.8283, -98.5795], zoom: 4, layers: [basemapSat] });
   // Dedicated pane for the parcel-boundary overlay, with pointer-events disabled so clicks fall
   // through to the map's click handler (which runs the spatial-query selection). This guarantees
@@ -7394,13 +7405,9 @@ async function geocodeSearch() {
 
 function setBasemap() {
   const v = document.getElementById('basemapToggle').value;
-  if (v === 'osm') {
-    if (map.hasLayer(basemapSat)) map.removeLayer(basemapSat);
-    if (!map.hasLayer(basemapStreet)) map.addLayer(basemapStreet);
-  } else {
-    if (map.hasLayer(basemapStreet)) map.removeLayer(basemapStreet);
-    if (!map.hasLayer(basemapSat)) map.addLayer(basemapSat);
-  }
+  const want = v === 'osm' ? basemapStreet : v === 'topo' ? basemapTopo : basemapSat;
+  [basemapSat, basemapStreet, basemapTopo].forEach(l => { if (l && l !== want && map.hasLayer(l)) map.removeLayer(l); });
+  if (!map.hasLayer(want)) map.addLayer(want);
 }
 
 function clearParcels() {
@@ -9077,7 +9084,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v91 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v105 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  MAP: Basemaps switched off OpenStreetMap (which blocks tile requests with no Referer, i.e. when the file is opened locally) to Esri World Imagery / Esri World Street Map / USGS Topo — same set as the Phase I ESA Worksheet.');
   console.log('  STRUCTURE: Reorganized sections to match HEROS sidebar order — 1101 Review Type → 1105 Initial Screen → 1120 Project Location → 1125 Project Summary → 1340 Cooperating Agency Agreement (EA only, NEW) → 1366 Project Justification → 2005 Related Laws & Authorities → 4010 EA Factors (was 1370) → 4030 EA Analysis (was 1375 + 1380 merged) → 5000 Mitigation Measures and Conditions (was 1390) → 6205 Preparer Notification / Final Screen (NEW).');
   console.log('  INSTRUCTIONS: HEROS-verbatim instructional text added to 4010 EA Factors (impact codes legend + directions paragraph), 5000 Mitigation (Project Mitigation Plan + the "before proceeding" warning), 6205 Final Screen (Partner User warning + reassignment guidance).');
   console.log('  4030 EA Analysis now bundles: Cumulative Impact, Alternatives, No Action, Additional Studies, Sources/Agencies Consulted, List of Permits, Public Outreach, Public Comment dates, Finding (FONSI/EIS), Summary of Findings, Mitigation narrative — matching the HEROS Environmental Assessment Analysis screen.');
