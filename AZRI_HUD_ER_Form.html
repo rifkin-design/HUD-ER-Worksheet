@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v128</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v129</div>
   </div>
 </header>
 
@@ -1178,8 +1178,13 @@
     <span style="font-weight:400;font-size:13px;opacity:0.85;">Project Name: <strong id="proj-name-context-rq" style="color:white;">—</strong></span>
   </h2>
   <div class="card-body">
-      <div style="font-size:12px;color:#2d3748;line-height:1.5;margin-bottom:12px;">Answer the Review Questions for each related law &amp; authority below. <strong>These mirror the same questions in each authority's Section 2005 row — answering or editing here updates there, and vice-versa.</strong> Use <em>Apply Determination</em> to mark a section Exempt / Follow-Up and insert its write-up, or flag it for the client.</div>
-      <div id="rqMirror1311"><em style="font-size:12px;color:var(--gray);">Loading review questions…</em></div>
+      <div style="font-size:12px;color:#2d3748;line-height:1.5;margin-bottom:10px;">Each authority's scope questions are answered <strong>in its own card below</strong> (yellow panel), next to its SOP, figure button and write-up. This strip tracks what is still unanswered — click a row to jump to that card. <em>Apply all</em> runs every answered authority's determination at once (it never overwrites a status you have already set).</div>
+      <div class="no-print" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <button type="button" onclick="const r = applyAllReviewQuestions(); refreshRQStatusStrip();" style="background:var(--azri-navy);color:white;border:none;padding:6px 14px;border-radius:4px;font-size:12.5px;cursor:pointer;font-weight:600;">✔ Apply all answered determinations</button>
+        <span id="rqCount" style="font-size:11.5px;color:#2d3748;font-weight:600;"></span>
+        <span id="rq1310Status" style="font-size:11.5px;color:#4a5568;"></span>
+      </div>
+      <div id="rqStatusStrip" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px;"></div>
   </div>
 </section>
 
@@ -7030,7 +7035,7 @@ function buildExemptionPanel(id) {
   const cfg = EXEMPTION_CHECKS[id];
   if (!panel || !cfg || panel.dataset.built === '1') return;
   let html = '<div style="font-size:12px;color:#2d3748;margin-bottom:8px;line-height:1.5;">' + cfg.intro
-    + (RQ_DERIVED[id] ? ' <em style="color:#4a5568;">(Also answerable in the 1311 Level of Review section — answers sync between both places.)</em>' : '') + '</div>';
+    + (RQ_DERIVED[id] ? '' : '') + '</div>';
   cfg.questions.forEach(q => {
     html += '<div style="margin-bottom:10px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;text-transform:none;letter-spacing:0;color:#2d3748;">' + q.label + '</div>';
     q.options.forEach(o => {
@@ -7165,6 +7170,7 @@ AUTHORITIES.forEach(a => {
   const div = document.createElement('div');
   div.className = (a.id === 'housing_map') ? 'authority map-section' : 'authority';
   div.dataset.authId = a.id;
+  div.id = 'auth_' + a.id;
   // Precompute the optional Map button so we don't need nested template literals inside the IIFE
   let mapBtnHtml = '';
   if (MAP_GENERATORS[a.id]) {
@@ -9948,73 +9954,34 @@ document.addEventListener('change', e => {
 });
 setTimeout(refreshLORConfirmation, 500);
 
-// ===== HEROS 1311 — Section 2: mirror each authority's Review Questions =====
-// Renders the same EXEMPTION_CHECKS questions shown in each authority's Section 2005 row, using
-// distinct radio names (exqM_*) that two-way sync with the canonical exq_* radios. The Apply / flag
-// buttons reuse the existing per-authority handlers (which read the canonical exq_* radios).
-function buildMirrorPanels() {
-  const host = document.getElementById('rqMirror1311');
+// ===== REVIEW QUESTIONS STATUS STRIP (v129) =====
+// The questions themselves live only in each authority card (exq_* radios). This strip shows, per authority,
+// whether its questions are answered / unanswered / flagged for the client and links to the card.
+function refreshRQStatusStrip() {
+  const host = document.getElementById('rqStatusStrip');
   if (!host || typeof EXEMPTION_CHECKS === 'undefined') return;
-  let html = '';
-  // (v123) Same order as the Compliance Summary / Section 2005 cards (the AUTHORITIES list), full authority names
-  const order = (typeof AUTHORITIES !== 'undefined' ? AUTHORITIES.map(a => a.id) : []).filter(id => EXEMPTION_CHECKS[id]).concat(Object.keys(EXEMPTION_CHECKS).filter(id => typeof AUTHORITIES === 'undefined' || !AUTHORITIES.some(a => a.id === id)));
-  order.forEach(id => {
+  const order = (typeof AUTHORITIES !== 'undefined' ? AUTHORITIES.map(a => a.id) : Object.keys(EXEMPTION_CHECKS)).filter(id => EXEMPTION_CHECKS[id]);
+  let done = 0;
+  host.innerHTML = order.map(id => {
     const cfg = EXEMPTION_CHECKS[id];
     const auth = (typeof AUTHORITIES !== 'undefined') ? AUTHORITIES.find(a => a.id === id) : null;
-    const name = auth ? auth.name.replace(/&amp;/g, '&') + (auth.cite ? ' <span style="font-weight:400;color:#64748b;font-size:11.5px;">— ' + auth.cite + '</span>' : '') : id;
-    html += '<div style="border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:10px;">';
-    html += '<div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);margin-bottom:4px;">' + name + '</div>';
-    html += '<div style="font-size:11.5px;color:#4a5568;margin-bottom:8px;line-height:1.5;">' + cfg.intro
-      + ' <em>(Mirrored with this authority’s Section 2005 Review Questions — editable in either place.)</em></div>';
-    cfg.questions.forEach(q => {
-      html += '<div style="margin-bottom:8px;"><div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#2d3748;text-transform:none;letter-spacing:0;">' + q.label + '</div>';
-      q.options.forEach(o => {
-        html += '<label style="display:block;font-size:12px;line-height:1.4;margin:3px 0;cursor:pointer;font-weight:400;color:#2d3748;text-transform:none;letter-spacing:0;"><input type="radio" name="exqM_' + id + '_' + q.id + '" value="' + o.v + '" style="margin-right:6px;">' + o.t + '</label>';
-      });
-      html += '</div>';
-    });
-    html += '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap;">'
-      + '<button type="button" onclick="applyExemptionCheckM(\'' + id + '\')" style="background:var(--azri-navy);color:white;border:none;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Apply Determination</button>'
-      + '<button type="button" id="flagBtnM_' + id + '" onclick="flagForClientM(\'' + id + '\')" style="background:white;border:1px solid #9b2c2c;color:#9b2c2c;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">' + ((typeof CLIENT_QUESTION_FLAGS !== 'undefined' && CLIENT_QUESTION_FLAGS[id]) ? '✓ Flagged for client (click to unflag)' : '❓ Not sure — flag for client') + '</button>'
-      + '<span id="exemptResultM_' + id + '" style="font-size:11.5px;color:#4a5568;flex-basis:100%;"></span></div>';
-    html += '</div>';
-  });
-  host.innerHTML = html;
+    const name = auth ? auth.name.replace(/&amp;/g, '&') : id;
+    const total = cfg.questions.length;
+    const answered = cfg.questions.filter(q => document.querySelector('input[name="exq_' + id + '_' + q.id + '"]:checked')).length;
+    const flagged = (typeof CLIENT_QUESTION_FLAGS !== 'undefined') && CLIENT_QUESTION_FLAGS[id];
+    const st = (document.querySelector('input[name="' + id + '_status"]:checked') || {}).value || '';
+    const stLabel = { compliant: 'Compliant', followup: 'Follow-Up', awaiting: 'Awaiting', na: 'N/A', exempt: 'Exempt' }[st] || 'Not set';
+    const complete = answered === total; if (complete) done++;
+    const color = flagged ? '#9b2c2c' : complete ? '#2f855a' : '#b7791f';
+    const icon = flagged ? '❓' : complete ? '✔' : '○';
+    return '<a href="#auth_' + id + '" onclick="const el=document.getElementById(\'auth_' + id + '\'); if(el){el.scrollIntoView({behavior:\'smooth\',block:\'start\'}); const p=document.getElementById(\'exemptPanel_' + id + '\'); if(p && p.dataset.built!==\'1\') buildExemptionPanel(\'' + id + '\'); if(p) p.style.display=\'block\';} return false;" style="display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--border);border-left:4px solid ' + color + ';border-radius:4px;padding:6px 10px;font-size:12px;text-decoration:none;color:#2d3748;background:#fff;">'
+      + '<span><span style="color:' + color + ';font-weight:700;margin-right:6px;">' + icon + '</span>' + name + '</span>'
+      + '<span style="color:#64748b;font-size:11px;white-space:nowrap;">' + (flagged ? 'flagged for client' : answered + '/' + total + ' answered') + ' · ' + stLabel + '</span></a>';
+  }).join('');
+  const c = document.getElementById('rqCount'); if (c) c.textContent = done + ' of ' + order.length + ' authorities fully answered.';
 }
-
-// Mirror-side Apply / flag wrappers: run the canonical handler, then copy its result/label back
-// to the mirror so the reviewer sees feedback in the 1311 section too.
-function applyExemptionCheckM(id) {
-  if (typeof applyExemptionCheck === 'function') applyExemptionCheck(id);
-  const src = document.getElementById('exemptResult_' + id);
-  const dst = document.getElementById('exemptResultM_' + id);
-  if (src && dst) { dst.textContent = src.textContent; dst.style.color = src.style.color; }
-}
-function flagForClientM(id) {
-  if (typeof flagForClient === 'function') flagForClient(id);
-  const btnM = document.getElementById('flagBtnM_' + id);
-  if (btnM) btnM.textContent = (CLIENT_QUESTION_FLAGS[id] ? '✓ Flagged for client (click to unflag)' : '❓ Not sure — flag for client');
-  const src = document.getElementById('exemptResult_' + id);
-  const dst = document.getElementById('exemptResultM_' + id);
-  if (src && dst) { dst.textContent = src.textContent; dst.style.color = src.style.color; }
-}
-
-// Two-way sync between mirror (exqM_*) and canonical (exq_*) Review-Question radios.
-document.addEventListener('change', e => {
-  const t = e.target;
-  if (!t || t.type !== 'radio' || !t.name) return;
-  let m;
-  if ((m = /^exq_(.+)$/.exec(t.name))) {
-    const mir = document.querySelector('input[name="exqM_' + m[1] + '"][value="' + t.value + '"]');
-    if (mir && !mir.checked) mir.checked = true;
-  } else if ((m = /^exqM_(.+)$/.exec(t.name))) {
-    const can = document.querySelector('input[name="exq_' + m[1] + '"][value="' + t.value + '"]');
-    if (can && !can.checked) { can.checked = true; can.dispatchEvent(new Event('change', { bubbles: true })); }
-  }
-});
-
-// Build the 1311 mirror once the authority panels have been rendered.
-setTimeout(buildMirrorPanels, 450);
+document.addEventListener('change', e => { const t = e.target; if (t && t.type === 'radio' && t.name && (/^exq_/.test(t.name) || /_status$/.test(t.name))) setTimeout(refreshRQStatusStrip, 0); });
+setTimeout(refreshRQStatusStrip, 500);
 
 // ===== HEROS Screen 1105 — ER creation record header =====
 function refreshErCreationRecord() {
@@ -11305,7 +11272,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v128 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v129 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
