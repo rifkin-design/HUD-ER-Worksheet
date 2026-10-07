@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v118</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v119</div>
   </div>
 </header>
 
@@ -6072,13 +6072,17 @@ function insertRadonWriteUp() {
   const srcSentence = src === 'state' ? 'Radon data for this analysis is from state tests.'
     : src === 'lab' ? 'Radon data for this analysis is from lab tests.'
     : 'Radon data for this analysis is from [state/lab] tests.';
+  // Q3 (data) overrides Q2 (new construction): any entered concentration, an FHA flag, or the "insufficient data" source counts as data
+  const hasData = !isNaN(v) || fha || src === 'insufficient';
+  const ncTail = (nc === 'yes') ? ' The project is new construction / substantial rehabilitation; radon testing of the completed building(s) will be conducted following construction, consistent with HUD Notice CPD-23-103.' : '';
   let txt = '', msg = '';
   if (ex === 'yes') {
     txt = 'The building(s) at the Subject Property meet an exemption in HUD Notice CPD-23-103 from having to consider radon in the contamination analysis: [no enclosed areas having ground contact (open air between the lowest floor and the ground) / non-residential and not occupied more than four (4) hours per day / existing radon mitigation system with test results below 4 pCi/L dated within the past two years and an O&M plan with periodic testing / tested within the past five years with results below 4.0 pCi/L]. No further consideration of radon is required for this Environmental Review.';
     msg = 'Exempt per CPD-23-103 — exemption write-up inserted (select the applicable exemption in the brackets).';
-  } else if (nc === 'yes') {
+  } else if (nc === 'yes' && !hasData) {
+    // Q2 only governs when there is NO radon data in Q3 — entered data (Q3) overrides the deferred-testing text
     txt = 'The proposed project is new construction or substantial rehabilitation; radon testing will be conducted but cannot yet occur because building construction has not been completed. Consideration of radon — and radon mitigation, if needed — will occur following construction, consistent with HUD Notice CPD-23-103 (January 11, 2024).';
-    msg = 'New construction / substantial rehab — deferred-testing write-up inserted.';
+    msg = 'New construction / substantial rehab — deferred-testing write-up inserted (enter Q3 data to use the data-based write-up instead).';
   } else if (src === 'insufficient') {
     txt = 'A scientific data review was attempted using the National Environmental Public Health Tracking Network Data Explorer (CDC). Fewer than ten (10) documented test results over the previous ten (10) years are available for the county where the project is located. Per HUD Notice CPD-23-103, this constitutes a lack of scientific data; because radon testing is infeasible or impracticable for this project, no further consideration of radon is required. This determination and the data search are documented in the Environmental Review Record.';
     msg = 'Lack of scientific data (<10 county results in 10 yrs) — write-up inserted; document the data search in the ERR.';
@@ -6099,6 +6103,7 @@ function insertRadonWriteUp() {
   } else {
     msg = 'Answer question 1 or 2, or select a data source and enter the radon concentration (pCi/L) from the CDC Data Explorer / test results.';
   }
+  if (txt && hasData && ncTail && ex !== 'yes') { txt += ncTail; msg += ' Q2 = new construction noted — post-construction testing sentence appended.'; }
   if (txt && ta) { ta.value = txt; ta.dispatchEvent(new Event('input', { bubbles: true })); }
   if (st) st.textContent = msg;
 }
@@ -10447,7 +10452,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v118 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v119 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
