@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v117</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v118</div>
   </div>
 </header>
 
@@ -3221,6 +3221,8 @@ async function runAutoAll() {
 
 
 
+
+
 // ===== AZ-RI FIGURE ENGINE (v108) =====
 // Canvas-based figure generator ported from the Phase I ESA Worksheet so both tools draw figures
 // the same way: stitch basemap tiles (fetched as blobs so the canvas never taints — works from
@@ -3904,7 +3906,7 @@ async function generateFloodFigure(authId) {
         if (prox.elevFt != null) lines.push('Site ground elevation (USGS 3DEP): ≈ ' + Math.round(prox.elevFt) + ' ft NAVD88' + (prox.bfe && prox.bfe.attrs && prox.bfe.attrs.ELEV != null ? ' (' + (prox.elevFt - prox.bfe.attrs.ELEV >= 0 ? '+' : '') + (prox.elevFt - prox.bfe.attrs.ELEV).toFixed(1) + ' ft vs. nearest BFE)' : ''));
         ctx.font = '12px Arial';
         const bw = Math.max(...lines.map(t => ctx.measureText(t).width)) + 16, bh = lines.length * 17 + 10;
-        const bx = PW - bw - 10, by = PH - bh - 10;   // bottom-right of the vicinity panel, clear of the site and the scale bar
+        const bx = PW - bw - 10, by = PH - bh - 66;   // bottom-right of the vicinity panel, above the scale-bar row
         ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
         ctx.fillStyle = '#1f2937'; lines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
       }
@@ -4080,6 +4082,144 @@ async function generateFarmlandFigure(authId) {
   } catch (e) {
     console.warn('[Farmland figure]', e);
     say('✗ Farmland figure failed: ' + e.message, 'var(--red,#c00)');
+  }
+}
+
+
+// ===== SOLE SOURCE AQUIFER FIGURE (SDWA §1424(e); §58.5(d)) =====
+// Split screen like the flood figures: LEFT = site detail, RIGHT = vicinity zoomed out far enough to show the
+// nearest EPA-designated Sole Source Aquifer (or to say none is within 25 miles). Source: EPA NEPAssist Water
+// service, layer 6 "Sole Source Aquifers" (the same layer the SOP has you turn on in NEPAssist).
+const EPA_SSA_SERVICE = 'https://geopub.epa.gov/ArcGIS/rest/services/NEPAssist/Water/MapServer';
+const EPA_SSA_LAYER = 6;
+async function ssaQuery(geometry, geometryType, extra) {
+  const params = new URLSearchParams(Object.assign({ f: 'json', geometry: JSON.stringify(geometry), geometryType, inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'SSA_ID,SSA_NAME,FR_ID,Coordinato,SSA_Coordi,Phone,Email', returnGeometry: 'false', outSR: '4326' }, extra || {}));
+  const j = await (await fetch(EPA_SSA_SERVICE + '/' + EPA_SSA_LAYER + '/query?' + params)).json();
+  if (j.error) throw new Error(j.error.message || 'EPA SSA query failed');
+  return j.features || [];
+}
+async function generateSSAFigure(authId) {
+  authId = authId || 'aquifer';
+  const statusEl = document.getElementById('autoStatus_' + authId);
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the SSA figure.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  try {
+    say('Querying EPA Sole Source Aquifer designations…');
+    let siteGeom = { x: center[0], y: center[1], spatialReference: { wkid: 4326 } }, siteType = 'esriGeometryPoint';
+    const parcelRings = [];
+    if (site.boundary && site.boundary.geometry) {
+      const g = site.boundary.geometry; (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []).forEach(r => parcelRings.push(r));
+      if (parcelRings.length) { siteGeom = { rings: parcelRings, spatialReference: { wkid: 4326 } }; siteType = 'esriGeometryPolygon'; }
+    }
+    const onSite = await ssaQuery(siteGeom, siteType);
+    const inSSA = onSite.length > 0;
+    // Vicinity extent: smallest half-width (1 → 25 mi) whose inner 65% contains an SSA; else 10 mi and "none within 25 mi"
+    const envFor = halfFt => { const dM = halfFt / FT_PER_M, lat0 = center[1] * Math.PI / 180; return { xmin: center[0] - dM / (111320 * Math.cos(lat0)), xmax: center[0] + dM / (111320 * Math.cos(lat0)), ymin: center[1] - dM / 110574, ymax: center[1] + dM / 110574, spatialReference: { wkid: 4326 } }; };
+    let vicHalfFt = 5280 * 2, found = inSSA, searchedMi = 25;
+    if (!inSSA) {
+      found = false;
+      for (const mi of [1, 2, 5, 10, 25]) { vicHalfFt = mi * 5280; const f = await ssaQuery(envFor(vicHalfFt * 0.65), 'esriGeometryEnvelope', { resultRecordCount: '1', outFields: 'SSA_ID' }); if (f.length) { found = true; break; } }
+      if (!found) vicHalfFt = 10 * 5280;
+    }
+    // Geometry for drawing + distance: everything intersecting a frame 1.3× the vicinity half-width, simplified to the panel resolution
+    const W = 1500, H = 1050, GAP = 10, PW = (W - GAP) / 2, PH = H - FIG_HB;
+    const detailHalfM = figParcelHalfM(site, center, 2.5, 500, 2000);
+    const tolDeg = (vicHalfFt * 2 / PW) / FT_PER_M / 111320 / 2;   // ~half a pixel at vicinity scale
+    const polys = await ssaQuery(envFor(vicHalfFt * 1.3), 'esriGeometryEnvelope', { returnGeometry: 'true', maxAllowableOffset: String(tolDeg) }).catch(() => []);
+    let nearest = null;
+    if (!inSSA) {
+      const probes = parcelRings.length ? parcelRings.flat() : [center];
+      polys.forEach(f => (f.geometry && f.geometry.rings || []).forEach(zr => probes.forEach(v => { const n = figNearestOnRing(v, zr); if (n && (!nearest || n.distFt < nearest.distFt)) nearest = Object.assign({ attrs: f.attributes }, n); })));
+    }
+    say('Rendering basemaps…');
+    const [detail, vic] = await Promise.all([
+      figBuildBase(center, detailHalfM, { basemap: 'streets', W: PW, H: PH }),
+      figBuildBase(center, vicHalfFt / FT_PER_M, { basemap: 'streets', W: PW, H: PH })
+    ]);
+    if (!detail.tilesOk || !vic.tilesOk) throw new Error('basemap tiles could not be loaded');
+    // Draw SSA polygons ourselves (consistent symbology on both panels), label each with its name on the vicinity panel
+    const drawSSA = (base, label) => {
+      const { ctx, toPx } = base;
+      polys.forEach(f => {
+        (f.geometry && f.geometry.rings || []).forEach(r => {
+          ctx.beginPath(); r.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath();
+          ctx.fillStyle = 'rgba(37,99,235,0.28)'; ctx.fill(); ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 2.5; ctx.stroke();
+        });
+        if (label) {
+          // label at the centroid of the largest ring that lands inside the panel; otherwise at the nearest in-frame vertex
+          let best = null;
+          (f.geometry.rings || []).forEach(r => { let cx = 0, cy = 0, n = 0; r.forEach(q => { const p = toPx(q); if (p[0] > 0 && p[0] < PW && p[1] > 60 && p[1] < PH) { cx += p[0]; cy += p[1]; n++; } }); if (n > (best ? best.n : 0)) best = { x: cx / n, y: cy / n, n }; });
+          if (best) { ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; const t = f.attributes.SSA_NAME || f.attributes.SSA_ID; const w = ctx.measureText(t).width; const lx = Math.min(Math.max(w / 2 + 8, best.x), PW - w / 2 - 8), ly = Math.min(Math.max(70, best.y), PH - 90); ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(lx - w / 2 - 5, ly - 13, w + 10, 18); ctx.fillStyle = '#1e3a8a'; ctx.fillText(t, lx, ly); }
+        }
+      });
+    };
+    drawSSA(detail, false); drawSSA(vic, true);
+    const siteLabel = figSiteLabel(proj, center);
+    const bearing = (a, b) => { const d = Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI; return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(((d + 360) % 360) / 45) % 8]; };
+    const ssaNames = onSite.map(f => f.attributes.SSA_NAME + (f.attributes.FR_ID ? ' (' + f.attributes.FR_ID + ')' : ''));
+    // Detail panel
+    figDrawSite(detail, site, center);
+    {
+      const { ctx, toPx } = detail; const c = toPx(center);
+      ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+      const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), PW - w - 12), ly = Math.min(Math.max(60, y), PH - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
+      tag('Subject Property: ' + (inSSA ? 'WITHIN a designated Sole Source Aquifer' : 'not within a designated Sole Source Aquifer'), c[0] + 16, c[1] - 24, inSSA ? '#b91c1c' : '#166534');
+      if (inSSA) tag(ssaNames.join('; '), c[0] + 16, c[1] - 2, '#1e3a8a');
+      figPanelCaption(ctx, 10, 10, 'Site Detail', 'Subject Property boundary and EPA SSA designation');
+      figDrawScale(ctx, detail.fpp, 20, PH - 36);
+    }
+    // Vicinity panel
+    {
+      const { ctx, toPx } = vic; const c = toPx(center);
+      figDrawSite(vic, site, center);
+      ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c[0], c[1], 22, 0, 7); ctx.stroke();
+      const inv = mm => [mm[0] / 6378137 * 180 / Math.PI, (2 * Math.atan(Math.exp(mm[1] / 6378137)) - Math.PI / 2) * 180 / Math.PI];
+      const [dx0, dy0, dx1, dy1] = detail.bbox; const p0 = toPx(inv([dx0, dy1])), p1 = toPx(inv([dx1, dy0]));
+      ctx.save(); ctx.setLineDash([8, 5]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(p0[0], p0[1], Math.max(6, p1[0] - p0[0]), Math.max(6, p1[1] - p0[1])); ctx.restore();
+      ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+      const lblX = Math.min(Math.max(8, c[0] + 28), PW - 150), lblY = Math.min(Math.max(70, c[1] - 26), PH - 14);
+      const w = ctx.measureText('Subject Property').width; ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lblX - 4, lblY - 14, w + 8, 19); ctx.fillStyle = '#b91c1c'; ctx.fillText('Subject Property', lblX, lblY);
+      const lines = [];
+      if (inSSA) lines.push('Subject Property lies within: ' + ssaNames.join('; '));
+      else if (nearest) lines.push('Nearest designated SSA: ' + (nearest.attrs.SSA_NAME || nearest.attrs.SSA_ID) + ' — ' + figFmtFt(nearest.distFt) + ' ' + bearing(center, nearest.pt));
+      else lines.push('No EPA-designated Sole Source Aquifer within ' + searchedMi + ' miles of the Subject Property');
+      ctx.font = '12px Arial';
+      const bw = Math.max(...lines.map(t => ctx.measureText(t).width)) + 16, bh = lines.length * 17 + 10;
+      const bx = PW - bw - 10, by = PH - bh - 66;   // above the scale-bar row so a wide note never overlaps it
+      ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
+      ctx.fillStyle = '#1f2937'; ctx.textAlign = 'left'; lines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
+      const vicMi = vicHalfFt * 2 / 5280;
+      figPanelCaption(ctx, 10, 10, 'Vicinity', 'EPA-designated Sole Source Aquifers within approx. ' + vicMi.toFixed(0) + ' miles · dashed box = Site Detail extent');
+      figDrawScale(ctx, vic.fpp, 20, PH - 36);
+      figDrawNorth(ctx, PW - 52, 100);
+    }
+    const legend = [
+      { label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
+      { label: 'EPA-designated Sole Source Aquifer (SDWA §1424(e))', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(37,99,235,0.28)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 2.5; ctx.strokeRect(x, y, w, h); } },
+      { label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }
+    ];
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(detail.cv, 0, FIG_HB); ctx.drawImage(vic.cv, PW + GAP, FIG_HB);
+    ctx.strokeStyle = '#0f2a44'; ctx.lineWidth = 1; ctx.strokeRect(0.5, FIG_HB + 0.5, PW - 1, PH - 1); ctx.strokeRect(PW + GAP + 0.5, FIG_HB + 0.5, PW - 1, PH - 1);
+    await figDrawHeader(ctx, W, { title: 'Sole Source Aquifer Map', meta: figProjectMeta(proj, center), subtitle: 'Safe Drinking Water Act §1424(e) · 40 CFR Part 149 · §58.5(d) · EPA Sole Source Aquifer designations (EPA NEPAssist Water service)' });
+    figDrawLegend(ctx, legend, 16, null, FIG_HB + PH - 70);
+    // Findings (internal — status line, Source/Ref, caption)
+    let finding, status;
+    if (inSSA) { const a = onSite[0].attributes; finding = 'Subject Property is WITHIN the ' + ssaNames.join('; ') + '. If the project is new construction or a rehab with major ground disturbance → Write Up 3 — EPA Region 3 SSA Project Review required (coordinator: ' + [a.Coordinato, a.SSA_Coordi].filter(Boolean).join(' ') + (a.Phone ? ', ' + a.Phone : '') + (a.Email ? ', ' + a.Email : '') + ').'; status = 'followup'; }
+    else { finding = 'Subject Property is NOT within an EPA-designated Sole Source Aquifer' + (nearest ? ' (nearest: ' + (nearest.attrs.SSA_NAME || nearest.attrs.SSA_ID) + ', ' + figFmtFt(nearest.distFt) + ' ' + bearing(center, nearest.pt) + ')' : ' (none within ' + searchedMi + ' miles)') + ' → Write Up 2 (or Write Up 1 if the project is exempt as not new construction / major ground disturbance).'; status = 'compliant'; }
+    const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
+    figAttach(authId, cv, slug + '_SSA_Map.jpg', finding);
+    figFillSourceRef(authId, 'EPA Sole Source Aquifer designations (NEPAssist Water service, layer 6)', inSSA ? ssaNames.join('; ') : 'Not within a designated SSA');
+    figDownloadPdf(cv, slug + '_SSA_Map.pdf');
+    say('✓ SSA figure generated — PDF downloaded and attached to Supporting Documents. ' + finding, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
+    return { finding, status, inSSA, ssaNames, nearest: nearest ? { name: nearest.attrs.SSA_NAME, distFt: nearest.distFt } : null, vicHalfFt };
+  } catch (e) {
+    console.warn('[SSA figure]', e);
+    say('✗ SSA figure failed: ' + e.message, 'var(--red,#c00)');
   }
 }
 // ===== AIR QUALITY — GENERAL CONFORMITY EVALUATION ATTACHMENT (Clean Air Act §176(c); §58.5(g)) =====
@@ -4336,6 +4476,7 @@ const MAP_GENERATORS = {
   flood_mgt: { fn: 'generateFloodFigure', label: '🗺 Floodplain Figure (FEMA NFHL)' },
   air:       { fn: 'generateAirQualityAttachment', label: '📄 General Conformity Attachment (EPA Green Book)' },
   farm:      { fn: 'generateFarmlandFigure', label: '🗺 Farmland Figure (NRCS soils + Urban Area)' },
+  aquifer:   { fn: 'generateSSAFigure', label: '🗺 SSA Figure (EPA Sole Source Aquifers)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -10306,7 +10447,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v117 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v118 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
