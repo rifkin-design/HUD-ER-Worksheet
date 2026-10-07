@@ -576,7 +576,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v115</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v116</div>
   </div>
 </header>
 
@@ -3217,6 +3217,8 @@ async function runAutoAll() {
 
 
 
+
+
 // ===== AZ-RI FIGURE ENGINE (v108) =====
 // Canvas-based figure generator ported from the Phase I ESA Worksheet so both tools draw figures
 // the same way: stitch basemap tiles (fetched as blobs so the canvas never taints — works from
@@ -3292,9 +3294,15 @@ async function figBuildBase(center, halfM, opts) {
 }
 
 // Draw an ArcGIS MapServer export (official agency symbology) over the base canvas for its exact bbox.
-async function figOverlayExport(base, serviceUrl, layers, opacity) {
+// opts.noLabels suppresses the service's own feature labels (zone codes etc.) via dynamicLayers.
+async function figOverlayExport(base, serviceUrl, layers, opacity, opts) {
   const [xmin, ymin, xmax, ymax] = base.bbox;
-  const q = '/export?f=image&format=png32&transparent=true&bboxSR=3857&imageSR=3857&size=' + base.W + ',' + base.H + '&bbox=' + xmin + ',' + ymin + ',' + xmax + ',' + ymax + (layers ? '&layers=show:' + layers : '');
+  let lyr = layers ? '&layers=show:' + layers : '';
+  if (opts && opts.noLabels && layers) {
+    const dl = String(layers).split(',').map(id => ({ id: +id, source: { type: 'mapLayer', mapLayerId: +id }, drawingInfo: { showLabels: false } }));
+    lyr = '&dynamicLayers=' + encodeURIComponent(JSON.stringify(dl));
+  }
+  const q = '/export?f=image&format=png32&transparent=true&bboxSR=3857&imageSR=3857&size=' + base.W + ',' + base.H + '&bbox=' + xmin + ',' + ymin + ',' + xmax + ',' + ymax + lyr;
   const im = await figFetchImg(serviceUrl + q);
   base.ctx.globalAlpha = opacity || 0.85; base.ctx.drawImage(im, 0, 0, base.W, base.H); base.ctx.globalAlpha = 1;
 }
@@ -3358,13 +3366,13 @@ function figFillSourceRef(authId, source, ref) {
   if (srcEl && !srcEl.value.trim() && source) { srcEl.value = source; srcEl.dispatchEvent(new Event('input', { bubbles: true })); }
 }
 
-// Standard furniture: title band, north arrow, scale bar, sources line, AZ-RI logo, legend.
-async function figFurnish(base, o) {
-  const { ctx, W, H } = base;
-  // Header border strip (white) — logo at left so it never sits over the map, title beside it, date at right
+// Standard furniture: header strip, north arrow, scale bar, legend. Split into parts so multi-panel
+// figures (e.g. the flood split-screen) can place them per panel; figFurnish() is the single-panel composition.
+const FIG_HB = 92;
+async function figDrawHeader(ctx, W, o) {
   // Header strip: logo | figure title + project name / location / grant no. / authority cite | date.
   // Everything on the figure is external-facing (HUD, RE, client) — no internal routing notes.
-  const HB = 92;
+  const HB = FIG_HB;
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, HB);
   ctx.fillStyle = '#0f2a44'; ctx.fillRect(0, HB - 3, W, 3);
   let tx = 20;
@@ -3380,35 +3388,58 @@ async function figFurnish(base, o) {
   ctx.font = '14px Arial'; ctx.fillStyle = '#1f2937'; if (line2) ctx.fillText(line2, tx, 54);
   if (o.subtitle) { ctx.font = '12px Arial'; ctx.fillStyle = '#4b5563'; ctx.fillText(o.subtitle, tx, 76); }
   ctx.font = '13px Arial'; ctx.fillStyle = '#334155'; ctx.textAlign = 'right'; ctx.fillText(new Date().toLocaleDateString(), W - 18, 30);
-  // North arrow
-  ctx.save(); ctx.translate(W - 52, HB + 48);
+  return HB;
+}
+function figDrawNorth(ctx, x, y) {
+  ctx.save(); ctx.translate(x, y);
   ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.beginPath(); ctx.arc(0, 0, 34, 0, 7); ctx.fill();
   ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(11, 12); ctx.lineTo(0, 4); ctx.lineTo(-11, 12); ctx.closePath(); ctx.fill();
   ctx.font = 'bold 17px Arial'; ctx.textAlign = 'center'; ctx.fillText('N', 0, 28); ctx.restore();
-  // Scale bar
+}
+// Scale bar with its bottom edge at (sbX, sbY); fpp = ground feet per canvas pixel. Returns the bar width.
+function figDrawScale(ctx, fpp, sbX, sbY) {
   const choices = [100, 200, 250, 500, 1000, 2000, 2640, 5280, 10560, 15840, 26400, 52800, 105600];
-  const ft = choices.find(c => c / base.fpp >= 140) || 105600, bw = ft / base.fpp;
-  const sbX = 20, sbY = H - 60;
+  const ft = choices.find(c => c / fpp >= 140) || 105600, bw = ft / fpp;
   ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(sbX - 4, sbY - 24, bw + 36, 46);
   ctx.fillStyle = '#111'; ctx.fillRect(sbX + 8, sbY, bw / 2, 7); ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.strokeRect(sbX + 8, sbY, bw, 7);
   ctx.font = '12px Arial'; ctx.textAlign = 'left'; ctx.fillText('0', sbX + 6, sbY - 6);
   const lbl = ft >= 5280 ? (ft / 5280) + (ft === 5280 ? ' mile' : ' miles') : ft === 2640 ? '0.5 mile' : ft.toLocaleString() + ' ft';
   ctx.fillText(lbl, sbX + 8 + bw - 14, sbY - 6);
+  return bw;
+}
+// Legend box with its top-left at (lx, ly) — or, when ly is null, its bottom at yBottom.
+function figDrawLegend(ctx, legend, lx, ly, yBottom) {
+  if (!legend || !legend.length) return;
+  ctx.font = '13px Arial'; ctx.textAlign = 'left';
+  const lw = Math.max(...legend.map(e => ctx.measureText(e.label).width)) + 54;
+  const lh = legend.length * 24 + 16;
+  if (ly == null) ly = yBottom - lh;
+  ctx.fillStyle = 'rgba(255,255,255,0.93)'; ctx.fillRect(lx, ly, lw, lh);
+  ctx.strokeStyle = '#999'; ctx.lineWidth = 1; ctx.strokeRect(lx, ly, lw, lh);
+  legend.forEach((e, i) => {
+    const sy = ly + 12 + i * 24;
+    e.draw(ctx, lx + 10, sy, 30, 16);  // (ctx, x, y, w, h)
+    ctx.fillStyle = '#111'; ctx.font = '13px Arial'; ctx.textAlign = 'left'; ctx.fillText(e.label, lx + 48, sy + 13);
+  });
+  return { lw, lh };
+}
+// Small caption box inside a map panel (top-left) — e.g. "Site Detail" / "Vicinity"
+function figPanelCaption(ctx, x, y, text, sub) {
+  ctx.font = 'bold 15px Arial'; ctx.textAlign = 'left';
+  const w = Math.max(ctx.measureText(text).width, sub ? (ctx.font = '12px Arial', ctx.measureText(sub).width) : 0) + 20;
+  const h = sub ? 46 : 28;
+  ctx.fillStyle = 'rgba(255,255,255,0.93)'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = '#0f2a44'; ctx.fillRect(x, y, 4, h);
+  ctx.fillStyle = '#0f2a44'; ctx.font = 'bold 15px Arial'; ctx.fillText(text, x + 12, y + 19);
+  if (sub) { ctx.fillStyle = '#4b5563'; ctx.font = '12px Arial'; ctx.fillText(sub, x + 12, y + 37); }
+}
+async function figFurnish(base, o) {
+  const { ctx, W, H } = base;
+  const HB = await figDrawHeader(ctx, W, o);
+  figDrawNorth(ctx, W - 52, HB + 48);
+  figDrawScale(ctx, base.fpp, 20, H - 60);
   // (No sources / preparer footer — that text lives in the write-up.)
-  // Legend (bottom-left above the scale bar, or wherever o.legendPos says)
-  if (o.legend && o.legend.length) {
-    ctx.font = '13px Arial'; ctx.textAlign = 'left';
-    const lw = Math.max(...o.legend.map(e => ctx.measureText(e.label).width)) + 54;
-    const lh = o.legend.length * 24 + 16;
-    const lx = 16, ly = H - 70 - lh - 10;
-    ctx.fillStyle = 'rgba(255,255,255,0.93)'; ctx.fillRect(lx, ly, lw, lh);
-    ctx.strokeStyle = '#999'; ctx.lineWidth = 1; ctx.strokeRect(lx, ly, lw, lh);
-    o.legend.forEach((e, i) => {
-      const sy = ly + 12 + i * 24;
-      e.draw(ctx, lx + 10, sy, 30, 16);  // (ctx, x, y, w, h)
-      ctx.fillStyle = '#111'; ctx.font = '13px Arial'; ctx.textAlign = 'left'; ctx.fillText(e.label, lx + 48, sy + 13);
-    });
-  }
+  figDrawLegend(ctx, o.legend, 16, null, H - 80);
 }
 
 // Export helpers: PDF download (figure only — no internal notes; these go to HUD, the RE and the client) + attach JPEG to the authority's Supporting Documents (replacing a prior auto figure)
@@ -3770,27 +3801,67 @@ async function generateFloodFigure(authId) {
     const in500 = siteZones.some(f => String(f.attributes.ZONE_SUBTY || '').toUpperCase().includes('0.2 PCT'));
     const noData = siteZones.length === 0;
 
-    say('Rendering basemap…');
-    // Frame tight on the parcel boundary (2.2× its half-extent, floor 350 ft, ceiling 1,500 ft) so the
-    // property's position relative to the zone lines is unmistakable
-    const base = await figBuildBase(center, figParcelHalfM(site, center, 2.2, 350, 1500), { basemap: 'streets' });
-    if (!base.tilesOk) throw new Error('basemap tiles could not be loaded');
-    const { ctx, toPx, W, H } = base;
+    say('Rendering basemaps…');
+    // Split screen: LEFT = site detail framed tight on the parcel boundary (2.2× its half-extent, 350–1,500 ft)
+    // so the property's position relative to the zone lines is unmistakable; RIGHT = vicinity, zoomed out far
+    // enough to show the nearest mapped flood hazard areas (SFHA), with the detail extent outlined.
+    const W = 1500, H = 1050, GAP = 10, PW = (W - GAP) / 2, PH = H - FIG_HB;
+    const detailHalfM = figParcelHalfM(site, center, 2.2, 350, 1500);
+    const sfhaCount = async halfFt => {
+      const dM = halfFt / FT_PER_M, lat0 = center[1] * Math.PI / 180;
+      const env = { xmin: center[0] - dM / (111320 * Math.cos(lat0)), xmax: center[0] + dM / (111320 * Math.cos(lat0)), ymin: center[1] - dM / 110574, ymax: center[1] + dM / 110574, spatialReference: { wkid: 4326 } };
+      const f = await nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "SFHA_TF='T'", outFields: 'FLD_ZONE', resultRecordCount: '1' });
+      return f.length;
+    };
+    // Pick the smallest vicinity extent that contains an SFHA (so the map actually shows floodplain), 0.5–3 mi half-width
+    let vicHalfFt = 2640;
+    // (test the inner 65% of each candidate frame so the floodplain lands well inside the panel, not just at a corner)
+    for (const h of [2640, 5280, 10560, 15840]) { vicHalfFt = h; try { if (await sfhaCount(h * 0.65)) break; } catch (e) { break; } }
+    const [detail, vic] = await Promise.all([
+      figBuildBase(center, detailHalfM, { basemap: 'streets', W: PW, H: PH }),
+      figBuildBase(center, vicHalfFt / FT_PER_M, { basemap: 'streets', W: PW, H: PH })
+    ]);
+    if (!detail.tilesOk || !vic.tilesOk) throw new Error('basemap tiles could not be loaded');
     let overlayOk = true;
-    // Zones + zone boundaries only — no cross-section / BFE layers (their hexagon labels clutter a parcel-scale frame)
-    try { await figOverlayExport(base, NFHL_SERVICE, [NFHL_LAYER.zones, NFHL_LAYER.floodwayBdy].join(','), 0.8); } catch (e) { overlayOk = false; }
-    figDrawSite(base, site, center);
-    const c = toPx(center);
-    // Site label: zone(s) + FIRM panel
-    ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
-    const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), W - w - 12), ly = Math.min(Math.max(110, y), H - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
-    tag('Subject Property: ' + (noData ? 'no NFHL flood zone data mapped' : 'Zone ' + zonesOnSite.join('; ')), c[0] + 16, c[1] - 24, inSFHA ? '#b91c1c' : '#1e3a8a');
-    if (firmRef) tag('FIRM Panel ' + firmRef, c[0] + 16, c[1] - 2, '#1f2937');
-    // Legend: only the zone categories that are actually within the mapped extent
-    const [xmin, ymin, xmax, ymax] = base.bbox;
+    // Zones + zone boundaries only — no cross-section / BFE layers (their hexagon labels clutter the frames)
+    const zoneLayers = [NFHL_LAYER.zones, NFHL_LAYER.floodwayBdy].join(',');
+    try { await Promise.all([figOverlayExport(detail, NFHL_SERVICE, zoneLayers, 0.8, { noLabels: true }), figOverlayExport(vic, NFHL_SERVICE, zoneLayers, 0.8, { noLabels: true })]); } catch (e) { overlayOk = false; }
+    // Detail panel: boundary + site label (zone(s) + FIRM panel)
+    figDrawSite(detail, site, center);
+    {
+      const { ctx, toPx } = detail; const c = toPx(center);
+      ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+      const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), PW - w - 12), ly = Math.min(Math.max(60, y), PH - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
+      tag('Subject Property: ' + (noData ? 'no NFHL flood zone data mapped' : 'Zone ' + zonesOnSite.join('; ')), c[0] + 16, c[1] - 24, inSFHA ? '#b91c1c' : '#1e3a8a');
+      if (firmRef) tag('FIRM Panel ' + firmRef, c[0] + 16, c[1] - 2, '#1f2937');
+      figPanelCaption(ctx, 10, 10, 'Site Detail', 'Subject Property boundary and mapped flood zones');
+      figDrawScale(ctx, detail.fpp, 20, PH - 36);
+    }
+    // Vicinity panel: site marker + ring, the detail-panel extent outlined, caption, scale, north arrow
+    {
+      const { ctx, toPx } = vic; const c = toPx(center);
+      figDrawSite(vic, site, center);
+      ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c[0], c[1], 22, 0, 7); ctx.stroke();
+      // Detail extent (inverse Mercator of the detail bbox)
+      const inv = mm => [mm[0] / 6378137 * 180 / Math.PI, (2 * Math.atan(Math.exp(mm[1] / 6378137)) - Math.PI / 2) * 180 / Math.PI];
+      const [dx0, dy0, dx1, dy1] = detail.bbox; const p0 = toPx(inv([dx0, dy1])), p1 = toPx(inv([dx1, dy0]));
+      ctx.save(); ctx.setLineDash([8, 5]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(p0[0], p0[1], p1[0] - p0[0], p1[1] - p0[1]); ctx.restore();
+      ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
+      const lblX = Math.min(Math.max(8, c[0] + 28), PW - 150), lblY = Math.min(Math.max(70, c[1] - 26), PH - 14);
+      const w = ctx.measureText('Subject Property').width; ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lblX - 4, lblY - 14, w + 8, 19); ctx.fillStyle = '#b91c1c'; ctx.fillText('Subject Property', lblX, lblY);
+      const vicMi = (vicHalfFt * 2 / 5280);
+      figPanelCaption(ctx, 10, 10, 'Vicinity', 'Mapped flood hazard areas within approx. ' + (vicMi >= 1 ? vicMi.toFixed(0) + ' mile' + (vicMi > 1 ? 's' : '') : '0.5 mile') + ' · dashed box = Site Detail extent');
+      figDrawScale(ctx, vic.fpp, 20, PH - 36);
+      figDrawNorth(ctx, PW - 52, 100);
+    }
+    // Legend: only the zone categories that are actually within the two mapped extents
+    const uniqL = arr => arr.filter((v, i) => arr.indexOf(v) === i);
     let extentZones = [];
-    try { extentZones = await nfhlQuery(NFHL_LAYER.zones, { xmin, ymin, xmax, ymax, spatialReference: { wkid: 3857 } }, 'esriGeometryEnvelope', { inSR: '3857', outFields: 'FLD_ZONE,ZONE_SUBTY' }); } catch (e) {}
-    const wanted = uniq(extentZones.map(f => nfhlZoneLabel(f.attributes)).filter(Boolean));
+    try {
+      const q = b => nfhlQuery(NFHL_LAYER.zones, { xmin: b[0], ymin: b[1], xmax: b[2], ymax: b[3], spatialReference: { wkid: 3857 } }, 'esriGeometryEnvelope', { inSR: '3857', outFields: 'FLD_ZONE,ZONE_SUBTY' });
+      extentZones = (await Promise.all([q(detail.bbox), q(vic.bbox)])).flat();
+    } catch (e) {}
+    const wanted = uniqL(extentZones.map(f => nfhlZoneLabel(f.attributes)).filter(Boolean));
     const siteLabel = figSiteLabel(proj, center);
     let legend = [{ label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
     try {
@@ -3799,12 +3870,19 @@ async function generateFloodFigure(authId) {
       order.forEach(lbl => { if (wanted.includes(lbl)) { const e = svc.find(x => x.label === lbl); if (e) legend.push({ label: lbl.trim() + (lbl.startsWith('1%') ? ' (SFHA — Zones A, AE, AH, AO, V, VE)' : lbl.startsWith('0.2%') ? ' (Zone X shaded — 500-yr)' : ''), draw: e.draw }); } });
     } catch (e) {}
     if (wanted.includes('Zone X — Area of Minimal Flood Hazard') || noData) legend.push({ label: 'Zone X — Area of Minimal Flood Hazard (unshaded)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 5, y, 20, h); } });
-    await figFurnish(base, {
+    legend.push({ label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } });
+    // Composite: header across the top, detail left, vicinity right, legend on the detail panel above its scale bar
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(detail.cv, 0, FIG_HB); ctx.drawImage(vic.cv, PW + GAP, FIG_HB);
+    ctx.strokeStyle = '#0f2a44'; ctx.lineWidth = 1; ctx.strokeRect(0.5, FIG_HB + 0.5, PW - 1, PH - 1); ctx.strokeRect(PW + GAP + 0.5, FIG_HB + 0.5, PW - 1, PH - 1);
+    await figDrawHeader(ctx, W, {
       title: isMgmt ? 'Floodplain Management Map' : 'Flood Insurance (FIRM) Map',
       meta: figProjectMeta(proj, center),
-      subtitle: (isMgmt ? 'Executive Order 11988 / 24 CFR Part 55 · §58.5(b)' : 'Flood Disaster Protection Act of 1973 (42 U.S.C. 4012a) · §58.6(a)') + ' · FEMA National Flood Hazard Layer' + (firmRef ? ' · FIRM Panel ' + firmRef : '') + (overlayOk ? '' : ' (overlay unavailable at generation time)'),
-      legend
+      subtitle: (isMgmt ? 'Executive Order 11988 / 24 CFR Part 55 · §58.5(b)' : 'Flood Disaster Protection Act of 1973 (42 U.S.C. 4012a) · §58.6(a)') + ' · FEMA National Flood Hazard Layer' + (firmRef ? ' · FIRM Panel ' + firmRef : '') + (overlayOk ? '' : ' (overlay unavailable at generation time)')
     });
+    figDrawLegend(ctx, legend, 16, null, FIG_HB + PH - 70);
+    const base = { cv };
     // Findings (internal — status line, Source/Ref, Supporting Doc caption only)
     let finding, status;
     const lomrTxt = lomrs.length ? ' A LOMR (' + lomrs.map(f => f.attributes.CASE_NO).filter(Boolean).join(', ') + ') intersects the site — review it.' : '';
@@ -10161,7 +10239,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v115 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v116 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
