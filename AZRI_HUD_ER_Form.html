@@ -583,7 +583,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v130</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v131</div>
   </div>
 </header>
 
@@ -2947,7 +2947,8 @@ const AUTO_DETERMINERS = {
       return { status: 'compliant', source: 'AST DBR + site reconnaissance', ref: 'No ASTs within 1 mile', notes: `As part of our review a 1-mile radius search from the Subject Property of above ground storage tanks (ASTs) was conducted. AZ-RI's review of this database and our site reconnaissance indicated no listed ASTs covered by 24 CFR 51C within 1 mile of the Subject Property. The project is in compliance with explosive and flammable hazard requirements.` };
     }
     if (astStatus === 'far') {
-      return { status: 'compliant', source: 'AST DBR (all >2,000 ft)', ref: 'See AST Worksheet', notes: `A 1-mile radius search of above ground storage tanks (ASTs) from the Subject Property was conducted. AZ-RI's review of these databases and our site reconnaissance indicated ___ addresses with active ASTs within 1 mile of the Subject Property. All addresses with listed active ASTs are located >2,000 ft from the Subject Property. These ASTs are located at facilities with residential and commercial uses. Thus, these ASTs are not anticipated to have a capacity greater than 100,000 gallons. The ASD for a pressurized tank of this size (worse case scenario) is 1,883 ft. Therefore, all addresses located >2,000 ft from the Subject Property are located at acceptable separation distances. The project is in compliance with explosive and flammable hazard requirements.` };
+      const remEl = document.getElementById('astRemainingSites'); const remN = remEl && remEl.value ? String(remEl.value) : '___';
+      return { status: 'compliant', source: 'AST DBR (all >2,000 ft)', ref: 'See AST Worksheet', notes: `A 1-mile radius search of above ground storage tanks (ASTs) from the Subject Property was conducted. AZ-RI's review of these databases and our site reconnaissance indicated ${remN} addresses with active ASTs within 1 mile of the Subject Property. All addresses with listed active ASTs are located >2,000 ft from the Subject Property. These ASTs are located at facilities with residential and commercial uses. Thus, these ASTs are not anticipated to have a capacity greater than 100,000 gallons. The ASD for a pressurized tank of this size (worse case scenario) is 1,883 ft. Therefore, all addresses located >2,000 ft from the Subject Property are located at acceptable separation distances. The project is in compliance with explosive and flammable hazard requirements.` };
     }
     if (astStatus === 'close_acceptable') {
       return { status: 'compliant', source: 'HUD ASD Calculator — all acceptable', ref: 'See AST Worksheet', notes: `A 1-mile radius search of above ground storage tanks (ASTs) from the Subject Property was conducted. AZ-RI's review of these databases and our site reconnaissance indicated addresses with active ASTs within 1 mile of the Subject Property. The addresses with listed active ASTs that are located >2,000 ft from the Subject Property are assumed to have an acceptable separation distance from Site. These ASTs are located at facilities with residential and commercial uses. Thus, these ASTs are not anticipated to have a capacity greater than 100,000 gallons. The ASD for a pressurized tank of this size (worse case scenario) is 1,883 ft. Therefore, all addresses located >2,000 ft from the Subject Property are located at acceptable separation distances. The remaining ASTs were evaluated using HUD's Acceptable Separation Distance (ASD) Tool and all have an acceptable separation distance from the Site. The project is in compliance with explosive and flammable hazard requirements.` };
@@ -7377,6 +7378,8 @@ AUTHORITIES.forEach(a => {
         </table>
         <button class="no-print" onclick="addASTRow()" style="margin-top:8px;background:#b7791f;color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">+ Add AST</button>
         <button class="no-print" onclick="clearASTRows()" style="margin-top:8px;margin-left:6px;background:white;color:#b7791f;border:1px solid #b7791f;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Clear All</button>
+        <button class="no-print" onclick="importASTJson()" title="Paste the JSON from Claude's ERIS AST extractor (drag the ERIS report into Claude and ask for the Explosives section)" style="margin-top:8px;margin-left:6px;background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📥 Import AST JSON (from Claude)</button>
+        <button class="no-print" onclick="autoFillASD()" title="Fill the ASD column from Largest Tank (gal) using the HUD ASD Tool equation (thermal radiation for people, unpressurized, undiked)" style="margin-top:8px;margin-left:6px;background:white;color:var(--azri-navy);border:1px solid var(--azri-navy);padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Σ Auto-ASD (HUD equation)</button>
       </div>
     `;
     authContainer.appendChild(astPanel);
@@ -7621,8 +7624,46 @@ function clearASTRows() {
 function removeASTRow(idx) {
   astRows.splice(idx, 1); renderASTRows();
 }
+// (v131) HUD ASD Electronic Assessment Tool equations (thermal radiation, unpressurized / undiked).
+// ASDPPU (people, 450 BTU/ft²-hr): 10^(0.4166·log10(gal) + 1.192)  → 100,000 gal = 1,884 ft.
+// ASDBPU (buildings, 10,000 BTU/ft²-hr): 10^(0.4623·log10(gal) + 0.3145). Blast (pressurized only): 10^(0.3306·log10(gal) + 1.3487).
+function hudAsdPeople(gal) { gal = parseFloat(gal); return (gal > 0) ? Math.round(Math.pow(10, 0.4166 * Math.log10(gal) + 1.192)) : null; }
+function hudAsdBuilding(gal) { gal = parseFloat(gal); return (gal > 0) ? Math.round(Math.pow(10, 0.4623 * Math.log10(gal) + 0.3145)) : null; }
+function hudAsdBlast(gal) { gal = parseFloat(gal); return (gal > 0) ? Math.round(Math.pow(10, 0.3306 * Math.log10(gal) + 1.3487)) : null; }
+function autoFillASD() {
+  astRows.forEach(r => { const a = hudAsdPeople(r.gal); if (a) r.asd = a; });
+  renderASTRows();
+}
+// Paste the JSON produced by the AZ-RI ERIS AST extractor (Claude skill "hud-er-explosives-ast") — fills the
+// inventory, the remaining-sites count and the worksheet status in one step.
+function importASTJson() {
+  const txt = prompt('Paste the AST import JSON from Claude (ERIS AST extractor):');
+  if (!txt) return;
+  let j; try { j = JSON.parse(txt); } catch (e) { alert('Not valid JSON: ' + e.message); return; }
+  const rows = Array.isArray(j) ? j : (j.astRows || []);
+  astRows = rows.map(r => ({ mapKey: String(r.mapKey || ''), site: r.site || '', addr: r.addr || '', dist: r.dist != null ? r.dist : '', gal: r.gal != null ? r.gal : '', asd: r.asd != null ? r.asd : (hudAsdPeople(r.gal) || ''), substance: r.substance || '', flags: r.flags || [] }));
+  renderASTRows();
+  const rem = document.getElementById('astRemainingSites');
+  if (rem && j.remaining != null) { rem.value = j.remaining; rem.dispatchEvent(new Event('input', { bubbles: true })); }
+  const sel = document.getElementById('astWorksheetStatus');
+  const valid = ['none', 'far', 'close_acceptable', 'close_no_los', 'close_los'];
+  let note = '';
+  if (sel && j.status) {
+    if (valid.includes(j.status)) { sel.value = j.status; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    else if (j.status === 'close_review') note = 'One or more sites are WITHIN their ASD — check line of sight (street view / site visit) and pick Write Up 5 or 6 in the status dropdown.';
+  }
+  const flagged = astRows.filter(r => r.flags && r.flags.length);
+  alert('Imported ' + astRows.length + ' prioritized AST site(s)' + (j.remaining != null ? ', ' + j.remaining + ' remaining >2,000 ft' : '') + '.'
+    + (note ? '\n\n' + note : '') + (flagged.length ? '\n\nVerify: ' + flagged.map(r => 'Map Key ' + r.mapKey + ' — ' + r.flags.join('; ')).join('\n') : '')
+    + '\n\nNow click Determine Level of Review (1310) or Auto-Determine to write the Explosives write-up.');
+}
 function updateASTRow(idx, field, val) {
   if (astRows[idx]) astRows[idx][field] = val;
+  if (field === 'gal' && astRows[idx]) {              // keep ASD in step with the tank size unless the reviewer typed one
+    const a = hudAsdPeople(val);
+    const asdIn = document.querySelector(`#astWorksheetBody tr[data-row="${idx}"] input[data-f="asd"]`);
+    if (a && asdIn && (!asdIn.value || asdIn.dataset.auto === '1')) { asdIn.value = a; asdIn.dataset.auto = '1'; astRows[idx].asd = a; }
+  }
   // Recompute status cell only — don't full-re-render to preserve focus
   const statusCell = document.querySelector(`#astWorksheetBody tr[data-row="${idx}"] .ast-status`);
   if (statusCell) statusCell.innerHTML = astRowStatus(astRows[idx]);
@@ -7647,7 +7688,7 @@ function renderASTRows() {
       <td style="padding:4px 6px;"><input type="text" value="${(r.addr || '').replace(/"/g, '&quot;')}" oninput="updateASTRow(${i}, 'addr', this.value)" style="width:200px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;"></td>
       <td style="padding:4px 6px;"><input type="number" value="${r.dist || ''}" oninput="updateASTRow(${i}, 'dist', this.value)" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;text-align:right;"></td>
       <td style="padding:4px 6px;"><input type="number" value="${r.gal || ''}" oninput="updateASTRow(${i}, 'gal', this.value)" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;text-align:right;"></td>
-      <td style="padding:4px 6px;"><input type="number" value="${r.asd || ''}" oninput="updateASTRow(${i}, 'asd', this.value)" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;text-align:right;"></td>
+      <td style="padding:4px 6px;"><input type="number" data-f="asd" value="${r.asd || ''}" oninput="this.dataset.auto='0';updateASTRow(${i}, 'asd', this.value)" title="${r.substance ? 'Largest active tank: ' + String(r.substance).replace(/"/g,'') + '. ' : ''}HUD ASD Tool — thermal radiation for people, unpressurized/undiked" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;text-align:right;"></td>
       <td class="ast-status" style="padding:4px 6px;font-size:11px;">${astRowStatus(r)}</td>
       <td class="no-print" style="padding:4px 6px;"><button onclick="removeASTRow(${i})" style="background:white;color:var(--red);border:1px solid var(--red);padding:2px 8px;border-radius:3px;font-size:11px;cursor:pointer;">×</button></td>
     </tr>
@@ -11332,7 +11373,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v130 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v131 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
