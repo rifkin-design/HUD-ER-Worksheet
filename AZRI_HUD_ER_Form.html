@@ -583,7 +583,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v131</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v132</div>
   </div>
 </header>
 
@@ -7342,6 +7342,10 @@ AUTHORITIES.forEach(a => {
     astPanel.innerHTML = `
       <div style="font-weight:700;font-size:13px;color:#7c4a03;margin-bottom:6px;">AST Worksheet (24 CFR 51C) — fill from ERIS AST DBR</div>
       <div style="font-size:12px;color:#4a5568;margin-bottom:10px;">Pull AST data from the Phase I ESA's ERIS report. After completing the inventory, set the status dropdown — Auto-Determine will write the appropriate Write-Up automatically.</div>
+      <div class="no-print" style="background:#eef6f6;border:1px solid var(--azri-teal,#2c7a7b);border-radius:5px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#2d3748;line-height:1.5;">
+        <b>Fast path with Claude:</b> 1) click <b>Copy Claude prompt</b> (project name, address and scope are filled in from this form) → 2) open a Claude chat, drag in the ERIS Database Report PDF, paste the prompt, send → 3) copy the JSON block Claude returns → 4) click <b>📥 Import AST JSON</b> below and paste → 5) Auto-Determine / 1310 writes the Write-Up.
+        <button type="button" onclick="copyClaudeAstPrompt(this)" style="margin-left:8px;background:var(--azri-teal,#2c7a7b);color:white;border:none;padding:4px 10px;border-radius:4px;font-size:11.5px;cursor:pointer;font-weight:600;">📋 Copy Claude prompt</button>
+      </div>
       <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
         <div style="flex:1;min-width:280px;">
           <label style="font-size:12px;font-weight:600;text-transform:uppercase;color:#4a5568;letter-spacing:0.5px;">AST Worksheet Status</label>
@@ -7636,6 +7640,30 @@ function autoFillASD() {
 }
 // Paste the JSON produced by the AZ-RI ERIS AST extractor (Claude skill "hud-er-explosives-ast") — fills the
 // inventory, the remaining-sites count and the worksheet status in one step.
+// Builds the exact prompt that triggers the "hud-er-explosives-ast" Claude skill, with project facts pre-filled.
+function buildClaudeAstPrompt() {
+  const v = n => ((document.querySelector('[data-field="' + n + '"]') || {}).value || '').trim();
+  const addr = [v('siteAddress'), v('siteCity'), [v('siteState'), v('siteZip')].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const sc = (typeof rq === 'function') ? rq('explos', 'scope') : null;
+  const scope = sc === 'yes' ? 'new construction, or a rehab that increases residential density / converts a building to habitation / makes a vacant building habitable (AST review required)'
+              : sc === 'no'  ? 'NOT new construction and NOT a rehab that increases residential density or habitation (section exempt under Write Up 1 — confirm, then give me the inventory anyway for the file)'
+              : '[new construction / rehab that adds units or habitation / neither]';
+  return 'Use the hud-er-explosives-ast skill. Attached is the ERIS Database Report for this project (ASTs ordered to 1 mile). Complete the Explosive & Flammable Hazards (24 CFR 51 Subpart C) section per the AZ-RI SOP:\n\n'
+    + '1. Run the AZ-RI ERIS AST extractor on the attached PDF (do not hand-type tank data).\n'
+    + '2. Active tanks only; one row per Map Key using the single largest active tank; sites < 2,000 ft are the inventory, sites >= 2,000 ft are only counted.\n'
+    + '3. ASD = HUD ASD Tool, thermal radiation for people, above ground = Yes, under pressure = No, diked = No.\n'
+    + '4. Spot-check at least two Map Keys against the raw report text and tell me if anything did not parse.\n'
+    + '5. Give me: (a) the 2-3 sentence determination and which Write-Up applies, (b) the table of sites < 2,000 ft with distance, largest active tank (gal + product), ASD, and acceptable / within-ASD, (c) any (VERIFY: ...) items, and (d) the Import JSON in one code block for the worksheet\'s "Import AST JSON (from Claude)" button.\n\n'
+    + 'Project: ' + (v('projectName') || '[project name]') + '\n'
+    + 'Subject Property: ' + (addr || '[address]') + '\n'
+    + 'Scope: ' + scope + '\n';
+}
+function copyClaudeAstPrompt(btn) {
+  const text = buildClaudeAstPrompt();
+  const done = ok => { if (btn) { const o = btn.textContent; btn.textContent = ok ? '✓ Copied — now paste into Claude with the ERIS PDF' : '✗ Copy failed'; setTimeout(() => { btn.textContent = o; }, 3500); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => done(true)).catch(() => { prompt('Copy this prompt:', text); done(true); });
+  else { prompt('Copy this prompt:', text); done(true); }
+}
 function importASTJson() {
   const txt = prompt('Paste the AST import JSON from Claude (ERIS AST extractor):');
   if (!txt) return;
@@ -11373,7 +11401,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v131 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v132 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
