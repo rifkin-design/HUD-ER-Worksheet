@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v138</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v140</div>
   </div>
 </header>
 
@@ -3120,6 +3120,7 @@ function renderSupportingDocs(authId) {
 function renderAllSupportingDocs() {
   AUTHORITIES.forEach(a => renderSupportingDocs(a.id));
   ['packet_fig1', 'packet_plans', 'packet_photos', 'air_greenbook'].forEach(renderSupportingDocs);
+  if (typeof renderCZMGuide === 'function') try { renderCZMGuide(); } catch (e) {}
   if (typeof esaRenderTable === 'function') esaRenderTable();
 }
 
@@ -5388,26 +5389,164 @@ async function generateCZMConsultation(authId) {
     const figures = await packetFigures(C, say);
     say('Writing the CZM consistency packet…');
     const P = await pkNewDoc('CZMA Federal Consistency Determination', C.meta);
-    pkP(P, C.g('czm_agency') || recip.title, { size: 9.5, after: 10 });
-    pkP(P, 'Re: Coastal Zone Management Act Section 307(c) - Federal consistency ' + (C.g('czm_type') || 'determination') + ' - ' + (C.meta.projectName || 'HUD-assisted project') + (C.meta.location ? ', ' + C.meta.location : ''), { bold: true });
-    pkP(P, 'On behalf of ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ', the Responsible Entity assuming HUD\'s environmental responsibilities under 24 CFR 58.5(c) for the above ' + (C.proj.hudProgram || 'HUD') + '-assisted project, AZ-RI Consultants submits this federal consistency ' + (C.g('czm_type') || 'determination') + ' under 15 CFR Part 930' + (/negative/i.test(C.g('czm_type')) ? ', Subpart C (negative determination, 15 CFR 930.35)' : ', Subpart C') + '. The project is located ' + (scope === 'inside' ? 'within' : 'outside but potentially affecting') + ' the state\'s designated coastal zone.');
+    // (v140) Kept simple: recipient block, "on behalf of" intro, determination statement, submittal line and signature were
+    // removed — the cover email (and the DE DCMP form / MD request form) carry those. This PDF is the project narrative + attachments.
     pkH1(P, 'Project Description'); pkP(P, packetDescriptionText(C));
     pkH1(P, 'Coastal Effects and Consistency with Enforceable Policies');
-    pkP(P, C.g('czm_effects') || 'The project is a ' + ((C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ') || 'housing') + ' activity on ' + (C.g('packet_existingUse') ? 'an existing ' + C.g('packet_existingUse') + ' site' : 'a previously developed site') + '. It does not involve work in tidal waters, wetlands, dunes or beaches, does not alter public access to the shoreline, and will comply with state erosion and sediment control and stormwater management requirements during construction. No reasonably foreseeable effects on coastal uses or resources beyond the site are anticipated.');
+    pkP(P, czmEffectsText(C));
     if (C.g('czm_policies')) { pkH2(P, 'Enforceable policies reviewed'); pkBullets(P, C.g('czm_policies').split(/\n/).filter(Boolean)); }
-    pkH1(P, 'Determination and Requested Action');
-    pkP(P, C.g('czm_determination') || ((C.proj.responsibleEntity || 'The Responsible Entity') + ' has determined that the project is consistent to the maximum extent practicable with the enforceable policies of the ' + recip.agency + '. We request the program\'s concurrence' + (/negative/i.test(C.g('czm_type')) ? ' with this negative determination' : '') + ' within the review period provided by 15 CFR 930.41.'));
-    if (recip.portal) pkP(P, 'Submittal: ' + recip.portal, { size: 9, italic: true });
     pkP(P, 'Attachments: project information, Figure 1 (site location) and plan sheets (following pages)' + (supportingDocs && supportingDocs.flood_ins && supportingDocs.flood_ins.length ? '; FIRM figure' : '') + '.', { italic: true, size: 9 });
-    pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : ''));
     pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_CZM_Consistency_Packet.pdf';
     pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); doc.save(name);
     figFillSourceRef(authId, 'CZMA federal consistency packet (' + recip.agency + ')', (C.g('czm_type') || 'Consistency determination') + ' submitted ' + new Date().toLocaleDateString());
     say('✓ CZM consistency packet generated — PDF downloaded and attached. Mark Awaiting Response until the program responds (Write Up 4/5 or the DE submission write-ups).', 'var(--azri-navy)');
+    renderCZMGuide();
   } catch (e) { console.warn('[CZM packet]', e); say('✗ CZM packet failed: ' + e.message, 'var(--red,#c00)'); }
 }
+function czmEffectsText(C) {
+  return C.g('czm_effects') || 'The project is a ' + ((C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ') || 'housing') + ' activity on ' + (C.g('packet_existingUse') ? 'an existing ' + C.g('packet_existingUse') + ' site' : 'a previously developed site') + '. It does not involve work in tidal waters, wetlands, dunes or beaches, does not alter public access to the shoreline, and will comply with state erosion and sediment control and stormwater management requirements during construction. No reasonably foreseeable effects on coastal uses or resources beyond the site are anticipated.';
+}
+
+// ===== CZM — STATE SUBMISSION GUIDE + DELAWARE DCMP FORM AUTO-FILL (v140) =====
+// The guide reads the project state (1125; overridable below), the scope answer and the submission type, and lists exactly what
+// the program wants, where it goes, and which attachments this worksheet has already produced. For Delaware it fills the
+// DCMP Fed Con Form v2.0 (the blank form ships in the repo next to this file; a file picker is the fallback when offline).
+const AZRI_FIRM = { name: 'AZ-RI Consultants', street: '919 W. 34th Street, #4706', city: 'Baltimore', state: 'MD', zip: '21211', web: 'az-ri.com' };
+const CZM_GUIDE = {
+  MD: { program: 'Maryland Coastal Zone Management Program (DNR; MDE coordinates federal consistency)', zone: 'Tidewater coastal-zone counties and Baltimore City; projects in the Chesapeake / Atlantic Coastal Bays Critical Area also go to the Critical Area Commission.',
+        how: 'Submit the online Coastal Consistency Review Request Form (JotForm, linked from the DNR page) — no email submittal.', url: 'https://dnr.maryland.gov/ccs/Pages/MD-coastal-consistency-submission-form.aspx',
+        contact: 'Danielle Spendiff, Federal Consistency Coordinator, MDE — danielle.spendiff1@maryland.gov — 410-537-4023',
+        send: ['Request form fields: project name, applicant / RE, federal agency (HUD, 24 CFR Part 58), location, description', 'CZM Enforceable-Policy checklists — Core (always); Development (new construction); Forest / Historical / Living Aquatic as applicable', 'CZM map (Figure 1), site plan, project narrative (the packet PDF from this card)', 'If in the Critical Area: also submit via the Critical Area Commission portal (FED40; Lisa Hoerger, lisa.hoerger@maryland.gov, 410-260-3478)'],
+        writeup: 'Pending → Write Up 4 (not received); received with conditions → Write Up 4 (received); FHA → Write Up 5.' },
+  DE: { program: 'Delaware Coastal Management Program (DCMP) — DNREC', zone: 'Statewide — the whole state is the coastal zone, so federal consistency almost always applies in Delaware.',
+        how: 'Email the completed DCMP Fed Con Form v2.0 and attachments to DNREC_FederalConsistency@delaware.gov. Concurrence is presumed if DCMP does not respond within 60 days (15 CFR Part 930, Subpart C).', url: 'https://dnrec.delaware.gov/coastal-programs/coastal-management/federal-consistency/',
+        contact: 'DCMP Federal Consistency Coordinator — DNREC_FederalConsistency@delaware.gov — 302-739-9283 — 100 W. Water St., Suite 7B, Dover, DE 19904',
+        send: ['DCMP Fed Con Form v2.0 — Sections I–VII (contact, category, description, general analysis of coastal effects, Policies 5.1–5.25, JPP/RAS, signed determination) — use 📝 Fill DCMP form below', 'Figure 1 (site location) and plan sheets (embedded in the packet PDF)', 'Project narrative — the packet PDF from this card'],
+        writeup: 'Write Up "DE — Consistency Determination" (or the Negative Determination variant); mark Awaiting until DCMP responds or 60 days pass.' },
+  VA: { program: 'Virginia Coastal Zone Management Program — DEQ Office of Environmental Impact Review (OEIR) administers federal consistency', zone: 'Tidewater Virginia (the 29 counties / 17 cities east of the fall line, incl. NoVA east of the fall line).',
+        how: 'Submit the federal consistency determination to DEQ OEIR (eir@deq.virginia.gov) with the enforceable-policy analysis; DEQ coordinates the state-agency review.', url: 'https://www.deq.virginia.gov/permits/environmental-impact-review/federal-consistency',
+        contact: 'DEQ Office of Environmental Impact Review — eir@deq.virginia.gov — 804-698-4000 (confirm the current federal consistency coordinator)',
+        send: ['Consistency determination letter / packet PDF (this card) with a statement against each of the Virginia CZM enforceable policies (tidal and non-tidal wetlands, fisheries, subaqueous lands, dunes and beaches, point / nonpoint pollution, shoreline sanitation, air quality, coastal lands management)', 'Figure 1 and plans', 'Any state permits / approvals obtained (VMRC, VDH, DEQ)'],
+        writeup: 'Write Up 4 (pending / received) — VA write-up variant to be added once the first submission is made.' },
+  PA: { program: 'Pennsylvania Coastal Resources Management Program — DEP', zone: 'Only the Lake Erie and Delaware Estuary coastal zones; everything else in PA is outside the coastal zone → Write Up 2.',
+        how: 'Submit the consistency determination to DEP Coastal Resources Management (J. Samantha Burton, jenburton@pa.gov, 717-772-5635).', url: 'https://www.dep.pa.gov/Business/Water/Compacts%20and%20Commissions/Coastal%20Resources%20Management%20Program/Pages/default.aspx',
+        contact: 'J. Samantha Burton, DEP CRM — jenburton@pa.gov — 717-772-5635',
+        send: ['Consistency determination letter / packet PDF (this card)', 'Figure 1 and plans', 'Coastal zone location confirmation (Lake Erie / Delaware Estuary boundary map)'],
+        writeup: 'In zone → Write Up 4; outside (nearly all of PA, incl. Cumberland County) → Write Up 2.' },
+  DC: { none: true, note: 'The District of Columbia has no federally approved CZMP — CZMA federal consistency does not apply → Write Up 1.' },
+  WV: { none: true, note: 'West Virginia has no federally approved CZMP — CZMA federal consistency does not apply → Write Up 1.' }
+};
+function czmState() {
+  const ov = ((document.querySelector('[data-field="czm_stateOverride"]') || {}).value || '').trim();
+  if (ov) return ov;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  return (typeof STATE_ABBR !== 'undefined' && STATE_ABBR[(proj.siteState || '').trim()]) || (proj.siteState || '').trim().toUpperCase().slice(0, 2) || '';
+}
+function renderCZMGuide() {
+  const el = document.getElementById('czmGuide'); if (!el) return;
+  const st = czmState(); const cfg = CZM_GUIDE[st];
+  const scope = (typeof rq === 'function') ? rq('czm', 'scope') : '';
+  const type = ((document.querySelector('[data-field="czm_type"]') || {}).value || 'Consistency determination');
+  const has = k => !!((typeof supportingDocs !== 'undefined' && supportingDocs[k]) || []).length;
+  const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const chip = (ok, label) => '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;margin:2px 4px 2px 0;' + (ok ? 'background:#e6f4ea;color:#276749;border:1px solid #9ae6b4;' : 'background:#fff5f5;color:#9b2c2c;border:1px solid #feb2b2;') + '">' + (ok ? '✓ ' : '✗ ') + label + '</span>';
+  let h = '';
+  if (!st) h = '<div style="color:#9b2c2c;">Enter the Project State in 1125 (or pick one in the override) to get the submission guide.</div>';
+  else if (!cfg) h = '<div>' + esc(st) + ' — no AZ-RI CZM guide yet. Confirm whether the state has a federally approved CZMP (NOAA OCM list) and whether the site is in its coastal zone; if both, submit the packet PDF from this card to the state program.</div>';
+  else if (cfg.none) h = '<div>' + esc(cfg.note) + '</div>';
+  else if (scope === 'outside' || scope === 'noczm') h = '<div>Scope answer is "' + (scope === 'outside' ? 'outside the coastal zone' : 'no CZMP') + '" → exempt; nothing to submit. ' + esc(cfg.zone) + '</div>';
+  else {
+    const attachments = [
+      chip(has('czm'), 'CZM packet PDF (this card)'), chip(has('packet_fig1'), 'Figure 1 (1125)'), chip(has('packet_plans'), 'Plans (1125)'),
+      chip(has('flood_ins') || has('flood_mgt'), 'FIRM / floodplain figure'), st === 'DE' ? chip(((supportingDocs || {}).czm || []).some(d => /DCMP_Fed_Con/i.test(d.name)), 'DCMP Fed Con Form (filled)') : ''
+    ].join('');
+    h = '<div style="margin-bottom:6px;"><b>' + esc(cfg.program) + '</b> · ' + esc(type) + '</div>'
+      + '<div style="margin-bottom:6px;"><b>Coastal zone:</b> ' + esc(cfg.zone) + '</div>'
+      + '<div style="margin-bottom:6px;"><b>How to submit:</b> ' + esc(cfg.how) + ' <a href="' + cfg.url + '" target="_blank" rel="noopener">program page</a></div>'
+      + '<div style="margin-bottom:6px;"><b>Contact:</b> ' + esc(cfg.contact) + '</div>'
+      + '<div style="margin-bottom:4px;"><b>What they want:</b></div><ul style="margin:0 0 8px 18px;padding:0;">' + cfg.send.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
+      + '<div style="margin-bottom:4px;"><b>Attachments on hand:</b> ' + attachments + '</div>'
+      + '<div style="margin-top:6px;"><b>Write-up:</b> ' + esc(cfg.writeup) + '</div>';
+  }
+  el.innerHTML = h;
+  const deBtn = document.getElementById('czmDeFormBtn'); if (deBtn) deBtn.style.display = (st === 'DE' && cfg && !cfg.none && scope !== 'outside' && scope !== 'noczm') ? '' : 'none';
+}
+// Delaware DCMP Fed Con Form v2.0 — fill the AcroForm fields from the worksheet
+const PDFLIB_URL = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+function loadPdfLib() { if (window.PDFLib) return Promise.resolve(window.PDFLib); return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = PDFLIB_URL; sc.onload = () => res(window.PDFLib); sc.onerror = () => rej(new Error('pdf-lib could not be loaded (offline?)')); document.head.appendChild(sc); }); }
+const DCMP_FORM_FILE = 'Delaware_Fed_Con_Form_v2.pdf';
+async function dcmpBlankForm() {
+  try { const r = await fetch(DCMP_FORM_FILE); if (r.ok) return new Uint8Array(await r.arrayBuffer()); } catch (e) {}
+  return new Promise((res, rej) => { alert('The blank DCMP Fed Con Form v2.0 could not be loaded next to this page — pick the blank form PDF in the next dialog.'); const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf'; inp.onchange = async e => { const f = e.target.files[0]; if (!f) return rej(new Error('No form chosen')); res(new Uint8Array(await f.arrayBuffer())); }; inp.click(); });
+}
+// Default policy-by-policy statements (DCMP Policies 5.1–5.25), drawn from what the worksheet already found; override any
+// one by starting a line in "Enforceable policies reviewed" with its number, e.g. "5.7: Site is in Zone X …".
+function dcmpPolicyText(C) {
+  const g = C.g; const f = C.proj; const act = (C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ') || 'housing';
+  const ref = id => (f[id + '_ref'] || '').trim();
+  const na = 'Not applicable — the project does not involve this resource or activity.';
+  const T = {
+    '5.1': ref('wetlands') ? 'No wetlands are mapped on the site (' + ref('wetlands') + '); no wetland impacts.' : 'No work in tidal or non-tidal wetlands is proposed; no wetland impacts.',
+    '5.2': 'Not applicable — the site is not on or adjacent to a beach or dune system.',
+    '5.3': 'Construction will comply with the Delaware Sediment and Stormwater Regulations (7 DE Admin. Code 5101); no direct discharge to coastal waters. Water supply and wastewater are provided by existing public systems.',
+    '5.4': 'Not applicable — no work in subaqueous lands or the coastal strip.',
+    '5.5': na,
+    '5.6': 'The site is previously developed; no natural areas, nature preserves or designated natural lands are affected.',
+    '5.7': ref('flood_mgt') || ref('flood_ins') ? 'FEMA mapping: ' + (ref('flood_mgt') || ref('flood_ins')) + '. The project complies with the applicable floodplain management requirements.' : 'Per the FEMA FIRM the site is outside the Special Flood Hazard Area (confirm on the Flood cards).',
+    '5.8': 'Not applicable — not at the Port of Wilmington.',
+    '5.9': 'The site is previously developed; no woodlands or agricultural lands are converted.',
+    '5.10': ref('historic') ? 'Section 106 review: ' + ref('historic') + '.' : 'Section 106 review is being conducted with the Delaware SHPO under 36 CFR Part 800; no adverse effect on historic properties is anticipated.',
+    '5.11': ref('esa') ? 'USFWS IPaC: ' + ref('esa') + '.' : 'No effect on living resources is anticipated; the site is previously developed.',
+    '5.12': na, '5.13': na, '5.14': 'Not applicable — no public trust lands or tidelands are affected.', '5.15': 'Not applicable — not an energy facility.',
+    '5.16': 'The project is federally assisted through HUD (24 CFR Part 58 review by the Responsible Entity); it is consistent with public investment policy.',
+    '5.17': 'No effect on recreation or tourism resources.', '5.18': 'Not applicable.', '5.19': 'No new transportation facilities; the project uses existing streets.',
+    '5.20': ref('air') ? 'EPA Green Book: ' + ref('air') + '.' : 'Delaware counties are reviewed under the Clean Air Act; the project is a small-scale ' + act + ' action with de minimis emissions.',
+    '5.21': 'Served by the existing public water supply; no new withdrawal.', '5.22': 'Construction debris will be disposed at a permitted facility; sanitary sewer service is provided by the existing public system.',
+    '5.23': 'The project is ' + act + ' on a previously developed site within an existing developed area, consistent with local zoning and the comprehensive plan.',
+    '5.24': 'Standard construction best management practices (erosion and sediment control, dust control, proper material handling) will be employed.',
+    '5.25': 'This submission is coordinated with DCMP; the Responsible Entity will incorporate any DCMP comments into the environmental review record.'
+  };
+  (g('czm_policies') || '').split(/\n/).forEach(l => { const m = l.match(/^\s*(?:Policy\s*)?(5\.\d{1,2})\s*[:\-\u2013\u2014]?\s*(.+)$/i); if (m && T[m[1]] !== undefined) T[m[1]] = m[2].trim(); });
+  return T;
+}
+async function fillDCMPForm(authId) {
+  authId = authId || 'czm'; const say = packetSay('autoStatus_' + authId);
+  const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before filling the DCMP form.'); return; }
+  try {
+    say('Loading the DCMP Fed Con Form…');
+    const [PDFLib, bytes] = await Promise.all([loadPdfLib(), dcmpBlankForm()]);
+    const pdf = await PDFLib.PDFDocument.load(bytes); const form = pdf.getForm();
+    const set = (name, val) => { try { form.getTextField(name).setText(String(val == null ? '' : val)); } catch (e) { console.warn('[DCMP] field', name, e.message); } };
+    const check = name => { try { form.getCheckBox(name).check(); } catch (e) { console.warn('[DCMP] checkbox', name, e.message); } };
+    const proj = C.proj, g = C.g; const type = (g('czm_type') || 'Consistency determination');
+    const title = g('packet_preparerTitle') || 'Environmental Professional';
+    set('ProjectActivity Name', C.meta.projectName + (C.meta.location ? ' - ' + C.meta.location : ''));
+    set('ContactNameTitle', C.reviewer + ', ' + title);
+    set('Federal Agency Contractor Name if applicable', AZRI_FIRM.name + ' (environmental consultant to ' + (proj.responsibleEntity || 'the Responsible Entity') + ')');
+    set('Federal Agency', 'U.S. Dept. of Housing and Urban Development' + (proj.hudProgram ? ' - ' + proj.hudProgram : '') + '; Responsible Entity under 24 CFR Part 58: ' + (proj.responsibleEntity || '[RE]'));
+    set('MailingAddress', AZRI_FIRM.street); set('Text4', AZRI_FIRM.city); set('Text5', AZRI_FIRM.state); set('Text6', AZRI_FIRM.zip);
+    set('Text7', g('packet_preparerEmail') || ''); set('Text8', g('packet_preparerPhone') || '');
+    try { form.getRadioGroup('Group1').select(/financial/i.test(g('czm_category')) ? 'Choice3' : 'Choice1'); } catch (e) { console.warn('[DCMP] category', e.message); }
+    set('III', packetDescriptionText(C) + '\n\nLocation: ' + C.meta.location + (C.center ? ' (' + C.center[1].toFixed(5) + ', ' + C.center[0].toFixed(5) + ')' : '') + (C.summary.acctids ? '\nParcel(s): ' + C.summary.acctids : '') + (C.meta.grant ? '\n' + C.meta.grant : ''));
+    set('undefined', czmEffectsText(C));
+    const T = dcmpPolicyText(C);
+    const names = { '5.1': 'Policy 51 Wetlands Management', '5.2': 'Policy 52 Beach Management', '5.3': 'Policy 53 Coastal Waters Management', '5.4': 'Policy 54 Subaqueous Land and Coastal Strip Management', '5.5': 'Policy 55 Public Lands Management', '5.6': 'Policy 56 Natural Lands Management', '5.7': 'Policy 57 Flood Hazard Areas Management', '5.8': 'Policy 58 Port of Wilmington', '5.9': 'Policy 59 Woodlands and Agricultural Lands Management', '5.10': 'Policy 510 Historic and Cultural Areas Management', '5.11': 'Policy 511 Living Resources', '5.12': 'Policy 512 Mineral Resources Management', '5.13': 'Policy 513 State Owned Coastal Recreation and Conservation', '5.14': 'Policy 514 Public Trust Doctrine', '5.15': 'Policy 515 Energy Facilities', '5.16': 'Policy 516 Public Investment', '5.17': 'Policy 517 Recreation and Tourism', '5.18': 'Policy 518 National Defense and Aerospace Facilities', '5.19': 'Policy 519 Transportation Facilities', '5.20': 'Policy 520 Air Quality Management', '5.21': 'Policy 521 Water Supply Management', '5.22': 'Policy 522 Waste Disposal Management', '5.23': 'Policy 523 Development', '5.24': 'Policy 524 Pollution Prevention', '5.25': 'Policy 525 Coastal Management Coordination' };
+    Object.keys(names).forEach(k => set(names[k], T[k]));
+    check('None');
+    check(/negative/i.test(type) ? 'herein the federal agency or its contracted agent listed in I above finds that this proposed activity will not have' : 'included herein the federal agency or its contracted agent listed in I above finds that this proposed activity is');
+    set('Printed Name', C.reviewer + ', ' + title + ' - ' + AZRI_FIRM.name); set('Date', new Date().toLocaleDateString('en-US'));
+    try { form.updateFieldAppearances(await pdf.embedFont(PDFLib.StandardFonts.Helvetica)); } catch (e) {}
+    const out = await pdf.save(); const slug = figSlug(proj); const name = slug + '_DCMP_Fed_Con_Form.pdf';
+    const blob = new Blob([out], { type: 'application/pdf' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    const dataUrl = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+    if (typeof supportingDocs !== 'undefined') { if (!supportingDocs[authId]) supportingDocs[authId] = []; supportingDocs[authId] = supportingDocs[authId].filter(d => !(d.auto && d.name === name)); supportingDocs[authId].push({ name, size: out.length, type: 'application/pdf', uploadedAt: new Date().toISOString(), data: dataUrl, auto: true, caption: 'DCMP Fed Con Form v2.0 - ' + type }); if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId); }
+    say('✓ DCMP Fed Con Form filled — downloaded and attached. Review Policies 5.1–5.25, sign Section VII, then email it with the packet PDF to DNREC_FederalConsistency@delaware.gov.', 'var(--azri-navy)');
+    renderCZMGuide();
+  } catch (e) { console.warn('[DCMP form]', e); say('✗ DCMP form fill failed: ' + e.message, 'var(--red,#c00)'); }
+}
+
 
 
 // ---------- Plan-sheet scanner: pull site data out of uploaded plan PDFs (text layer) ----------
@@ -7460,6 +7599,7 @@ AUTHORITIES.forEach(a => {
             ? `<button class="no-print" onclick="toggleExemptionCheck('${a.id}')" id="exemptBtn_${a.id}" style="background:var(--azri-sand);border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✔ Review Questions</button>`
             : ''}
         ${mapBtnHtml}
+        ${a.id === 'air' ? `<button class="no-print" onclick="uploadSupportingDoc('air_greenbook')" title="Screenshot or PDF of the Green Book state/county section — embedded in the General Conformity attachment" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">⬆ Green Book page</button>` : ''}
         ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportClaudePanel()" title="Copy/paste instructions for having Claude read the airport's RPZ/CZ or APZ map and make the final zone determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Zone review with Claude</button>` : ''}
         ${a.id === 'historic' ? `<button class="no-print" onclick="generateLetter('historic')" title="Generates the Section 106 consultation letter in the state-specific format (DC HPO 5-point / VA DHR ePIX / generic)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📄 106 Letter (state format)</button><button class="no-print" onclick="generateCoverEmail()" title="Generates the matching cover email template (DC HPO / VA DHR)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✉ Cover Email (DC/VA)</button>` : ''}
         <span class="no-print" id="autoStatus_${a.id}" style="font-size:11px;color:var(--gray);"></span>
@@ -7503,8 +7643,7 @@ AUTHORITIES.forEach(a => {
         <div><label>CO (tpy)</label><input type="text" data-field="air_emisCO"></div>
         <div class="full"><label>Emissions estimate basis</label><input type="text" data-field="air_emisBasis" placeholder="e.g., EPA NONROAD / MOVES construction estimate dated …"></div>
         <div class="full"><label>Green Book status (manual) <span style="font-weight:400;color:var(--gray);">— only if EPA's map service is down or missed an area. One per line: <code>NAAQS | Area, ST | Status | Classification</code>, e.g. <code>8-Hour Ozone (2015) | Baltimore, MD | Nonattainment | Serious</code></span></label><textarea data-field="air_gbManual" style="min-height:48px;"></textarea></div>
-        <div class="full" style="margin-top:4px;"><label>EPA Green Book page(s) <span style="font-weight:400;color:var(--gray);">— screenshot or PDF of the state / county section at epa.gov/green-book; embedded in the attachment after the evaluation text. Figure 1 and the plans uploaded in 1125 (Project figures &amp; plans) are embedded too.</span></label>
-          <div><button type="button" onclick="uploadSupportingDoc('air_greenbook')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;margin-top:4px;">⬆ Upload Green Book page</button></div>
+        <div class="full" style="margin-top:4px;"><label>EPA Green Book page(s) attached <span style="font-weight:400;color:var(--gray);">— upload with the ⬆ Green Book page button in the card header; embedded in the attachment after the evaluation text, followed by Figure 1 and the plans from 1125.</span></label>
           <div id="docs_air_greenbook" style="margin-top:6px;"></div></div>
       </div>
     </details>` : ''}
@@ -7544,12 +7683,20 @@ AUTHORITIES.forEach(a => {
     ${a.id === 'czm' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">CZM consistency packet inputs <span style="font-weight:400;color:var(--gray);">(shared project facts come from 1125)</span></summary>
       <div class="field-grid" style="margin-top:10px;">
-        <div><label>Submission type</label><select data-field="czm_type"><option value="">Consistency determination (default)</option><option>Consistency determination</option><option>Negative determination</option></select></div>
-        <div class="full"><label>State CZM agency / contact override <span style="font-weight:400;color:var(--gray);">(default from the project state)</span></label><input type="text" data-field="czm_agency"></div>
+        <div><label>Submission type</label><select data-field="czm_type" onchange="renderCZMGuide()"><option value="">Consistency determination (default)</option><option>Consistency determination</option><option>Negative determination</option></select></div>
+        <div><label>CZM state <span style="font-weight:400;color:var(--gray);">(default: Project State in 1125)</span></label><select data-field="czm_stateOverride" onchange="renderCZMGuide()"><option value="">— from 1125 —</option><option>MD</option><option>DE</option><option>VA</option><option>PA</option><option>DC</option><option>WV</option></select></div>
+        <div><label>Consistency category <span style="font-weight:400;color:var(--gray);">(DE form, Section II)</span></label><select data-field="czm_category"><option value="">Federal activity — RE acting for HUD (Subpart C, default)</option><option>Federal financial assistance (Subpart F)</option></select></div>
         <div class="full"><label>Coastal effects narrative override (optional)</label><textarea data-field="czm_effects" style="min-height:50px;"></textarea></div>
-        <div class="full"><label>Enforceable policies reviewed (one per line, e.g., MD Tidal Wetlands Act — not applicable, no tidal wetlands on site)</label><textarea data-field="czm_policies" style="min-height:50px;"></textarea></div>
-        <div class="full"><label>Determination statement override (optional)</label><textarea data-field="czm_determination" style="min-height:44px;"></textarea></div>
+        <div class="full"><label>Enforceable policies reviewed <span style="font-weight:400;color:var(--gray);">(one per line; for Delaware start a line with the policy number to override that policy on the DCMP form, e.g. <code>5.7: Site is in Zone X per FIRM 10001C0266K</code>)</span></label><textarea data-field="czm_policies" style="min-height:50px;"></textarea></div>
       </div>
+    </details>
+    <details class="no-print" open style="margin:0 22px 12px;border:1px solid #2c7a7b;border-radius:6px;background:#eef6f6;padding:8px 14px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">📬 Submission guide — by state <span style="font-weight:400;color:var(--gray);">(what the program wants, where it goes, what's already attached)</span></summary>
+      <div style="display:flex;gap:8px;align-items:center;margin:8px 0 6px;flex-wrap:wrap;">
+        <button type="button" onclick="renderCZMGuide()" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">↻ Refresh</button>
+        <button type="button" id="czmDeFormBtn" onclick="fillDCMPForm('czm')" style="display:none;background:var(--azri-navy);border:none;color:white;padding:3px 12px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">📝 Fill DCMP Fed Con Form v2.0 (DE)</button>
+      </div>
+      <div id="czmGuide" style="font-size:12px;line-height:1.5;color:#2d3748;"></div>
     </details>` : ''}
     <div class="authority-fields">
       <!-- Source / Date Consulted hidden (preserved for save/load + ERR exports back-compat) -->
@@ -11635,7 +11782,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v138 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v140 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
