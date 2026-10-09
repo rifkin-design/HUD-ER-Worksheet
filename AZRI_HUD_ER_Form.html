@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v144</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v145</div>
   </div>
 </header>
 
@@ -1910,7 +1910,7 @@ const AUTHORITY_SOP = {
     <div style="margin-bottom:8px;"><b>Authority:</b> Section 106 of the National Historic Preservation Act (54 U.S.C. § 306108, formerly 16 U.S.C. 470f) · <b>36 CFR Part 800</b> · <b>24 CFR §58.5(a)</b>. <b>EXEMPTIONS: None.</b> Section 106 consultation is required for every project — there is no CE/blanket exemption, so always run the process and request a SHPO determination.</div>
     <div style="margin-bottom:8px;"><b>Step 1 — Background review (all states)</b>
       <ol style="margin:6px 0 6px 18px;padding:0;">
-        <li><b>National Register map.</b> Open the <a href="https://www.nps.gov/subjects/nationalregister/data-downloads.htm" target="_blank" rel="noopener">NPS National Register</a> / <a href="https://npgallery.nps.gov/NRHP/SearchResults?view=list" target="_blank" rel="noopener">NRHP map viewer ("NR Map")</a> and check whether the Subject Property or anything in the APE is listed/eligible. Screenshot → save "NR Map."</li>
+        <li><b>National Register map.</b> Open the <a href="https://www.nps.gov/subjects/nationalregister/data-downloads.htm" target="_blank" rel="noopener">NPS National Register</a> / <a href="https://npgallery.nps.gov/NRHP/SearchResults?view=list" target="_blank" rel="noopener">NRHP map viewer ("NR Map")</a> and check whether the Subject Property or anything in the APE is listed/eligible. Or click <b>🗺 National Register Map (NR Map)</b> on this card — it pulls the NPS National Register listed properties and districts, draws them with distances, downloads the PDF, attaches it and fills the listed-resources field.</li>
         <li><b>Identify the SHPO contact.</b> Confirm the current reviewer in the <a href="https://ncshpo.org/directory/" target="_blank" rel="noopener">NCSHPO directory</a> (ncshpo.org/directory), then use the state-specific portal/contact below.</li>
         <li><b>TDAT (only if ground disturbance).</b> If the scope includes ground disturbance, run HUD's <a href="https://egis.hud.gov/tdat/" target="_blank" rel="noopener">Tribal Directory Assessment Tool ("TDAT")</a> (egis.hud.gov/tdat) to identify Tribes with interest in the project area, and notify the listed THPOs separately. No ground disturbance → no TDAT/Tribal notice needed.</li>
         <li><b>Define the APE</b> as the project parcel(s) plus any area where ground-disturbing, visual, or atmospheric/audible effects could occur.</li>
@@ -5624,40 +5624,124 @@ async function generateExplosAttachment(authId) {
   } catch (e) { console.warn('[AST attachment]', e); say('✗ AST attachment failed: ' + e.message, 'var(--red,#c00)'); }
 }
 
+// ===== NATIONAL REGISTER MAP ("NR Map") — NPS NRHP spatial data (v145) =====
+// Section 106 Step 1: is the Subject Property, or anything near it, listed on the National Register? Pulls the NPS
+// National Register of Historic Places points and polygons (listed properties and districts; the same data behind the
+// NPS NR Map viewer), draws them on a split-pane figure (site detail + 1/2-mile vicinity), lists each listed resource
+// with its distance, and fills the "NRHP-listed resources" field in the Section 106 inputs. Eligibility (not listed)
+// still comes from the state inventory (MEDUSA / CHRIS / HistoryQuest / V-CRIS / PA-SHARE) per the SOP.
+const NRHP_SERVICE = 'https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer';
+const NRHP_FIELDS = 'NRIS_Refnum,RESNAME,ResType,Address,City,County,State,CertDate,Is_NHL,MultiName';
+async function generateNRHPFigure(authId) {
+  authId = authId || 'historic';
+  const say = packetSay('autoStatus_' + authId);
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the National Register map.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const meta = figProjectMeta(proj, center);
+  try {
+    say('Querying the NPS National Register (points and districts)…');
+    const siteGeom = site.boundary && site.boundary.geometry ? { rings: site.boundary.geometry.type === 'Polygon' ? site.boundary.geometry.coordinates : site.boundary.geometry.coordinates.flat(), spatialReference: { wkid: 4326 } } : { x: center[0], y: center[1], spatialReference: { wkid: 4326 } };
+    const siteType = siteGeom.rings ? 'esriGeometryPolygon' : 'esriGeometryPoint';
+    const VIC_FT = 2640;   // half-mile vicinity pane
+    const env = figEnvFt(center, VIC_FT * 1.15);
+    const [onSitePoly, onSitePt, polys, pts] = await Promise.all([
+      figArcQuery(NRHP_SERVICE + '/1', siteGeom, siteType, { outFields: NRHP_FIELDS, returnGeometry: 'false' }).catch(() => []),
+      figArcQuery(NRHP_SERVICE + '/0', siteGeom, siteType, { outFields: NRHP_FIELDS, returnGeometry: 'false' }).catch(() => []),
+      figArcQuery(NRHP_SERVICE + '/1', env, 'esriGeometryEnvelope', { outFields: NRHP_FIELDS, returnGeometry: 'true', maxAllowableOffset: String((VIC_FT * 2 / 745) / FT_PER_M / 111320) }).catch(() => []),
+      figArcQuery(NRHP_SERVICE + '/0', env, 'esriGeometryEnvelope', { outFields: NRHP_FIELDS, returnGeometry: 'true' }).catch(() => [])
+    ]);
+    const onSiteIds = new Set([...onSitePoly, ...onSitePt].map(f => f.attributes.NRIS_Refnum));
+    // Distance from the Subject Property to each resource (nearest ring vertex for polygons, point for points)
+    const probes = (site.boundary && site.boundary.geometry) ? (site.boundary.geometry.type === 'Polygon' ? site.boundary.geometry.coordinates : site.boundary.geometry.coordinates.flat()).flat() : [center];
+    const distTo = pt => Math.min(...probes.map(p => figDistFt(p, pt)));
+    const resources = [];
+    polys.forEach(f => { const ring = (f.geometry.rings || []).reduce((a, b) => (b.length > a.length ? b : a), []); let d = Infinity; (f.geometry.rings || []).forEach(r => r.forEach(p => { d = Math.min(d, distTo(p)); })); resources.push({ a: f.attributes, kind: 'district', geom: f.geometry, labelPt: ring.length ? ring[Math.floor(ring.length / 2)] : null, distFt: onSiteIds.has(f.attributes.NRIS_Refnum) ? 0 : d }); });
+    pts.forEach(f => { const id = f.attributes.NRIS_Refnum; if (resources.some(r => r.a.NRIS_Refnum === id)) return; const pt = [f.geometry.x, f.geometry.y]; resources.push({ a: f.attributes, kind: 'point', pt, distFt: onSiteIds.has(id) ? 0 : distTo(pt) }); });
+    resources.sort((x, y) => x.distFt - y.distFt);
+    const onSite = resources.filter(r => r.distFt === 0);
+    const within = resources.filter(r => r.distFt > 0 && r.distFt <= VIC_FT);
+    say('Rendering the National Register map…');
+    const drawNR = base => {
+      const { ctx, toPx, PW, PH } = base;
+      resources.forEach(r => {
+        if (r.kind === 'district') {
+          ctx.beginPath(); (r.geom.rings || []).forEach(ring => ring.forEach((p, i) => { const px = toPx(p); i ? ctx.lineTo(px[0], px[1]) : ctx.moveTo(px[0], px[1]); })); ctx.closePath();
+          ctx.fillStyle = 'rgba(124,58,237,0.22)'; ctx.fill('evenodd'); ctx.save(); ctx.setLineDash([7, 4]); ctx.strokeStyle = '#6d28d9'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+        } else {
+          const p = toPx(r.pt); if (p[0] < 0 || p[0] > PW || p[1] < 0 || p[1] > PH) return;
+          ctx.fillStyle = '#6d28d9'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(p[0], p[1] - 9); ctx.lineTo(p[0] + 8, p[1] + 6); ctx.lineTo(p[0] - 8, p[1] + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+      });
+      // labels (name + distance) for points and district centroids inside the pane
+      ctx.font = 'bold 11px Arial'; ctx.textAlign = 'left';
+      resources.forEach(r => {
+        const lp = r.kind === 'point' ? r.pt : r.labelPt; if (!lp) return; const p = toPx(lp); if (p[0] < 0 || p[0] > PW || p[1] < 0 || p[1] > PH) return;
+        const txt = (r.a.RESNAME || 'NRHP resource') + (r.distFt === 0 ? ' (on site)' : ' — ' + figFmtFt(r.distFt)); const w = ctx.measureText(txt).width;
+        const lx = (p[0] + 12 + w > PW - 6) ? p[0] - 12 - w : p[0] + 12, ly = Math.max(24, Math.min(PH - 8, p[1] + 4));
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(lx - 3, ly - 11, w + 6, 15); ctx.fillStyle = '#4c1d95'; ctx.fillText(txt, lx, ly);
+      });
+    };
+    const legend = [
+      { label: 'Subject Property — ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
+      { label: 'NRHP-listed property (point)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = '#6d28d9'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + w / 2, y - 1); ctx.lineTo(x + w / 2 + 8, y + h); ctx.lineTo(x + w / 2 - 8, y + h); ctx.closePath(); ctx.fill(); ctx.stroke(); } },
+      { label: 'NRHP-listed historic district / property boundary', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(124,58,237,0.22)'; ctx.fillRect(x, y, w, h); ctx.save(); ctx.setLineDash([5, 3]); ctx.strokeStyle = '#6d28d9'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); ctx.restore(); } },
+      { label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }
+    ];
+    const noteLines = resources.length ? resources.slice(0, 6).map(r => (r.a.RESNAME || 'NRHP resource') + ' — ' + (r.distFt === 0 ? 'on / overlapping the Subject Property' : figFmtFt(r.distFt))).concat(resources.length > 6 ? ['+ ' + (resources.length - 6) + ' more listed resources in the vicinity'] : []) : ['No National Register-listed properties or districts within 1/2 mile'];
+    const fig = await figSplitPane({ site, center, detailHalfM: figParcelHalfM(site, center, 2.5, 400, 2000), vicHalfFt: VIC_FT, basemap: 'streets', title: 'National Register of Historic Places Map', meta, subtitle: 'NHPA Section 106 · NPS National Register of Historic Places listed properties and districts within approx. 1/2 mile of the Subject Property', detailCaption: 'Subject Property and listed resources', vicCaption: 'Listed properties and districts', legend, noteLines, drawDetail: drawNR, drawVicinity: drawNR, sources: ['National Park Service, National Register of Historic Places spatial data (NRHP points and polygons)'] });
+    // Findings
+    const fmtRes = r => (r.a.RESNAME || 'NRHP resource') + (r.a.NRIS_Refnum ? ' (NRIS ' + r.a.NRIS_Refnum + ')' : '') + (r.kind === 'district' ? ', district / boundary' : '') + (r.a.CertDate ? ', listed ' + fmtUtcDate(r.a.CertDate) : '') + (r.a.Is_NHL && /yes|true|1/i.test(String(r.a.Is_NHL)) ? ', NHL' : '');
+    const findings = onSite.length ? 'The Subject Property is within or overlaps a National Register-listed property / district: ' + onSite.map(fmtRes).join('; ') + '.' : 'The Subject Property is not listed on the National Register and is not within a listed historic district.';
+    const nearby = within.length ? ' Listed resources within 1/2 mile: ' + within.slice(0, 8).map(r => fmtRes(r) + ' — ' + figFmtFt(r.distFt)).join('; ') + (within.length > 8 ? '; +' + (within.length - 8) + ' more' : '') + '.' : ' No other National Register-listed properties or districts within 1/2 mile.';
+    const nrEl = document.querySelector('[data-field="hist_nrhp"]');
+    if (nrEl && !nrEl.value.trim()) { nrEl.value = (onSite.length ? 'Listed: ' + onSite.map(r => r.a.RESNAME).join('; ') + '. ' : 'Not NRHP-listed; not in a listed district. ') + (within.length ? 'Nearby listed: ' + within.slice(0, 4).map(r => r.a.RESNAME + ' (' + figFmtFt(r.distFt) + ')').join('; ') + '. ' : '') + 'State inventory (eligible / surveyed) results: [add].'; nrEl.dispatchEvent(new Event('input', { bubbles: true })); }
+    const slug = figSlug(proj);
+    figAttach(authId, fig.cv, slug + '_NR_Map.jpg', findings + nearby);
+    figDownloadPdf(fig.cv, slug + '_NR_Map.pdf');
+    window._lastNRHPFigure = { cv: fig.cv, findings: findings + nearby, onSite, within };
+    say('✓ NR Map generated — PDF downloaded and attached. ' + findings + nearby + ' Next: state inventory check (MEDUSA / CHRIS / HistoryQuest / V-CRIS / PA-SHARE) for eligible resources, then the Section 106 packet.', onSite.length ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
+    return { onSite, within, resources };
+  } catch (e) { console.warn('[NR Map]', e); say('✗ NR Map failed: ' + e.message + ' — use the NPS NR Map viewer screenshot method in the SOP.', 'var(--red,#c00)'); }
+}
+
 // ---------- 3) Section 106 (SHPO submittal) ----------
 async function generateHistoricConsultation(authId) {
   authId = authId || 'historic'; const say = packetSay('autoStatus_' + authId);
   const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before generating the Section 106 packet.'); return; }
   if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
   try {
-    const apeFt = parseFloat(C.g('hist_apeFt')) || 250; const age = (typeof rq === 'function') ? rq('historic', 'age') : ''; const ground = (typeof rq === 'function') ? rq('historic', 'ground') : '';
+    const age = (typeof rq === 'function') ? rq('historic', 'age') : ''; const ground = (typeof rq === 'function') ? rq('historic', 'ground') : '';
     const recip = (typeof LETTER_TEMPLATES !== 'undefined' && LETTER_TEMPLATES.historic) ? LETTER_TEMPLATES.historic.recipient(C.stateAbbr) : { title: '[SHPO]', agency: 'SHPO', portal: '' };
     const figures = await packetFigures(C, say);
-    say('Rendering APE figure…');
-    const { site, center, proj } = C; const apeRings = figBufferRings(site, center, apeFt);
-    const drawAPE = base => { const { ctx, toPx } = base; apeRings.forEach(r => { ctx.save(); ctx.setLineDash([8, 5]); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(124,58,237,0.10)'; ctx.beginPath(); r.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }); };
-    const apeFig = await figSplitPane({ site, center, detailHalfM: (figParcelHalfM(site, center, 1, 0, 1e9) * FT_PER_M + apeFt + 150) / FT_PER_M, vicHalfFt: 2640, basemap: 'imagery', title: 'Area of Potential Effects (APE)', sources: [], meta: C.meta, subtitle: 'NHPA Section 106 - 36 CFR 800.16(d) - APE = Subject Property plus ' + apeFt.toLocaleString() + ' ft (direct and visual effects)', detailCaption: 'Subject Property and APE (' + apeFt.toLocaleString() + ' ft)', vicCaption: 'APE in its setting', legend: [{ label: 'Subject Property - ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }, { label: 'Area of Potential Effects - ' + apeFt.toLocaleString() + ' ft from the boundary', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(124,58,237,0.10)'; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); ctx.restore(); } }, { label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }], drawDetail: drawAPE, drawVicinity: drawAPE });
+    const nr = window._lastNRHPFigure || null;
+    const nrDocs = ((typeof supportingDocs !== 'undefined' && supportingDocs[authId]) || []).filter(d => /NR_Map/i.test(d.name));
     say('Writing the Section 106 packet…');
     const P = await pkNewDoc('NHPA Section 106 - Project Submittal', C.meta);
-    pkP(P, recip.title, { size: 9.5, after: 10 });
-    pkP(P, 'Re: Section 106 consultation - ' + (C.meta.projectName || 'HUD-assisted project') + (C.meta.location ? ', ' + C.meta.location : '') + (C.g('hist_shpoFile') ? ' - SHPO file no. ' + C.g('hist_shpoFile') : ''), { bold: true });
-    pkP(P, 'On behalf of ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ', the Responsible Entity assuming HUD\'s Section 106 responsibilities under 24 CFR 58.5(a) for the above ' + (C.proj.hudProgram || 'HUD') + '-assisted undertaking, AZ-RI Consultants is initiating consultation under Section 106 of the National Historic Preservation Act (36 CFR Part 800). The undertaking, its Area of Potential Effects, and the identification efforts completed to date are described below and in the attached Project Packet.');
+    // (v145) Kept simple: no recipient block, intro, APE figure, request or signature — the cover email / state portal carry
+    // those. This PDF is the undertaking, the site, the identification results (NR Map + state inventory) and the finding.
     pkH1(P, 'Undertaking'); pkP(P, packetDescriptionText(C));
-    pkH1(P, 'Area of Potential Effects');
-    pkP(P, 'The APE for direct effects is the Subject Property (limits of disturbance). The APE for visual/indirect effects extends ' + apeFt.toLocaleString() + ' feet from the property boundary' + (C.g('hist_apeNote') ? ' (' + C.g('hist_apeNote') + ')' : '') + ', as shown on the attached APE figure. ' + (ground === 'yes' ? 'The undertaking involves ground disturbance (' + (C.g('packet_disturbedAcres') ? C.g('packet_disturbedAcres') + ' acres, ' : '') + (C.g('packet_excavDepthFt') ? 'to about ' + C.g('packet_excavDepthFt') + ' ft' : 'see Project Packet') + '), so the archaeological APE is the limits of disturbance.' : 'The undertaking involves no ground disturbance beyond utility tie-ins; the archaeological APE is therefore limited to the building footprint.'));
+    pkP(P, ground === 'yes' ? 'The undertaking involves ground disturbance' + (C.g('packet_disturbedAcres') ? ' of approximately ' + C.g('packet_disturbedAcres') + ' acres' : '') + (C.g('packet_excavDepthFt') ? ' to a depth of about ' + C.g('packet_excavDepthFt') + ' ft' : '') + '.' : 'The undertaking involves no ground disturbance beyond utility tie-ins.');
     pkH1(P, 'Identification of Historic Properties');
-    pkKV(P, [['Structures on the property', C.g('packet_yearBuilt') ? 'Existing structure(s) built circa ' + C.g('packet_yearBuilt') + (age === 'yes' ? ' (50+ years old)' : age === 'no' ? ' (under 50 years old)' : '') : (age === 'no' ? 'No structures 50 years old or older (or vacant site)' : '[year built]')], ['NRHP-listed / eligible resources or historic district', C.g('hist_nrhp') || 'None identified in the state inventory within the APE [confirm]'], ['Previous surveys / SHPO file numbers', C.g('hist_priorSurvey')], ['Consulting parties', C.g('hist_parties')], ['Tribes notified (HUD TDAT)', C.g('hist_tribes') ? C.g('hist_tribes').split(/\n/).filter(Boolean).join('; ') : (ground === 'yes' ? '[paste the HUD TDAT list]' : 'Not applicable - no ground disturbance')]]);
-    pkH1(P, 'Finding and Requested Action');
-    pkP(P, C.g('hist_finding') || ('Based on the identification efforts described above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' proposes a finding of ' + (age === 'yes' ? '"no adverse effect" on historic properties' : '"no historic properties affected"') + ' (36 CFR 800.4(d)/800.5). We request the SHPO\'s concurrence within the 30-day review period.'));
-    if (recip.portal) pkP(P, 'Submittal: ' + recip.portal, { size: 9, italic: true });
-    pkP(P, 'Attachments: APE figure; project information, Figure 1 (site location) and plan sheets (following pages).', { italic: true, size: 9 });
-    pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : ''));
-    pkImagePage(P, pkCanvasToJpeg(apeFig.cv), apeFig.cv.width, apeFig.cv.height, 'Figure: Area of Potential Effects.');
+    pkKV(P, [
+      ['Structures on the property', C.g('packet_yearBuilt') ? 'Existing structure(s) built circa ' + C.g('packet_yearBuilt') + (age === 'yes' ? ' (50+ years old)' : age === 'no' ? ' (under 50 years old)' : '') : (age === 'no' ? 'No structures 50 years old or older (or vacant site)' : '[year built]')],
+      ['National Register (NPS NR Map)', nr ? nr.findings : (C.g('hist_nrhp') || 'Run the National Register Map on this card')],
+      ['State inventory (listed / eligible / surveyed)', C.g('hist_nrhp') || '[state inventory results]'],
+      ['Previous surveys / SHPO file numbers', C.g('hist_priorSurvey')],
+      ['Consulting parties', C.g('hist_parties')],
+      ['Tribes notified (HUD TDAT)', C.g('hist_tribes') ? C.g('hist_tribes').split(/\n/).filter(Boolean).join('; ') : (ground === 'yes' ? '[paste the HUD TDAT list]' : 'Not applicable - no ground disturbance')]
+    ]);
+    pkH1(P, 'Finding');
+    pkP(P, C.g('hist_finding') || ('In AZ-RI Consultants\' opinion, based on the identification efforts described above, the undertaking will result in ' + (age === 'yes' ? '"no adverse effect" on historic properties (36 CFR 800.5(b))' : '"no historic properties affected" (36 CFR 800.4(d)(1))') + '.'));
+    pkP(P, 'Attachments: National Register map; project information, Figure 1 (site location) and plan sheets (following pages).', { italic: true, size: 9 });
+    if (nr && nr.cv) pkImagePage(P, pkCanvasToJpeg(nr.cv), nr.cv.width, nr.cv.height, 'Figure: National Register of Historic Places map (NPS NRHP spatial data).');
+    else for (const d of nrDocs) await pkEmbedDoc(P, d, 'National Register map (' + d.name + ')');
     pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_Section106_Packet.pdf';
-    pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency + ' - APE ' + apeFt + ' ft'); doc.save(name);
-    figFillSourceRef(authId, 'Section 106 submittal packet (' + recip.agency + ')', 'APE ' + apeFt.toLocaleString() + ' ft; submitted ' + new Date().toLocaleDateString());
+    pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency); doc.save(name);
+    figFillSourceRef(authId, 'Section 106 submittal packet (' + recip.agency + ')', 'Submitted ' + new Date().toLocaleDateString());
     say('✓ Section 106 packet generated — PDF downloaded and attached. Submit via ' + (recip.portal ? 'the state portal (see letter)' : 'email to the SHPO') + '; mark Awaiting Response until concurrence arrives.', 'var(--azri-navy)');
   } catch (e) { console.warn('[106 packet]', e); say('✗ Section 106 packet failed: ' + e.message, 'var(--red,#c00)'); }
 }
@@ -5858,7 +5942,7 @@ const MAP_GENERATORS = {
   wsr:       { fn: 'generateWSRFigure', label: '🗺 Wild & Scenic Rivers Figure (NWSRS + NPS NRI)' },
   noise:     { fn: 'generateNoiseScreeningFigure', label: '🗺 Noise Screening Figure (roads 1,000 ft · rail 3,000 ft · airports 15 mi)' },
   esa:       { fn: 'generateESAConsultation', label: '📄 ESA Section 7 Packet (effect determination)' },
-  historic:  { fn: 'generateHistoricConsultation', label: '📄 Section 106 Packet (SHPO submittal + APE figure)' },
+  historic:  { fn: 'generateHistoricConsultation', label: '📄 Section 106 Packet (SHPO submittal)' },
   czm:       { fn: 'generateCZMConsultation', label: '📄 CZM Consistency Packet' },
   explos:    { fn: 'generateExplosAttachment', label: '📄 AST / ASD Calculation Attachment (HEROS)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
@@ -7887,6 +7971,7 @@ AUTHORITIES.forEach(a => {
         ${a.id === 'air' ? `<button class="no-print" onclick="uploadSupportingDoc('air_greenbook')" title="Screenshot or PDF of the Green Book state/county section — embedded in the General Conformity attachment" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">⬆ Green Book page</button>` : ''}
         ${a.id === 'esa' ? `<button class="no-print" onclick="uploadSupportingDoc('esa_ipac')" title="Upload the IPaC Official Species List PDF — embedded in the Section 7 packet and the one you attach to the Claude chat" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">⬆ IPaC list (PDF)</button><button class="no-print" onclick="showEsaClaudePanel()" title="Copy/paste instructions for having Claude read the IPaC list and make the Section 7 determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Review IPaC with Claude</button>` : ''}
         ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportClaudePanel()" title="Copy/paste instructions for having Claude read the airport's RPZ/CZ or APZ map and make the final zone determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Zone review with Claude</button>` : ''}
+        ${a.id === 'historic' ? `<button class="no-print" onclick="generateNRHPFigure('historic')" title="NPS National Register points and districts around the Subject Property — Step 1 of the SOP (the NR Map)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🗺 National Register Map (NR Map)</button>` : ''}
         ${a.id === 'historic' ? `<button class="no-print" onclick="generateLetter('historic')" title="Generates the Section 106 consultation letter in the state-specific format (DC HPO 5-point / VA DHR ePIX / generic)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📄 106 Letter (state format)</button><button class="no-print" onclick="generateCoverEmail()" title="Generates the matching cover email template (DC HPO / VA DHR)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✉ Cover Email (DC/VA)</button>` : ''}
         <span class="no-print" id="autoStatus_${a.id}" style="font-size:11px;color:var(--gray);"></span>
       </div>
@@ -7973,14 +8058,12 @@ AUTHORITIES.forEach(a => {
       </div>
     </details>` : ''}
     ${a.id === 'historic' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
-      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 106 packet inputs <span style="font-weight:400;color:var(--gray);">(APE, inventory results, Tribal list; shared project facts come from 1125)</span></summary>
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 106 packet inputs <span style="font-weight:400;color:var(--gray);">(inventory results, Tribal list; shared project facts come from 1125)</span></summary>
       <div class="field-grid" style="margin-top:10px;">
-        <div><label>APE distance from boundary (ft)</label><input type="text" data-field="hist_apeFt" placeholder="250"></div>
-        <div><label>APE note (optional)</label><input type="text" data-field="hist_apeNote" placeholder="e.g., one parcel in each direction / viewshed to the street"></div>
         <div><label>Ground disturbance (acres)</label><input type="text" data-field="hist_disturbedAcres" placeholder="e.g., 0.6"></div>
         <div><label>Max excavation depth (ft)</label><input type="text" data-field="hist_excavDepthFt" placeholder="e.g., 8"></div>
         <div><label>Year built (existing structures)</label><input type="text" data-field="hist_yearBuilt" placeholder="defaults to the parcel record"></div>
-        <div class="full"><label>NRHP-listed / eligible resources or historic districts in the APE (state inventory results)</label><input type="text" data-field="hist_nrhp" placeholder="e.g., None in MEDUSA / CHRIS / PA-SHARE within the APE; or list resource names and inventory numbers"></div>
+        <div class="full"><label>State inventory results — NRHP-listed / eligible resources or historic districts near the site <span style="font-weight:400;color:var(--gray);">(the NR Map fills the listed ones; add MEDUSA / CHRIS / HistoryQuest / V-CRIS / PA-SHARE eligible results)</span></label><input type="text" data-field="hist_nrhp" placeholder="e.g., None in MEDUSA / CHRIS / PA-SHARE within the APE; or list resource names and inventory numbers"></div>
         <div class="full"><label>Previous surveys / SHPO file numbers</label><input type="text" data-field="hist_priorSurvey"></div>
         <div class="full"><label>Consulting parties (local government, historical society, applicant)</label><input type="text" data-field="hist_parties"></div>
         <div class="full"><label>Tribes to notify (paste the HUD TDAT list, one per line — required when there is ground disturbance)</label><textarea data-field="hist_tribes" style="min-height:50px;"></textarea></div>
@@ -12093,7 +12176,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v144 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v145 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
