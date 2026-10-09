@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v135</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v136</div>
   </div>
 </header>
 
@@ -3765,6 +3765,9 @@ async function generateAirportFigure(authId) {
     const srcEl = document.querySelector('[data-field="' + authId + '_source"]');
     if (srcEl && !srcEl.value.trim()) { srcEl.value = 'FAA NASR Airports & Runways (ADIP) — Airport Hazards Map'; srcEl.dispatchEvent(new Event('input', { bubbles: true })); }
     window._lastAirportFigure = { canvas: base.cv, filename: slug + '_Airport_Hazards_Map.pdf', footer: [civilTxt, milTxt, otherTxt, verdict].filter(Boolean) };
+    // (v136) keep the screening result for the "ask Claude" zone-review prompt; open that panel when a distance is triggered
+    window._lastAirportFindings = { civilHit, milHit, civilTxt, milTxt, civilName: nearestCivil ? nearestCivil.a.NAME + (nearestCivil.a.IDENT ? ' (' + nearestCivil.a.IDENT + ')' : '') : '', milName: nearestMil ? nearestMil.a.NAME + (nearestMil.a.IDENT ? ' (' + nearestMil.a.IDENT + ')' : '') : '', civilDist: nearestCivil ? figFmtFt(nearestCivil.distFt) : '', milDist: nearestMil ? figFmtFt(nearestMil.distFt) : '' };
+    if (civilHit || milHit) showAirportClaudePanel(true); else refreshAirportClaudePrompt();
     figDownloadPdf(base.cv, slug + '_Airport_Hazards_Map.pdf');   // no footer — findings stay in the worksheet, not on the external figure
     say('✓ Airport Hazards figure generated — PDF downloaded and attached to Supporting Documents. ' + verdict, (civilHit || milHit) ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
     return { civilTxt, milTxt, otherTxt, verdict, rows };
@@ -3774,6 +3777,89 @@ async function generateAirportFigure(authId) {
   }
 }
 
+
+// ===== AIRPORT HAZARDS — "ZONE REVIEW WITH CLAUDE" PROMPT (v136) =====
+// When the figure triggers a screening distance, the reviewer finds the airport's RPZ/CZ (civil) or AICUZ CZ/APZ
+// (military) map, drops it into a Claude chat with the figure, and pastes this prompt so Claude makes the final
+// in/out-of-zone determination and drafts the write-up. The prompt is rebuilt from the current figure result,
+// the scope answer in Review Questions, and the 1125 project fields.
+function showAirportClaudePanel(open) {
+  const d = document.getElementById('airportClaudePanel');
+  if (!d) return;
+  d.style.display = '';
+  if (open !== false) d.open = true;
+  refreshAirportClaudePrompt();
+  if (open !== false) try { d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+}
+function buildAirportClaudePrompt() {
+  const f = window._lastAirportFindings || null;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const site = (typeof figSiteContext === 'function') ? figSiteContext() : null;
+  const center = site ? site.centroid : null;
+  const meta = figProjectMeta(proj, center);
+  const scopeSel = document.querySelector('input[name="exq_airport_scope"]:checked');
+  const scope = scopeSel
+    ? (scopeSel.value === 'nc'
+        ? 'NEW CONSTRUCTION / substantial rehabilitation adding occupants or footprint, or conversion to a use with more people on site.'
+        : 'Acquisition, or rehabilitation / modernization of an EXISTING structure with no increase in the number of people on site.')
+    : 'NOT YET ANSWERED in the worksheet — ask me before applying §51.303(a) if the site turns out to be inside a zone.';
+  const refTxt = ((document.querySelector('[data-field="airport_ref"]') || {}).value || '').trim();
+  // Which screens apply: from the figure when it has run this session; otherwise both, flagged for the reviewer
+  const civil = f ? f.civilHit : true, mil = f ? f.milHit : true;
+  const civilName = (f && f.civilName) || '[civil airport name]';
+  const milName = (f && f.milName) || '[military / joint-use airfield name]';
+  const L = [];
+  L.push('You are helping with the Airport Hazards determination for a HUD Part 58 environmental review (24 CFR Part 51 Subpart D; 24 CFR 58.6(d)). AZ-RI\'s desktop screen found the Subject Property within a HUD screening distance of a runway end. I have attached the airport\'s / installation\'s official zone map and AZ-RI\'s Airport Hazards Figure (which shows the Subject Property boundary and the measured runway-end distances). Read the zone map and make the final determination.');
+  L.push('');
+  L.push('PROJECT');
+  L.push('- Project: ' + (meta.projectName || '[project name]'));
+  L.push('- Subject Property: ' + (meta.location || '[site address]') + (center ? ' (approx. ' + center[1].toFixed(5) + ', ' + center[0].toFixed(5) + ')' : ''));
+  if (meta.grant) L.push('- ' + meta.grant);
+  L.push('- Project type (decides the §51.303 outcome if the site is inside a zone): ' + scope);
+  L.push('');
+  L.push('SCREENING RESULT (Airport Hazards Figure, distances to the nearest FAA runway end)');
+  if (f) { if (f.civilTxt) L.push('- ' + f.civilTxt); if (f.milTxt) L.push('- ' + f.milTxt); }
+  else L.push('- ' + (refTxt || '[run the Airport Hazards Figure on this card, then click ↻ Refresh — or type the nearest civil airport / military airfield and their runway-end distances here]') + ' (figure not run this session — delete whichever section below does not apply)');
+  L.push('');
+  L.push('WHAT TO CHECK ON THE ATTACHED MAP' + (civil && mil ? ' (address the civil and military screens separately)' : ''));
+  if (civil) {
+    L.push('A. Civil airport — ' + civilName + ':');
+    L.push('   1. Confirm it is an existing commercial service airport designated in the FAA NPIAS (24 CFR 51.301(c)). If it is a general aviation, reliever-only or non-NPIAS field, it is not a "civil airport" under Subpart D — say so, cite the NPIAS entry, and the civil screen ends there (Compliant, Write Up 2, with that explanation).');
+    L.push('   2. On the Airport Layout Plan / RPZ exhibit, locate the Subject Property relative to the Runway Protection Zone (RPZ / Clear Zone) of every runway end within 2,500 ft. State whether ANY part of the Subject Property boundary lies inside an RPZ/CZ, and which runway end it belongs to.');
+  }
+  if (mil) {
+    L.push((civil ? 'B' : 'A') + '. Military / joint-use airfield — ' + milName + ':');
+    L.push('   1. On the AICUZ / APZ map, locate the Subject Property relative to the Clear Zone (CZ), Accident Potential Zone I (APZ I) and APZ II of every runway end within 15,000 ft. State which zone, if any, ANY part of the Subject Property boundary falls in.');
+    L.push('   2. If it is in APZ I or APZ II: compare the project\'s land use to the DoD land-use compatibility table for that zone (DoD Instruction 4165.57; 32 CFR Part 256, Appendix) and say whether it is generally consistent (24 CFR 51.303(b)).');
+  }
+  L.push('');
+  L.push('DECISION RULES (24 CFR 51.303)');
+  L.push('- Outside every zone → Compliant → Write Up 2 (civil) / Write Up 4 (military).');
+  L.push('- Inside a civil RPZ/CZ or a military Clear Zone: new construction or substantial rehabilitation → CANNOT proceed (§51.303(a)(1)); acquisition or rehab of an existing occupied structure with no added occupants → may proceed with the notice to prospective buyers / tenants (§51.303(a)(3)) → Write Up 3 (civil) / Write Up 7 (military); a use not frequently used or occupied by people, with the airport operator\'s written assurance → §51.303(a)(2) → Write Up 6.');
+  L.push('- Inside APZ I or APZ II: generally consistent with the DoD guidelines → Write Up 5 (needs the Certifying Officer\'s consistency finding); not consistent → CANNOT proceed.');
+  L.push('');
+  L.push('OUTPUT, in this order');
+  L.push('1. Determination — one line per screen: the zone(s) the Subject Property is in (or "outside all zones") and the resulting Write Up number or "cannot proceed".');
+  L.push('2. Basis — how you placed the Subject Property on the zone map (runway, roads, landmarks, scale bar, map title and date) and how confident you are. If the map does not let you place the site with confidence, say so and tell me exactly what map or data to get instead of guessing.');
+  L.push('3. Report text — 2 to 4 client-facing sentences for the Compliance Determinations box, written for HUD, the Responsible Entity and the client: cite the zone map by title and date and the Airport Hazards Figure, state the zone finding and the §51.303 basis. No internal notes, no reference to this chat or to desktop screening.');
+  L.push('4. Follow-ups — anything I still need to obtain or do (NPIAS confirmation, buyer/tenant notice, airport-operator assurance, Certifying Officer consistency finding, a better map).');
+  L.push('');
+  L.push('Rules: the zone map governs — never infer a zone boundary from the 2,500 ft / 15,000 ft screening rings, and never assume the site is clear because it is far from the runway. Quote the map\'s own zone labels. If anything in the attachments conflicts with the screening result above, say so.');
+  return L.join('\n');
+}
+function refreshAirportClaudePrompt() {
+  const ta = document.getElementById('airportClaudePrompt');
+  if (!ta) return;
+  try { ta.value = buildAirportClaudePrompt(); } catch (e) { console.warn('[Airport Claude prompt]', e); }
+  const c = document.getElementById('airportClaudeCopied'); if (c) c.textContent = '';
+}
+function copyAirportClaudePrompt() {
+  const ta = document.getElementById('airportClaudePrompt'); if (!ta) return;
+  if (!ta.value.trim()) refreshAirportClaudePrompt();
+  const done = ok => { const c = document.getElementById('airportClaudeCopied'); if (c) { c.textContent = ok ? '✓ Copied — paste it into a Claude chat with the zone map attached' : '⚠ Copy blocked — select the text and copy it manually'; c.style.color = ok ? '#2f855a' : '#c00'; } };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(() => done(true), () => { ta.select(); done(document.execCommand('copy')); });
+  else { ta.select(); done(document.execCommand('copy')); }
+}
 
 // ===== COASTAL BARRIER RESOURCES FIGURE (CBRA, 16 U.S.C. 3501; §58.6(c)) =====
 // Official USFWS CBRS data served by the USGS CBRS Mapper backend: System Units / Otherwise Protected Areas,
@@ -7349,12 +7435,33 @@ AUTHORITIES.forEach(a => {
             ? `<button class="no-print" onclick="toggleExemptionCheck('${a.id}')" id="exemptBtn_${a.id}" style="background:var(--azri-sand);border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✔ Review Questions</button>`
             : ''}
         ${mapBtnHtml}
+        ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportClaudePanel()" title="Copy/paste instructions for having Claude read the airport's RPZ/CZ or APZ map and make the final zone determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Zone review with Claude</button>` : ''}
         ${a.id === 'historic' ? `<button class="no-print" onclick="generateLetter('historic')" title="Generates the Section 106 consultation letter in the state-specific format (DC HPO 5-point / VA DHR ePIX / generic)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📄 106 Letter (state format)</button><button class="no-print" onclick="generateCoverEmail()" title="Generates the matching cover email template (DC HPO / VA DHR)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✉ Cover Email (DC/VA)</button>` : ''}
         <span class="no-print" id="autoStatus_${a.id}" style="font-size:11px;color:var(--gray);"></span>
       </div>
     </div>
     ${EXEMPTION_CHECKS[a.id] ? `<div id="exemptPanel_${a.id}" class="no-print" style="display:none;margin:0 22px 12px;border:1px solid var(--azri-sand,#d6b656);border-radius:6px;background:#fffdf5;padding:10px 14px;"></div>` : ''}
     ${sopHtml}
+    ${a.id === 'airport' ? `<details id="airportClaudePanel" class="no-print" style="display:none;margin:0 22px 12px;border:1px solid #6b46c1;border-radius:6px;background:#f7f5ff;">
+      <summary style="cursor:pointer;padding:8px 14px;font-weight:700;font-size:12px;color:#44337a;list-style:none;">🤖 Zone review with Claude — RPZ / Clear Zone (civil) · CZ / APZ I / APZ II (military) <span style="font-weight:400;color:#4a5568;">· opens automatically when the figure triggers a screening distance</span></summary>
+      <div style="padding:4px 16px 12px;font-size:12px;line-height:1.5;color:#2d3748;">
+        <div style="margin-bottom:8px;">The figure only settles <i>proximity</i>. Whether the Subject Property is actually inside a zone is decided from the airport's own zone map — and that read is done in a Claude chat, with the map attached:</div>
+        <ol style="margin:0 0 10px 18px;padding:0;">
+          <li><b>Get the zone map.</b> Civil airport → the operator's Airport Layout Plan (ALP) or RPZ exhibit (airport engineering / planning office; some are on the airport or FAA ADIP site). Military / joint-use → the installation's AICUZ study or APZ map (check the shared drive for a copy from a prior AZ-RI review first — e.g. Dover AFB — otherwise ask the base community planner).</li>
+          <li><b>Open a new Claude chat</b> and drag in <b>(1)</b> the zone map (PDF or image) and <b>(2)</b> the Airport Hazards Figure PDF this card just downloaded.</li>
+          <li><b>Copy the prompt below</b> (📋 Copy) and paste it as the message. It carries the project, site, scope answer and screening distances, the §51.303 decision rules, and the output format.</li>
+          <li><b>Record Claude's determination:</b> paste the report text into Compliance Determinations, attach the zone map to Supporting Documents, set the status radio, and clear any follow-ups it lists (NPIAS confirmation, buyer/tenant notice, operator assurance, Certifying Officer consistency finding).</li>
+        </ol>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">
+          <b style="flex:1;">Prompt for Claude</b>
+          <button type="button" onclick="refreshAirportClaudePrompt()" title="Rebuild the prompt from the current figure result, scope answer and project fields" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">↻ Refresh</button>
+          <button type="button" onclick="copyAirportClaudePrompt()" style="background:#6b46c1;border:none;color:white;padding:3px 12px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">📋 Copy prompt</button>
+          <span id="airportClaudeCopied" style="font-size:11px;color:#2f855a;"></span>
+        </div>
+        <textarea id="airportClaudePrompt" rows="20" spellcheck="false" style="width:100%;box-sizing:border-box;font:11.5px/1.45 Menlo,Consolas,monospace;color:#1a202c;background:#fff;border:1px solid #c4b5fd;border-radius:4px;padding:8px;"></textarea>
+        <div style="font-size:11px;color:#718096;margin-top:4px;">Edit the text freely before copying — e.g. delete the civil or military section if only one applies, or add what you already know about the map.</div>
+      </div>
+    </details>` : ''}
     ${a.id === 'air' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Attachment inputs — General Conformity evaluation <span style="font-weight:400;color:var(--gray);">(fill before generating; all optional except where noted)</span></summary>
       <div class="field-grid" style="margin-top:10px;">
@@ -11502,7 +11609,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v135 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v136 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
