@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v143</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v144</div>
   </div>
 </header>
 
@@ -5546,6 +5546,84 @@ function importEsaClaudeResult() {
   say('✓ Imported ' + sp.length + ' species. ' + (any ? 'Suitable habitat flagged for ' + sp.filter(x => norm(String(x.habitat || '')) !== 'none').map(x => x.name).join(', ') + ' → consultation required: generate the ESA Section 7 Packet.' : 'No suitable habitat for any species → no effect; insert Write Up 2 and attach the IPaC list.'), any ? '#c00' : '#2f855a');
 }
 
+// ===== EXPLOSIVE & FLAMMABLE HAZARDS — AST / ASD CALCULATION ATTACHMENT (v144) =====
+// HEROS attachment: the 1-mile AST inventory, the HUD Acceptable Separation Distance equations with each tank's
+// calculation shown, and the result. Facts and AZ-RI's opinion only — no agency references, no signature block
+// (same style as the Air Quality and CZM attachments).
+async function generateExplosAttachment(authId) {
+  authId = authId || 'explos';
+  const say = packetSay('autoStatus_' + authId);
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the AST attachment.'); return; }
+  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const meta = figProjectMeta(proj, center);
+  const status = ((document.getElementById('astWorksheetStatus') || {}).value || '');
+  const remaining = ((document.getElementById('astRemainingSites') || {}).value || '').trim();
+  const scope = (typeof rq === 'function') ? rq('explos', 'scope') : '';
+  const rows = (typeof astRows !== 'undefined' ? astRows : []).filter(r => (r.site || r.addr || r.gal || r.dist));
+  if (!status) { alert('Set the AST Worksheet Status first (and import / enter the AST inventory if any sites are within 2,000 ft).'); return; }
+  try {
+    say('Writing the AST / ASD calculation attachment…');
+    const P = await pkNewDoc('Explosive and Flammable Hazards - AST Review and ASD Calculations', meta);
+    const fmt = n => (n == null || n === '' || isNaN(n)) ? '—' : Number(n).toLocaleString();
+    // 1. Project and applicability
+    pkH1(P, '1. Project and Applicability');
+    pkP(P, (proj.projectDescription || '').trim() || '(Project description not entered in Screen 1125.)');
+    pkP(P, 'The project is ' + (scope === 'yes' ? 'new construction, or a rehabilitation that increases residential density, converts a building to habitation, or makes a vacant building habitable' : 'subject to review') + ', so 24 CFR Part 51, Subpart C (Siting of HUD-Assisted Projects Near Hazardous Operations Handling Conventional Fuels or Chemicals of an Explosive or Flammable Nature) applies and the Subject Property was reviewed for above-ground storage tanks (ASTs) of conventional fuels or chemicals of an explosive or flammable nature. Subject Property: ' + meta.location + ' (' + center[1].toFixed(5) + ', ' + center[0].toFixed(5) + ').');
+    // 2. Method
+    pkH1(P, '2. Review Method');
+    pkBullets(P, [
+      'Regulatory database search: ASTs registered within 1 mile of the Subject Property (ERIS regulatory database report, AST / above-ground storage tank listings; the ASTM E1527 radius for the Phase I ESA was extended to 1 mile for this review).',
+      'Screening distance: a 100,000-gallon unpressurized, undiked tank of a conventional fuel yields an Acceptable Separation Distance of approximately 1,884 ft for people; ASTs more than 2,000 ft from the Subject Property therefore cannot present an unacceptable hazard and are listed by count only. Sites within 2,000 ft are evaluated individually.',
+      'For each site within 2,000 ft, the single largest active tank governs; inactive or removed tanks are excluded. Unless the tank is documented as diked, it is evaluated as undiked (worst case).',
+      'Acceptable Separation Distance (ASD) per 24 CFR 51.203 and Appendix I, using the HUD ASD Electronic Assessment Tool equations for thermal radiation from an unpressurized, undiked tank: ASD for people (450 BTU/sq ft-hr) = 10^(0.4166 x log10(gallons) + 1.192) ft; ASD for buildings (10,000 BTU/sq ft-hr) = 10^(0.4623 x log10(gallons) + 0.3145) ft.',
+      'The measured distance from the tank site to the nearest point of the Subject Property is compared to the ASD for people. A distance greater than the ASD is acceptable; a distance within the ASD requires a barrier evaluation (24 CFR 51.205) or mitigation.'
+    ]);
+    // 3. Inventory + calculations
+    pkH1(P, '3. AST Inventory and ASD Calculations');
+    if (status === 'none') pkP(P, 'No ASTs covered by 24 CFR Part 51, Subpart C were identified within 1 mile of the Subject Property in the database search' + ((proj.explos_siteRecon || '').trim() ? ' or during site reconnaissance' : '') + '.');
+    else {
+      if (remaining) pkP(P, remaining + ' listed address(es) with active ASTs are located more than 2,000 ft from the Subject Property and are therefore beyond any Acceptable Separation Distance for a tank of up to 100,000 gallons; no further evaluation of those sites is required.');
+      if (rows.length) {
+        pkTable(P, ['Map key', 'Site / address', 'Distance (ft)', 'Largest active tank (gal)', 'ASD people (ft)', 'ASD building (ft)', 'Result'],
+          rows.map(r => { const p = hudAsdPeople(r.gal), b = hudAsdBuilding(r.gal); const d = parseFloat(r.dist); const asd = parseFloat(r.asd) || p; const res = (!d || !asd) ? '—' : d > asd ? 'Acceptable' : 'Within ASD'; return [r.mapKey || '', [r.site, r.addr].filter(Boolean).join(' - '), fmt(d), fmt(r.gal) + (r.substance ? ' ' + r.substance : ''), fmt(r.asd || p), fmt(b), res]; }),
+          [0.08, 0.32, 0.11, 0.17, 0.11, 0.11, 0.10]);
+        pkH2(P, 'Calculations');
+        rows.forEach(r => {
+          const g = parseFloat(r.gal); if (!(g > 0)) { pkP(P, 'Map key ' + (r.mapKey || '-') + ' - ' + (r.site || r.addr || '') + ': tank capacity not available; ASD not calculated.', { size: 9.5 }); return; }
+          const lg = Math.log10(g); const p = hudAsdPeople(g), b = hudAsdBuilding(g); const d = parseFloat(r.dist); const asd = parseFloat(r.asd) || p;
+          pkP(P, 'Map key ' + (r.mapKey || '-') + ' - ' + [r.site, r.addr].filter(Boolean).join(', ') + (r.substance ? ' (' + r.substance + ')' : '') + ':', { bold: true, after: 2 });
+          pkBullets(P, [
+            'Largest active tank: ' + fmt(g) + ' gal; log10(' + fmt(g) + ') = ' + lg.toFixed(4) + '.',
+            'ASD people = 10^(0.4166 x ' + lg.toFixed(4) + ' + 1.192) = 10^' + (0.4166 * lg + 1.192).toFixed(4) + ' = ' + fmt(p) + ' ft' + (parseFloat(r.asd) && parseFloat(r.asd) !== p ? ' (HUD ASD Calculator value used: ' + fmt(r.asd) + ' ft)' : '') + '.',
+            'ASD buildings = 10^(0.4623 x ' + lg.toFixed(4) + ' + 0.3145) = ' + fmt(b) + ' ft.',
+            'Distance to the Subject Property: ' + fmt(d) + ' ft -> ' + (!d ? 'distance not entered' : d > asd ? 'greater than the ASD for people (' + fmt(asd) + ' ft): acceptable.' : 'within the ASD for people (' + fmt(asd) + ' ft): barrier evaluation / mitigation required.')
+          ]);
+        });
+      } else pkP(P, 'No AST sites within 2,000 ft of the Subject Property were identified for individual evaluation.');
+    }
+    // 4. Conclusion
+    pkH1(P, '4. Conclusion');
+    const within = rows.filter(r => { const d = parseFloat(r.dist), asd = parseFloat(r.asd) || hudAsdPeople(r.gal); return d && asd && d <= asd; });
+    let concl;
+    if (status === 'none') concl = 'In AZ-RI Consultants\' opinion no above-ground storage tanks covered by 24 CFR Part 51, Subpart C are located within 1 mile of the Subject Property, and the project is in compliance with the Explosive and Flammable Hazards requirements.';
+    else if (status === 'far') concl = 'In AZ-RI Consultants\' opinion all listed ASTs within 1 mile are located more than 2,000 ft from the Subject Property, beyond the Acceptable Separation Distance for any tank of up to 100,000 gallons, and the project is in compliance with 24 CFR Part 51, Subpart C.';
+    else if (status === 'close_acceptable') concl = 'In AZ-RI Consultants\' opinion the Subject Property is located beyond the Acceptable Separation Distance for people from every AST within 2,000 ft, as calculated above, and the project is in compliance with 24 CFR Part 51, Subpart C. No mitigation is required.';
+    else if (status === 'close_no_los') concl = 'The Subject Property is within the Acceptable Separation Distance of ' + (within.length ? within.map(r => 'Map key ' + r.mapKey).join(', ') : 'one or more ASTs') + '. A man-made or natural barrier blocks the line of sight between the tank(s) and the Subject Property; under 24 CFR 51.205 a licensed professional engineer must evaluate the adequacy of the existing barrier before the project proceeds. ' + ((proj.explos_barrier || '').trim() || '');
+    else concl = 'The Subject Property is within the Acceptable Separation Distance of ' + (within.length ? within.map(r => 'Map key ' + r.mapKey).join(', ') : 'one or more ASTs') + ' with a clear line of sight. The project cannot proceed as proposed unless mitigation acceptable under 24 CFR 51.205 (burying the tank, a blast / thermal barrier, or relocation) is designed by a licensed professional engineer and implemented, or the ASD is otherwise satisfied.';
+    pkP(P, concl);
+    const mapDocs = ((typeof supportingDocs !== 'undefined' && supportingDocs[authId]) || []).filter(d => /tank|distance|map|figure/i.test(d.name) && !/AST_ASD_Calculations/i.test(d.name));
+    pkP(P, 'Source: ERIS regulatory database report (AST listings, 1-mile radius); HUD ASD Electronic Assessment Tool equations (24 CFR 51.203, Appendix I).' + (mapDocs.length ? ' Attached: ' + mapDocs.map(d => d.name).join('; ') + ' (following pages).' : ''), { italic: true, size: 9 });
+    for (const d of mapDocs) await pkEmbedDoc(P, d, 'Tank distance figure (' + d.name + ')');
+    const doc = pkFinish(P); const slug = figSlug(proj); const name = slug + '_AST_ASD_Calculations.pdf';
+    pkAttachPdf(authId, doc, name, concl); doc.save(name);
+    figFillSourceRef(authId, 'ERIS AST DBR (1 mi) + HUD ASD equations — AST / ASD calculation attachment', rows.length ? rows.map(r => 'Map key ' + r.mapKey + ': ' + fmt(r.dist) + ' ft vs ASD ' + fmt(r.asd || hudAsdPeople(r.gal)) + ' ft').join('; ') : (status === 'none' ? 'No ASTs within 1 mile' : remaining + ' sites, all >2,000 ft'));
+    say('✓ AST / ASD calculation attachment generated — PDF downloaded and attached to Supporting Documents.', 'var(--green,#2f855a)');
+  } catch (e) { console.warn('[AST attachment]', e); say('✗ AST attachment failed: ' + e.message, 'var(--red,#c00)'); }
+}
+
 // ---------- 3) Section 106 (SHPO submittal) ----------
 async function generateHistoricConsultation(authId) {
   authId = authId || 'historic'; const say = packetSay('autoStatus_' + authId);
@@ -5782,6 +5860,7 @@ const MAP_GENERATORS = {
   esa:       { fn: 'generateESAConsultation', label: '📄 ESA Section 7 Packet (effect determination)' },
   historic:  { fn: 'generateHistoricConsultation', label: '📄 Section 106 Packet (SHPO submittal + APE figure)' },
   czm:       { fn: 'generateCZMConsultation', label: '📄 CZM Consistency Packet' },
+  explos:    { fn: 'generateExplosAttachment', label: '📄 AST / ASD Calculation Attachment (HEROS)' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
   // CBRS "Generate Map PDF" button removed per AZ-RI request — the CBRS Mapper/Validation Tool link
   // lives in the SOP panel and produces the official PDF directly.
@@ -7993,6 +8072,7 @@ AUTHORITIES.forEach(a => {
         <button class="no-print" onclick="addASTRow()" style="margin-top:8px;background:#b7791f;color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">+ Add AST</button>
         <button class="no-print" onclick="clearASTRows()" style="margin-top:8px;margin-left:6px;background:white;color:#b7791f;border:1px solid #b7791f;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Clear All</button>
         <button class="no-print" onclick="importASTJson()" title="Paste the JSON from Claude's ERIS AST extractor (drag the ERIS report into Claude and ask for the Explosives section)" style="margin-top:8px;margin-left:6px;background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📥 Import AST JSON (from Claude)</button>
+        <button class="no-print" onclick="generateExplosAttachment('explos')" title="Writes the HEROS attachment: 1-mile AST inventory, HUD ASD equations with each tank's calculation, and the result" style="margin-top:8px;margin-left:6px;background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📄 ASD Calculation Attachment</button>
         <button class="no-print" onclick="autoFillASD()" title="Fill the ASD column from Largest Tank (gal) using the HUD ASD Tool equation (thermal radiation for people, unpressurized, undiked)" style="margin-top:8px;margin-left:6px;background:white;color:var(--azri-navy);border:1px solid var(--azri-navy);padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Σ Auto-ASD (HUD equation)</button>
       </div>
     `;
@@ -12013,7 +12093,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v143 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v144 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
