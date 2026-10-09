@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v134</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v135</div>
   </div>
 </header>
 
@@ -3394,13 +3394,33 @@ function figDrawSite(base, site, center) {
   return polys;
 }
 // Project name / location / grant number for the figure header (external-facing)
+// (v135) Every grant number on the project — the Grant ID field plus each funding source — so multi-grant
+// projects show all of them. With no grant number entered, fall back to the HEROS number, then the funding program.
 function figProjectMeta(proj, center) {
-  let grant = (proj.grantId || '').trim();
-  if (!grant) { try { const fs = JSON.parse(proj.fundingSourcesJSON || '[]'); const g = (fs.find(f => (f.grantId || '').trim()) || {}).grantId; if (g) grant = g.trim(); } catch (e) {} }
-  if (!grant && typeof fundingSources !== 'undefined' && Array.isArray(fundingSources)) { const g = (fundingSources.find(f => (f.grantId || '').trim()) || {}).grantId; if (g) grant = g.trim(); }
+  const grants = [];
+  const add = g => { g = (g || '').trim(); if (g && !grants.includes(g)) grants.push(g); };
+  add(proj.grantId);
+  let fs = [];
+  try { fs = JSON.parse(proj.fundingSourcesJSON || '[]'); } catch (e) {}
+  if (!fs.length && typeof fundingSources !== 'undefined' && Array.isArray(fundingSources)) fs = fundingSources;
+  fs.forEach(f => add(f && f.grantId));
   const heros = (proj.herosNumber || '').trim();
-  const grantLabel = grant ? 'Grant No. ' + grant : (heros ? 'HEROS No. ' + heros : '');
-  return { projectName: (proj.projectName || '').trim(), location: figSiteLabel(proj, center), grant: grantLabel };
+  const program = ((fs.find(f => f && (f.programName || f.program)) || {}).programName || (fs[0] || {}).program || proj.fundingProgram || '').trim();
+  const grantLabel = grants.length ? (grants.length > 1 ? 'Grant Nos. ' : 'Grant No. ') + grants.join(', ') : (heros ? 'HEROS No. ' + heros : (program ? 'Funding: ' + program : ''));
+  return { projectName: (proj.projectName || '').trim(), location: figSiteLabel(proj, center), grant: grantLabel, grants };
+}
+// (v135) Where the Subject Property boundary came from, for the sources footer
+function figParcelSource(site) {
+  const st = (site && site.state) || (typeof CURRENT_STATE !== 'undefined' ? CURRENT_STATE : '');
+  return ({ MD: 'MD iMAP Parcel Boundaries (MDP / SDAT)', DE: 'DE FirstMap Statewide Parcels', DC: 'DC GIS (OCTO) Parcels', PA: 'county parcel GIS', VA: 'county / city parcel GIS' })[st] || 'state / county parcel GIS';
+}
+// Sources list for a figure footer: thematic data first, then the Subject Property boundary and basemap
+function figSources(base, items) {
+  const site = figSiteContext();
+  const out = (items || []).filter(Boolean).slice();
+  if (site && site.boundary) out.push('Subject Property boundary: ' + figParcelSource(site));
+  if (base && base.src) out.push('Basemap: ' + base.src);
+  return out;
 }
 // Half-extent (metres) that frames the parcel boundary: pad × its larger half-dimension, clamped (feet)
 function figParcelHalfM(site, center, pad, minFt, maxFt) {
@@ -3442,9 +3462,12 @@ async function figDrawHeader(ctx, W, o) {
   } catch (e) {}
   const meta = o.meta || {};
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#0f2a44'; ctx.font = 'bold 22px Arial'; ctx.fillText(o.title + (meta.projectName ? ' — ' + meta.projectName : ''), tx, 30);
-  const line2 = [meta.location, meta.grant].filter(Boolean).join('   ·   ');
-  ctx.font = '14px Arial'; ctx.fillStyle = '#1f2937'; if (line2) ctx.fillText(line2, tx, 54);
+  ctx.fillStyle = '#0f2a44'; ctx.font = 'bold 22px Arial'; ctx.fillText(o.title, tx, 30);
+  // (v135) Line 2 always carries Project · Site · Grant No(s). — labelled, so each is identifiable on its own
+  const sameName = meta.projectName && meta.location && meta.projectName.trim().toLowerCase() === meta.location.trim().toLowerCase();
+  const line2 = (sameName ? ['Project / Site: ' + meta.projectName] : [meta.projectName ? 'Project: ' + meta.projectName : '', meta.location ? 'Site: ' + meta.location : '']).concat([meta.grant || '']).filter(Boolean).join('   ·   ');
+  ctx.font = '14px Arial'; ctx.fillStyle = '#1f2937';
+  if (line2) { if (ctx.measureText(line2).width > W - tx - 130) ctx.font = '12px Arial'; ctx.fillText(line2, tx, 54); }
   if (o.subtitle) { ctx.font = '12px Arial'; ctx.fillStyle = '#4b5563'; ctx.fillText(o.subtitle, tx, 76); }
   ctx.font = '13px Arial'; ctx.fillStyle = '#334155'; ctx.textAlign = 'right'; ctx.fillText(new Date().toLocaleDateString(), W - 18, 30);
   return HB;
@@ -3492,13 +3515,27 @@ function figPanelCaption(ctx, x, y, text, sub) {
   ctx.fillStyle = '#0f2a44'; ctx.font = 'bold 15px Arial'; ctx.fillText(text, x + 12, y + 19);
   if (sub) { ctx.fillStyle = '#4b5563'; ctx.font = '12px Arial'; ctx.fillText(sub, x + 12, y + 37); }
 }
+// (v135) Sources footer: a white band across the bottom of every figure listing the data behind it.
+// Findings / preparer notes still stay off the figure (they live in the write-up).
+const FIG_FB = 28;
+function figDrawSources(ctx, W, H, sources) {
+  if (!sources || !sources.length) return;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, H - FIG_FB, W, FIG_FB);
+  ctx.fillStyle = '#0f2a44'; ctx.fillRect(0, H - FIG_FB, W, 2);
+  let txt = 'Sources: ' + sources.join('  ·  ');
+  ctx.textAlign = 'left'; ctx.fillStyle = '#334155'; ctx.font = '12px Arial';
+  const maxW = W - 32;
+  if (ctx.measureText(txt).width > maxW) ctx.font = '10.5px Arial';
+  while (ctx.measureText(txt).width > maxW && txt.length > 20) txt = txt.slice(0, -2).replace(/\s+$/, '') + '…';
+  ctx.fillText(txt, 16, H - 10);
+}
 async function figFurnish(base, o) {
   const { ctx, W, H } = base;
   const HB = await figDrawHeader(ctx, W, o);
   figDrawNorth(ctx, W - 52, HB + 48);
   figDrawScale(ctx, base.fpp, 20, H - 60);
-  // (No sources / preparer footer — that text lives in the write-up.)
   figDrawLegend(ctx, o.legend, 16, null, H - 80);
+  figDrawSources(ctx, W, H, figSources(base, o.sources));
 }
 
 // Export helpers: PDF download (figure only — no internal notes; these go to HUD, the RE and the client) + attach JPEG to the authority's Supporting Documents (replacing a prior auto figure)
@@ -3706,7 +3743,8 @@ async function generateAirportFigure(authId) {
       title: 'Airport Hazards Map',
       meta: figProjectMeta(proj, center),
       subtitle: '24 CFR Part 51 Subpart D · §58.6(d) · distances measured from the Subject Property to the nearest runway end (FAA NASR airports & runways)',
-      legend
+      legend,
+      sources: ['FAA NASR airports & runways (FAA ADIP)']
     });
     const fmtRow = r => r ? `${r.a.NAME}${r.a.IDENT ? ' (' + r.a.IDENT + ')' : ''}, ${airportTypeLabel(r.a).toLowerCase()}${r.a.PRIVATEUSE == 1 ? ', private use' : ''} — ${figFmtFt(r.distFt)} to nearest ${r.basis}` : 'none within the mapped area';
     // Findings text
@@ -3810,7 +3848,8 @@ async function generateCBRSFigure(authId) {
       title: 'Coastal Barrier Resources Map',
       meta: figProjectMeta(proj, center),
       subtitle: 'Coastal Barrier Resources Act, 16 U.S.C. 3501 et seq. · §58.6(c) · USFWS Coastal Barrier Resources System' + (overlayOk ? '' : ' (overlay unavailable at generation time)'),
-      legend
+      legend,
+      sources: ['USFWS Coastal Barrier Resources System (USGS CBRS Mapper)']
     });
     // Findings
     let finding, status;
@@ -3970,7 +4009,7 @@ async function generateFloodFigure(authId) {
       if (firmRef) tag('FIRM Panel ' + firmRef, c[0] + 16, c[1] - 2, '#1f2937');
       if (isMgmt) tag(inSFHA ? 'Within the 1% annual chance floodplain (SFHA)' : in500 ? 'Within the 0.2% annual chance (500-yr) floodplain' : 'Outside the 1% and 0.2% annual chance floodplains', c[0] + 16, c[1] + 20, (inSFHA || in500) ? '#b91c1c' : '#166534');
       figPanelCaption(ctx, 10, 10, 'Site Detail', isMgmt ? 'Subject Property boundary · 1% (SFHA) and 0.2% floodplains' : 'Subject Property boundary and mapped flood zones');
-      figDrawScale(ctx, detail.fpp, 20, PH - 36);
+      figDrawScale(ctx, detail.fpp, 20, PH - 36 - FIG_FB);
     }
     // Vicinity panel: site marker + ring, the detail-panel extent outlined, caption, scale, north arrow
     {
@@ -4002,7 +4041,7 @@ async function generateFloodFigure(authId) {
       }
       const vicMi = (vicHalfFt * 2 / 5280);
       figPanelCaption(ctx, 10, 10, 'Vicinity', (isMgmt ? 'FFRMS screening — 1% (SFHA) and 0.2% floodplains within approx. ' : 'Mapped flood hazard areas within approx. ') + (vicMi >= 1 ? vicMi.toFixed(0) + ' mile' + (vicMi > 1 ? 's' : '') : '0.5 mile') + ' · dashed box = Site Detail extent');
-      figDrawScale(ctx, vic.fpp, 20, PH - 36);
+      figDrawScale(ctx, vic.fpp, 20, PH - 36 - FIG_FB);
       figDrawNorth(ctx, PW - 52, 100);
     }
     // Legend: only the zone categories that are actually within the two mapped extents
@@ -4033,6 +4072,7 @@ async function generateFloodFigure(authId) {
       subtitle: (isMgmt ? 'Executive Order 11988 / 24 CFR Part 55 · §58.5(b)' : 'Flood Disaster Protection Act of 1973 (42 U.S.C. 4012a) · §58.6(a)') + ' · FEMA National Flood Hazard Layer' + (firmRef ? ' · FIRM Panel ' + firmRef : '') + (overlayOk ? '' : ' (overlay unavailable at generation time)')
     });
     figDrawLegend(ctx, legend, 16, null, FIG_HB + PH - 70);
+    figDrawSources(ctx, W, H, figSources(detail, ['FEMA National Flood Hazard Layer (NFHL)' + (firmRef ? ' — FIRM Panel ' + firmRef : '')]));
     const base = { cv };
     // Findings (internal — status line, Source/Ref, Supporting Doc caption only)
     let finding, status;
@@ -4155,7 +4195,8 @@ async function generateFarmlandFigure(authId) {
       title: 'Farmland Protection Map',
       meta: figProjectMeta(proj, center),
       subtitle: 'Farmland Protection Policy Act, 7 CFR Part 658 · §58.5(h) · USDA-NRCS SSURGO farmland classification · U.S. Census Urban Areas',
-      legend
+      legend,
+      sources: ['USDA-NRCS SSURGO (Soil Data Access)', 'U.S. Census Bureau 2020 Urban Areas (TIGERweb)']
     });
     // Findings
     const important = soilsSite.filter(r => farmlandImportant(r.farmlndcl));
@@ -4259,7 +4300,7 @@ async function generateSSAFigure(authId) {
       tag('Subject Property: ' + (inSSA ? 'WITHIN a designated Sole Source Aquifer' : 'not within a designated Sole Source Aquifer'), c[0] + 16, c[1] - 24, inSSA ? '#b91c1c' : '#166534');
       if (inSSA) tag(ssaNames.join('; '), c[0] + 16, c[1] - 2, '#1e3a8a');
       figPanelCaption(ctx, 10, 10, 'Site Detail', 'Subject Property boundary and EPA SSA designation');
-      figDrawScale(ctx, detail.fpp, 20, PH - 36);
+      figDrawScale(ctx, detail.fpp, 20, PH - 36 - FIG_FB);
     }
     // Vicinity panel
     {
@@ -4283,7 +4324,7 @@ async function generateSSAFigure(authId) {
       ctx.fillStyle = '#1f2937'; ctx.textAlign = 'left'; lines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
       const vicMi = vicHalfFt * 2 / 5280;
       figPanelCaption(ctx, 10, 10, 'Vicinity', 'EPA-designated Sole Source Aquifers within approx. ' + vicMi.toFixed(0) + ' miles · dashed box = Site Detail extent');
-      figDrawScale(ctx, vic.fpp, 20, PH - 36);
+      figDrawScale(ctx, vic.fpp, 20, PH - 36 - FIG_FB);
       figDrawNorth(ctx, PW - 52, 100);
     }
     const legend = [
@@ -4295,6 +4336,7 @@ async function generateSSAFigure(authId) {
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
     ctx.drawImage(detail.cv, 0, FIG_HB); ctx.drawImage(vic.cv, PW + GAP, FIG_HB);
     ctx.strokeStyle = '#0f2a44'; ctx.lineWidth = 1; ctx.strokeRect(0.5, FIG_HB + 0.5, PW - 1, PH - 1); ctx.strokeRect(PW + GAP + 0.5, FIG_HB + 0.5, PW - 1, PH - 1);
+    figDrawSources(ctx, W, H, figSources(detail, ['EPA Sole Source Aquifer designations (EPA NEPAssist Water service)']));
     await figDrawHeader(ctx, W, { title: 'Sole Source Aquifer Map', meta: figProjectMeta(proj, center), subtitle: 'Safe Drinking Water Act §1424(e) · 40 CFR Part 149 · §58.5(d) · EPA Sole Source Aquifer designations (EPA NEPAssist Water service)' });
     figDrawLegend(ctx, legend, 16, null, FIG_HB + PH - 70);
     // Findings (internal — status line, Source/Ref, caption)
@@ -4336,7 +4378,7 @@ async function figSplitPane(o) {
     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
     (o.detailTags || []).forEach((tg, i) => { const w = ctx.measureText(tg.text).width; const lx = Math.min(Math.max(8, c[0] + 16), PW - w - 12), ly = Math.min(Math.max(60, c[1] - 24 + i * 22), PH - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = tg.color || '#1f2937'; ctx.fillText(tg.text, lx, ly); });
     figPanelCaption(ctx, 10, 10, 'Site Detail', o.detailCaption || 'Subject Property boundary');
-    figDrawScale(ctx, detail.fpp, 20, PH - 36);
+    figDrawScale(ctx, detail.fpp, 20, PH - 36 - FIG_FB);
   }
   // Vicinity panel furniture
   {
@@ -4357,7 +4399,7 @@ async function figSplitPane(o) {
     }
     const vicMi = o.vicHalfFt * 2 / 5280;
     figPanelCaption(ctx, 10, 10, 'Vicinity', (o.vicCaption || 'Vicinity') + ' within approx. ' + (vicMi >= 1 ? vicMi.toFixed(0) + ' mile' + (vicMi > 1 ? 's' : '') : (vicMi * 5280).toLocaleString() + ' ft') + ' · dashed box = Site Detail extent');
-    figDrawScale(ctx, vic.fpp, 20, PH - 36);
+    figDrawScale(ctx, vic.fpp, 20, PH - 36 - FIG_FB);
     figDrawNorth(ctx, PW - 52, 100);
   }
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
@@ -4366,6 +4408,7 @@ async function figSplitPane(o) {
   ctx.strokeStyle = '#0f2a44'; ctx.lineWidth = 1; ctx.strokeRect(0.5, FIG_HB + 0.5, PW - 1, PH - 1); ctx.strokeRect(PW + GAP + 0.5, FIG_HB + 0.5, PW - 1, PH - 1);
   await figDrawHeader(ctx, W, { title: o.title, meta: o.meta, subtitle: o.subtitle });
   figDrawLegend(ctx, o.legend, 16, null, FIG_HB + PH - 70);
+  figDrawSources(ctx, W, H, figSources(detail, o.sources));
   return { cv, detail, vic };
 }
 // Envelope (WGS84) of half-width ft around center; nearest-distance helpers for polygons (rings) and lines (paths)
@@ -4433,7 +4476,7 @@ async function generateWetlandsFigure(authId) {
       : [nearest ? 'No NWI wetlands mapped on the Subject Property · nearest: ' + (nearest.attrs.WETLAND_TYPE || 'wetland') + ' — ' + figFmtFt(nearest.distFt) + ' ' + figBearing(center, nearest.pt) : 'No NWI wetlands mapped on the Subject Property or within the vicinity frame'];
     const { cv } = await figSplitPane({
       site, center, detailHalfM, vicHalfFt,
-      title: 'Wetlands Map', meta: figProjectMeta(proj, center),
+      title: 'Wetlands Map', meta: figProjectMeta(proj, center), sources: ['USFWS National Wetlands Inventory (NWI)'],
       subtitle: 'Executive Order 11990 · 24 CFR Part 55 · §58.5(b) · USFWS National Wetlands Inventory' + (overlayOk ? '' : ' (overlay unavailable at generation time)'),
       detailCaption: 'Subject Property boundary and NWI-mapped wetlands', vicCaption: 'NWI-mapped wetlands and waters',
       detailTags: [{ text: onSite.length ? 'NWI wetland(s) mapped on the Subject Property' : 'No NWI wetlands mapped on the Subject Property', color: onSite.length ? '#b91c1c' : '#166534' }].concat(onSite.length ? [{ text: typeTxt, color: '#1e3a8a' }] : []),
@@ -4520,7 +4563,7 @@ async function generateWSRFigure(authId) {
     const proximate = [nearWSR, nearNRI].filter(n => n && n.distFt <= WSR_PROXIMATE_FT);
     const { cv } = await figSplitPane({
       site, center, detailHalfM, vicHalfFt,
-      title: 'Wild and Scenic Rivers Map', meta: figProjectMeta(proj, center),
+      title: 'Wild and Scenic Rivers Map', meta: figProjectMeta(proj, center), sources: ['National Wild & Scenic Rivers System (EPA NEPAssist Water service)', 'NPS Nationwide Rivers Inventory (NRI)'],
       subtitle: 'Wild and Scenic Rivers Act, 16 U.S.C. 1271–1287 · §58.5(f) · National Wild & Scenic Rivers System (NWSRS) · NPS Nationwide Rivers Inventory (NRI)',
       detailCaption: 'Subject Property boundary' + (proximate.length ? ' and proximate river segment(s)' : ''), vicCaption: 'Designated and NRI-listed rivers',
       detailTags: [{ text: proximate.length ? 'Subject Property is within ' + figFmtFt(WSR_PROXIMATE_FT) + ' of a listed river segment' : 'No designated or NRI-listed river within ' + figFmtFt(WSR_PROXIMATE_FT) + ' of the Subject Property', color: proximate.length ? '#b91c1c' : '#166534' }],
@@ -4640,7 +4683,7 @@ async function generateNoiseScreeningFigure(authId) {
       { label: 'Secondary road — US / state highway or arterial (Census S1200)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); } },
       { label: 'Railroad (Census TIGER)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); ctx.setLineDash([3, 7]); ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x + 2, y + h / 2); ctx.lineTo(x + w - 2, y + h / 2); ctx.stroke(); ctx.restore(); } }
     ];
-    await figFurnish(base, { title: 'Noise Screening Map', meta: figProjectMeta(proj, center), subtitle: '24 CFR Part 51 Subpart B · §58.5(i)(1) · Screening distances per HUD Noise Guidebook: major roads 1,000 ft · railroads 3,000 ft · airports 15 miles · Census TIGER roads / rails · FAA airports', legend });
+    await figFurnish(base, { title: 'Noise Screening Map', meta: figProjectMeta(proj, center), subtitle: '24 CFR Part 51 Subpart B · §58.5(i)(1) · Screening distances per HUD Noise Guidebook: major roads 1,000 ft · railroads 3,000 ft · airports 15 miles · Census TIGER roads / rails · FAA airports', legend, sources: ['U.S. Census Bureau TIGER/Line roads & railroads', 'FAA NASR airports (FAA ADIP)'] });
     let finding, status;
     if (triggered) { finding = 'Noise screening: ' + [roadsIn.length ? roadsIn.length + ' major road(s) within 1,000 ft (' + roadsIn.slice(0, 3).map(r => r.name + ' ' + figFmtFt(r.distFt)).join(', ') + ')' : '', railIn.length ? railIn.length + ' railroad(s) within 3,000 ft (' + railIn.slice(0, 2).map(r => r.name + ' ' + figFmtFt(r.distFt)).join(', ') + ')' : '', apts.length ? apts.length + ' airport(s)/airfield(s) within 15 mi (nearest ' + fmtA(apts[0]) + ')' : ''].filter(Boolean).join('; ') + '. New construction of a noise-sensitive use → Step 4 full Noise Assessment (DNL at each NAL); rehab affecting attenuating materials → Write Up 1b with the screening result; non-residential rehab → Write Up 2. Confirm road traffic volumes with the state DOT counts before treating a secondary road as a major roadway.'; status = 'followup'; }
     else { finding = 'Noise screening: no major roads within 1,000 ft, no railroads within 3,000 ft, and no airports/airfields within 15 miles of the Subject Property boundary' + (nearestRoadAny ? ' (nearest classified road ' + nearestRoadAny.name + ' at ' + figFmtFt(nearestRoadAny.distFt) + ')' : '') + ' → Write Up 3 (document the screening sources).'; status = 'compliant'; }
@@ -5063,7 +5106,7 @@ async function packetFigures(C, say) {
   if (((typeof supportingDocs !== 'undefined' && supportingDocs.packet_fig1) || []).length) return {};   // uploaded Figure 1 is used instead
   const legend = [{ label: 'Subject Property - ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
   say && say('Rendering site location figure…');
-  const location = await figSplitPane({ site, center, detailHalfM: figParcelHalfM(site, center, 2.5, 400, 2000), vicHalfFt: 5280, title: 'Site Location Map', meta, subtitle: 'Subject Property boundary (site detail and 2-mile vicinity)', detailCaption: 'Subject Property boundary', vicCaption: 'Vicinity', legend: legend.concat([{ label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }]) });
+  const location = await figSplitPane({ site, center, detailHalfM: figParcelHalfM(site, center, 2.5, 400, 2000), vicHalfFt: 5280, title: 'Site Location Map', sources: [], meta, subtitle: 'Subject Property boundary (site detail and 2-mile vicinity)', detailCaption: 'Subject Property boundary', vicCaption: 'Vicinity', legend: legend.concat([{ label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }]) });
   return { location };
 }
 // Embed an uploaded document: images directly, PDFs page-by-page via pdf.js (rendered at ~150 dpi)
@@ -5197,7 +5240,7 @@ async function generateHistoricConsultation(authId) {
     say('Rendering APE figure…');
     const { site, center, proj } = C; const apeRings = figBufferRings(site, center, apeFt);
     const drawAPE = base => { const { ctx, toPx } = base; apeRings.forEach(r => { ctx.save(); ctx.setLineDash([8, 5]); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(124,58,237,0.10)'; ctx.beginPath(); r.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }); };
-    const apeFig = await figSplitPane({ site, center, detailHalfM: (figParcelHalfM(site, center, 1, 0, 1e9) * FT_PER_M + apeFt + 150) / FT_PER_M, vicHalfFt: 2640, basemap: 'imagery', title: 'Area of Potential Effects (APE)', meta: C.meta, subtitle: 'NHPA Section 106 - 36 CFR 800.16(d) - APE = Subject Property plus ' + apeFt.toLocaleString() + ' ft (direct and visual effects)', detailCaption: 'Subject Property and APE (' + apeFt.toLocaleString() + ' ft)', vicCaption: 'APE in its setting', legend: [{ label: 'Subject Property - ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }, { label: 'Area of Potential Effects - ' + apeFt.toLocaleString() + ' ft from the boundary', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(124,58,237,0.10)'; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); ctx.restore(); } }, { label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }], drawDetail: drawAPE, drawVicinity: drawAPE });
+    const apeFig = await figSplitPane({ site, center, detailHalfM: (figParcelHalfM(site, center, 1, 0, 1e9) * FT_PER_M + apeFt + 150) / FT_PER_M, vicHalfFt: 2640, basemap: 'imagery', title: 'Area of Potential Effects (APE)', sources: [], meta: C.meta, subtitle: 'NHPA Section 106 - 36 CFR 800.16(d) - APE = Subject Property plus ' + apeFt.toLocaleString() + ' ft (direct and visual effects)', detailCaption: 'Subject Property and APE (' + apeFt.toLocaleString() + ' ft)', vicCaption: 'APE in its setting', legend: [{ label: 'Subject Property - ' + figSiteLabel(proj, center), draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }, { label: 'Area of Potential Effects - ' + apeFt.toLocaleString() + ' ft from the boundary', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3; ctx.fillStyle = 'rgba(124,58,237,0.10)'; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); ctx.restore(); } }, { label: 'Site Detail extent (shown at left)', draw: (ctx, x, y, w, h) => { ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore(); } }], drawDetail: drawAPE, drawVicinity: drawAPE });
     say('Writing the Section 106 packet…');
     const P = await pkNewDoc('NHPA Section 106 - Project Submittal', C.meta);
     pkP(P, recip.title, { size: 9.5, after: 10 });
@@ -11459,7 +11502,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v134 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v135 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
