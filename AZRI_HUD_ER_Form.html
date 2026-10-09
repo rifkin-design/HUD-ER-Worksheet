@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v142</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v143</div>
   </div>
 </header>
 
@@ -5424,7 +5424,7 @@ function esaParseIpac() {
 }
 function esaRenderTable() {
   const host = document.getElementById('esaSpeciesTable'); if (!host) return; const rows = esaRows();
-  if (!rows.length) { host.innerHTML = '<em style="font-size:11px;color:var(--gray);">No species parsed yet — paste the IPaC list above and click Parse.</em>'; return; }
+  if (!rows.length) { host.innerHTML = '<em style="font-size:11px;color:var(--gray);">No species yet — run 🤖 Review IPaC with Claude and import the result (or + Add species manually).</em>'; return; }
   const opt = (v, cur) => `<option value="${v}"${cur === v ? ' selected' : ''}>`;
   host.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="background:#e2e8f0;"><th style="text-align:left;padding:4px;">Species</th><th style="text-align:left;padding:4px;">Status</th><th style="text-align:left;padding:4px;">Suitable habitat on / adjacent to site?</th><th style="text-align:left;padding:4px;">Rationale (optional)</th><th></th></tr></thead><tbody>'
     + rows.map((s, i) => `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:4px;"><input type="text" value="${s.name.replace(/"/g, '&quot;')}" onchange="esaEdit(${i},'name',this.value)" style="width:100%;font-size:11.5px;"><input type="text" value="${(s.sci || '').replace(/"/g, '&quot;')}" placeholder="Scientific name" onchange="esaEdit(${i},'sci',this.value)" style="width:100%;font-size:10.5px;font-style:italic;margin-top:2px;"></td><td style="padding:4px;"><input type="text" value="${s.status}" onchange="esaEdit(${i},'status',this.value)" style="width:110px;font-size:11.5px;"></td><td style="padding:4px;"><select onchange="esaEdit(${i},'habitat',this.value)" style="font-size:11.5px;">${opt('', s.habitat)}— select —</option>${opt('none', s.habitat)}No — no suitable habitat (developed / maintained site)</option>${opt('possible', s.habitat)}Possible — habitat nearby or marginal; avoidance measures apply</option>${opt('present', s.habitat)}Yes — suitable habitat within the limits of disturbance</option></select></td><td style="padding:4px;"><input type="text" value="${(s.rationale || '').replace(/"/g, '&quot;')}" onchange="esaEdit(${i},'rationale',this.value)" style="width:100%;font-size:11px;" placeholder="e.g., no forest on site; nearest stream 900 ft"></td><td style="padding:4px;"><button type="button" onclick="esaRemove(${i})" style="border:none;background:none;color:#c00;cursor:pointer;">×</button></td></tr>`).join('')
@@ -5779,7 +5779,7 @@ const MAP_GENERATORS = {
   wetlands:  { fn: 'generateWetlandsFigure', label: '🗺 Wetlands Figure (USFWS NWI)' },
   wsr:       { fn: 'generateWSRFigure', label: '🗺 Wild & Scenic Rivers Figure (NWSRS + NPS NRI)' },
   noise:     { fn: 'generateNoiseScreeningFigure', label: '🗺 Noise Screening Figure (roads 1,000 ft · rail 3,000 ft · airports 15 mi)' },
-  esa:       { fn: 'generateESAConsultation', label: '📄 ESA Section 7 Packet (IPaC determination + concurrence request)' },
+  esa:       { fn: 'generateESAConsultation', label: '📄 ESA Section 7 Packet (effect determination)' },
   historic:  { fn: 'generateHistoricConsultation', label: '📄 Section 106 Packet (SHPO submittal + APE figure)' },
   czm:       { fn: 'generateCZMConsultation', label: '📄 CZM Consistency Packet' },
   // Airport "Open in NEPAssist" button removed in v64 — the NEPAssist link now lives in the SOP panel.
@@ -7879,11 +7879,9 @@ AUTHORITIES.forEach(a => {
       </div>
     </details>` : ''}
     ${a.id === 'esa' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
-      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 7 packet inputs — paste the IPaC official species list <span style="font-weight:400;color:var(--gray);">(shared project facts come from the Project Packet inputs in 1125)</span></summary>
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 7 packet inputs — site conditions + species table <span style="font-weight:400;color:var(--gray);">(fill the site conditions before the Claude review; the species table fills from the import)</span></summary>
       <div class="field-grid" style="margin-top:10px;">
         <div class="full"><label>IPaC Official Species List attached <span style="font-weight:400;color:var(--gray);">(upload with the ⬆ IPaC list (PDF) button in the card header; embedded in the packet)</span></label><div id="docs_esa_ipac"></div></div>
-        <div class="full"><label>IPaC species list text <span style="font-weight:400;color:var(--gray);">(alternative to the Claude review: open the IPaC PDF, select-all / copy the "Endangered Species" pages and paste here)</span></label><textarea data-field="esa_ipacText" style="min-height:90px;font-family:monospace;font-size:11px;" placeholder="Northern Long-eared Bat Myotis septentrionalis   Endangered&#10;Monarch Butterfly Danaus plexippus   Proposed Threatened&#10;…"></textarea></div>
-        <div class="full" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="esaParseIpac()" style="background:var(--azri-navy);color:white;border:none;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Parse IPaC list</button><span style="font-size:11px;color:var(--gray);">Then set "suitable habitat" for each species — No → No effect; Possible / Yes → NLAA with avoidance measures and a concurrence request.</span></div>
         <input type="hidden" data-field="esa_speciesJSON">
         <div class="full" id="esaSpeciesTable"></div>
         <div><label>IPaC project code</label><input type="text" data-field="esa_ipacCode" placeholder="e.g., 2026-0012345"></div>
@@ -7893,7 +7891,6 @@ AUTHORITIES.forEach(a => {
         <div><label>Ground disturbance (acres)</label><input type="text" data-field="esa_disturbedAcres" placeholder="e.g., 0.6"></div>
         <div><label>Existing site conditions (one line)</label><input type="text" data-field="esa_existingUse" placeholder="e.g., vacant 2-story commercial building with paved lot; mowed lawn, no forest or wetlands"></div>
         <div><label>Designated critical habitat in project area</label><input type="text" data-field="esa_critHab" placeholder="auto-filled from IPaC when found; e.g., None designated"></div>
-        <div class="full"><label>USFWS field office override <span style="font-weight:400;color:var(--gray);">(default from the project state: Chesapeake Bay / PA / VA ESFO)</span></label><input type="text" data-field="esa_fieldOffice"></div>
       </div>
     </details>` : ''}
     ${a.id === 'historic' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
@@ -12016,7 +12013,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v142 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v143 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
