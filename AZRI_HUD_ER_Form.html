@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v136</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v137</div>
   </div>
 </header>
 
@@ -2169,7 +2169,7 @@ const AUTO_DETERMINERS = {
       firmPanel = panelInfo.FIRM_PAN || panelInfo.DFIRM_ID || '';
       if (panelInfo.EFF_DATE) {
         const ts = parseInt(panelInfo.EFF_DATE);
-        if (!isNaN(ts)) firmRev = new Date(ts).toLocaleDateString('en-US');
+        if (!isNaN(ts)) firmRev = fmtUtcDate(ts);
       }
     }
     const firmRef = firmPanel + (firmRev ? ` (${firmRev})` : '');
@@ -2236,7 +2236,7 @@ const AUTO_DETERMINERS = {
       let eff = '';
       if (panelInfo.EFF_DATE) {
         const ts = parseInt(panelInfo.EFF_DATE);
-        if (!isNaN(ts)) eff = new Date(ts).toLocaleDateString('en-US');
+        if (!isNaN(ts)) eff = fmtUtcDate(ts);
       }
       firmRef = panel + (eff ? ` (${eff})` : '');
     }
@@ -4011,7 +4011,7 @@ async function generateFloodFigure(authId) {
       nfhlQuery(NFHL_LAYER.loma, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS,DETERMINATION' }).catch(() => [])
     ]);
     const panel = panels[0] ? panels[0].attributes : null;
-    const effDate = panel && panel.EFF_DATE ? new Date(parseInt(panel.EFF_DATE)).toLocaleDateString('en-US') : '';
+    const effDate = panel && panel.EFF_DATE ? fmtUtcDate(panel.EFF_DATE) : '';
     const firmRef = panel ? (panel.FIRM_PAN || panel.DFIRM_ID || '') + (effDate ? ' (effective ' + effDate + ')' : '') : '';
     const zoneTxt = a => (a.FLD_ZONE || '?') + (a.ZONE_SUBTY ? ' — ' + String(a.ZONE_SUBTY).toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) : '');
     const uniq = arr => arr.filter((v, i) => arr.indexOf(v) === i);
@@ -4843,7 +4843,10 @@ async function greenBookQuery(layer, center) {
     return { layer, hits: (j.features || []).map(f => Object.assign({ _layer: layer }, f.attributes)) };
   } catch (e) { if (t) clearTimeout(t); return { layer, error: e.message }; }
 }
-function fmtEpaDate(v) { if (!v) return ''; const n = parseInt(v); return isNaN(n) ? String(v) : new Date(n).toLocaleDateString('en-US'); }
+function fmtEpaDate(v) { return fmtUtcDate(v); }
+// (v137) Agency date fields (FEMA NFHL EFF_DATE, EPA Green Book dates) are epoch ms at MIDNIGHT UTC. Rendering them in
+// local time shifted every date back a day in the Eastern time zone (5/5/2003 became 5/4/2003) — format in UTC.
+function fmtUtcDate(v) { if (v == null || v === '') return ''; const n = parseInt(v); return isNaN(n) ? String(v) : new Date(n).toLocaleDateString('en-US', { timeZone: 'UTC' }); }
 
 async function generateAirQualityAttachment(authId) {
   authId = authId || 'air';
@@ -11609,7 +11612,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v136 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v137 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
