@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v133</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v134</div>
   </div>
 </header>
 
@@ -1665,16 +1665,17 @@ const AUTHORITY_SOP = {
     <div style="margin-bottom:8px;"><b>Step 2 — Location-specific process?</b> No.<br>Same federal process for MD, DC, VA, PA, DE: generate the Airport Hazards figure, then contact the specific airport for its zone map if a screening distance is triggered.</div>
     <div style="margin-bottom:8px;"><b>Step 3 — Make the map &amp; measure</b> — click <b>🗺 Airport Hazards Figure (FAA runway ends)</b> on this card (needs the parcel selected in 1125, or a Lat/Long). It:
       <ol style="margin:6px 0 6px 18px;padding:0;">
-        <li>Pulls every FAA-registered landing facility near the site from the <b>FAA NASR airport database</b> — airports <i>and</i> heliports, public <i>and</i> private use — plus the FAA runway / helipad polygons.</li>
-        <li>Measures from the Subject Property to the <b>nearest runway end</b> of each facility (HUD's measuring point under 24 CFR 51.303 — not the airport reference point NEPAssist uses). Facilities with no runway geometry fall back to the FAA reference point and are labeled as such.</li>
-        <li>Draws the 2,500 ft civil ring and the 15,000 ft military ring, labels each facility with its distance, downloads the PDF, attaches a copy to Supporting Documents, and fills the Source / Ref fields. Red cross = civil (incl. heliports), blue cross = military or joint-use.</li>
+        <li>Pulls every FAA-registered landing facility near the site from the <b>FAA NASR airport database</b> plus the FAA runway polygons, and sorts them per <b>24 CFR 51.301</b>: public-use <b>airports</b> (civil screen), <b>military / joint-use airfields</b> (military screen), and <b>other facilities</b> — heliports, seaplane bases, private-use strips — which are <i>not</i> civil airports under §51.301(c) and appear only as gray reference dots (no distance, not screened).</li>
+        <li>Measures from the Subject Property to the <b>nearest runway end</b> of each airport / airfield (HUD's measuring point under 24 CFR 51.303 — not the airport reference point NEPAssist uses). Airports with no runway geometry fall back to the FAA reference point and are labeled as such.</li>
+        <li>Draws the 2,500 ft civil ring and the 15,000 ft military ring, labels each airport with its distance, downloads the PDF, attaches a copy to Supporting Documents, and fills the Source / Ref fields. Red cross = civil airport, blue cross = military or joint-use, gray dot = heliport / private strip (reference only).</li>
       </ol>
-      <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;">Why runway end matters: a long military runway can reach inside 15,000 ft while the base's reference point is well outside it (Dover AFB vs. downtown Dover is the live example). If the figure and an older NEPAssist map disagree, the runway-end distance governs. Heliports and private strips are civil airports for Subpart D screening — the 2,500 ft test applies to them too. Joint-use fields (FAA "ALL") are screened as military.</div>
+      <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;">Why runway end matters: a long military runway can reach inside 15,000 ft while the base's reference point is well outside it (Dover AFB vs. downtown Dover is the live example). If the figure and an older NEPAssist map disagree, the runway-end distance governs. Joint-use fields (FAA "ALL") are screened as military.</div>
+      <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;"><b>What counts as a "civil airport":</b> under 24 CFR 51.301(c) it is <i>an existing commercial service airport designated in the FAA NPIAS</i>. Heliports and private strips are therefore never civil airports (that is also why NEPAssist's airport layer leaves them out), and neither is a general aviation field. FAA NASR cannot flag commercial service, so the figure screens every public-use airport at 2,500 ft; if one lands inside the ring, confirm its NPIAS role (<a href="https://www.faa.gov/airports/planning_capacity/npias" target="_blank" rel="noopener">FAA NPIAS report, Appendix A</a>) before contacting it, and say so in the write-up if it is general aviation.</div>
       <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;">Fallback if the FAA service is down: <a href="https://nepassisttool.epa.gov/nepassist/nepamap.aspx" target="_blank" rel="noopener">NEPAssist</a> → Transportation → Airport Points + Polygons → Measure; note that NEPAssist measures to the airport point, so add the runway length to your margin before calling it clear.</div>
     </div>
     <div><b>Step 4 — Determine compliance / follow-up</b> (the figure's status line tells you which branch you are in)
-      <div style="margin:5px 0;"><b>(A) No civil runway end ≤2,500 ft &amp; no military runway end ≤15,000 ft</b> → Compliant → <b>Write Up 1</b> (cite the figure: nearest civil and military facility with their runway-end distances).</div>
-      <div style="margin:5px 0;"><b>(B) Civil airport or heliport runway end ≤2,500 ft</b> — check the Runway Protection Zone/Clear Zone (RPZ/CZ); contact the airport operator for its ALP / RPZ map (for a heliport, its FATO / approach-departure surfaces):
+      <div style="margin:5px 0;"><b>(A) No civil runway end ≤2,500 ft &amp; no military runway end ≤15,000 ft</b> → Compliant → <b>Write Up 1</b> (cite the figure: nearest civil airport and military airfield with their runway-end distances).</div>
+      <div style="margin:5px 0;"><b>(B) Civil airport runway end ≤2,500 ft</b> — confirm it is a commercial service airport in the NPIAS, then check the Runway Protection Zone/Clear Zone (RPZ/CZ); contact the airport operator for its ALP / RPZ map:
         <ul style="margin:4px 0 4px 18px;">
           <li>Outside RPZ/CZ → Compliant → <b>Write Up 2.</b></li>
           <li>Inside, acquisition/sale of an existing <i>occupied</i> property only → buyer notice §51.303(a)(3) (<a href="https://www.hudexchange.info/resource/2758/notice-prospective-buyers-properties-in-runway-clear-zones/" target="_blank" rel="noopener">HUD sample Notice to Prospective Buyers</a>) → <b>Write Up 3.</b></li>
@@ -1682,7 +1683,7 @@ const AUTHORITY_SOP = {
           <li>Inside, <i>not</i> frequently used/occupied by people + airport-operator assurance → §51.303(a)(2) → <b>Write Up 6.</b></li>
         </ul>
       </div>
-      <div style="margin:5px 0;"><b>(C) Military / joint-use airfield runway end ≤15,000 ft</b> — check the Clear Zone (CZ) <b>and</b> Accident Potential Zones (APZ I/II) on the installation's AICUZ map (contact the base community planner if it is not published):
+      <div style="margin:5px 0;"><b>(C) Military / joint-use airfield runway end ≤15,000 ft</b> — check the Clear Zone (CZ) <b>and</b> Accident Potential Zones (APZ I/II) on the installation's AICUZ map (check the shared drive for a copy from a prior AZ-RI review first — e.g. Dover AFB; otherwise contact the base community planner):
         <ul style="margin:4px 0 4px 18px;">
           <li>Outside CZ &amp; both APZs → Compliant → <b>Write Up 4.</b></li>
           <li>In an APZ &amp; generally consistent with DOD guidelines (DOD Instruction 4165.57; 32 CFR Part 256), §51.303(b) → <b>Write Up 5.</b></li>
@@ -3539,6 +3540,9 @@ function figDownloadPdf(canvas, filename, footerLines) {
 const FAA_AIRPORTS_URL = 'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/US_Airport/FeatureServer/0/query';
 const FAA_RUNWAYS_URL  = 'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Runways/FeatureServer/0/query';
 const AIRPORT_CIVIL_FT = 2500, AIRPORT_MIL_FT = 15000;
+// (v134) Show heliports / private strips on the figure as gray reference markers (no distance, not screened)?
+// Set false to leave them off entirely — they are never "civil airports" under 24 CFR 51.301(c) either way.
+const AIRPORT_SHOW_OTHER = true;
 
 function figSiteContext() {
   // Prefer selected parcels; fall back to the 1125 Lat/Long field so a figure can be made pre-parcel.
@@ -3555,7 +3559,20 @@ async function faaQuery(url, center, miles, outFields, geometry) {
   if (j.error) throw new Error(j.error.message || 'FAA query failed');
   return j.features || [];
 }
-function airportKind(a) { const m = (a.MIL_CODE || '').toUpperCase(); return m === 'MIL' ? 'military' : m === 'ALL' ? 'joint' : 'civil'; }
+// (v134) Classification per 24 CFR 51.301(c): a "civil airport" is an existing COMMERCIAL SERVICE airport designated in
+// the FAA NPIAS. Heliports, seaplane bases, gliderports, ultralight / balloon ports and private-use strips are therefore
+// never civil airports under Subpart D (NEPAssist's airport layer omits them for the same reason) → kind 'other':
+// drawn in gray for reference only, no distance, excluded from the screen and the findings. FAA NASR carries no
+// commercial-service flag, so every public-use airport is screened as 'civil' and the reviewer confirms NPIAS status
+// for any that lands inside 2,500 ft (a general-aviation field is not a civil airport either).
+function airportKind(a) {
+  const m = (a.MIL_CODE || '').toUpperCase();
+  if (m === 'MIL') return 'military';
+  if (m === 'ALL') return 'joint';
+  const t = (a.TYPE_CODE || 'AD').toUpperCase();
+  if (t !== 'AD' || a.PRIVATEUSE == 1) return 'other';
+  return 'civil';
+}
 function airportTypeLabel(a) { return ({ AD: 'Airport', HP: 'Heliport', SP: 'Seaplane base', GL: 'Gliderport', UL: 'Ultralight', BP: 'Balloonport' })[(a.TYPE_CODE || '').toUpperCase()] || 'Landing facility'; }
 
 async function generateAirportFigure(authId) {
@@ -3597,8 +3614,10 @@ async function generateAirportFigure(authId) {
       const arpFt = figDistFt(center, pt);
       return { a, pt, kind: airportKind(a), runwayFt: best ? best.distFt : null, runwayPt: best ? best.pt : null, arpFt, distFt: best ? best.distFt : arpFt, basis: best ? 'runway end' : 'airport reference point (no FAA runway geometry)' };
     }).filter(r => (r.a.OPERSTATUS || 'OPERATIONAL').toUpperCase() !== 'CLOSED');
-    const civil = rows.filter(r => r.kind !== 'military').sort((x, y) => x.distFt - y.distFt);
-    const mil = rows.filter(r => r.kind !== 'civil').sort((x, y) => x.distFt - y.distFt);
+    const civil = rows.filter(r => r.kind === 'civil').sort((x, y) => x.distFt - y.distFt);
+    const mil = rows.filter(r => r.kind === 'military' || r.kind === 'joint').sort((x, y) => x.distFt - y.distFt);
+    const other = rows.filter(r => r.kind === 'other').sort((x, y) => x.distFt - y.distFt);   // heliports, private strips, etc. — reference only
+    const otherIds = new Set(other.map(r => norm(r.a.GLOBAL_ID)));
     const nearestCivil = civil[0] || null, nearestMil = mil[0] || null;
     const civilHit = nearestCivil && nearestCivil.distFt <= AIRPORT_CIVIL_FT;
     const milHit = nearestMil && nearestMil.distFt <= AIRPORT_MIL_FT;
@@ -3623,8 +3642,8 @@ async function generateAirportFigure(authId) {
     const lab = (txt, r) => { const w = ctx.measureText(txt).width; const yTop = c[1] - r; const y = yTop - 20 >= 100 ? yTop - 20 : (yTop + 8 >= 100 ? yTop + 8 : c[1] + r - 26); ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(c[0] - w / 2 - 4, y, w + 8, 18); ctx.fillStyle = '#7f1d1d'; ctx.fillText(txt, c[0], y + 14); };
     lab('Military airfield screen — 15,000 ft', rPx(AIRPORT_MIL_FT));
     lab('Civil airport screen — 2,500 ft', rPx(AIRPORT_CIVIL_FT));
-    // Runway polygons
-    runways.forEach(f => (f.geometry.rings || []).forEach(ring => {
+    // Runway polygons — airports and military airfields only (helipad polygons of 'other' facilities are not runways for Subpart D)
+    runways.filter(f => !otherIds.has(norm(f.attributes.AIRPORT_ID))).forEach(f => (f.geometry.rings || []).forEach(ring => {
       ctx.beginPath(); ring.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath();
       ctx.fillStyle = 'rgba(55,65,81,0.85)'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.stroke();
     }));
@@ -3632,6 +3651,19 @@ async function generateAirportFigure(authId) {
     const drawAirport = r => {
       const p = toPx(r.pt);
       if (p[0] < 0 || p[0] > W || p[1] < 100 || p[1] > H) return;   // off the map — the edge pointer handles the nearest ones
+      if (r.kind === 'other') {
+        // Heliport / private strip etc. — not a civil airport under 24 CFR 51.301(c): small gray dot, name + type, no distance
+        if (!AIRPORT_SHOW_OTHER) return;
+        ctx.fillStyle = '#6b7280'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, 7); ctx.fill(); ctx.stroke();
+        const txt = (r.a.NAME || r.a.IDENT) + (r.a.IDENT ? ' (' + r.a.IDENT + ')' : '') + ' — ' + airportTypeLabel(r.a).toLowerCase() + (r.a.PRIVATEUSE == 1 ? ', private use' : '') + ' (reference only)';
+        ctx.font = 'italic 11px Arial'; ctx.textAlign = 'left'; const w = ctx.measureText(txt).width;
+        const lx = (p[0] + 11 + w > W - 6) ? p[0] - 11 - w : p[0] + 11;
+        const ly = Math.max(108, Math.min(H - 12, p[1] + 4));
+        ctx.fillStyle = 'rgba(255,255,255,0.80)'; ctx.fillRect(lx - 3, ly - 12, w + 6, 16);
+        ctx.fillStyle = '#4b5563'; ctx.fillText(txt, lx, ly);
+        return;
+      }
       const col = r.kind === 'civil' ? '#d32f2f' : '#1d4ed8';
       ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.fillStyle = col;
       ctx.beginPath(); ctx.moveTo(p[0] - 9, p[1]); ctx.lineTo(p[0] + 9, p[1]); ctx.moveTo(p[0], p[1] - 9); ctx.lineTo(p[0], p[1] + 9); ctx.stroke();
@@ -3642,7 +3674,8 @@ async function generateAirportFigure(authId) {
       ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(lx - 4, ly - 13, w + 8, 17);
       ctx.fillStyle = '#111'; ctx.fillText(txt, lx, ly);
     };
-    rows.forEach(drawAirport);
+    // Draw reference facilities first so the screened airports' labels sit on top
+    other.forEach(drawAirport); civil.forEach(drawAirport); mil.forEach(drawAirport);
     // If the nearest airport's reference point is off the map, add an edge pointer so it's still labelled
     const edgePointer = (r, col) => {
       if (!r) return; const p = toPx(r.pt);
@@ -3662,10 +3695,13 @@ async function generateAirportFigure(authId) {
       { label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
       { label: 'Civil airport screen — 2,500 ft', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(255,214,0,0.40)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#c62828'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } },
       { label: 'Military airfield screen — 15,000 ft', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(255,235,59,0.22)'; ctx.fillRect(x, y, w, h); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#c62828'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); ctx.setLineDash([]); } },
-      { label: 'Civil airport / heliport', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
+      { label: 'Civil airport (24 CFR 51.301(c))', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
       { label: 'Military airfield', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
       { label: 'Runway (FAA)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(55,65,81,0.85)'; ctx.fillRect(x, y + 3, w, h - 6); } }
     ];
+    if (AIRPORT_SHOW_OTHER && other.some(r => { const p = toPx(r.pt); return p[0] >= 0 && p[0] <= W && p[1] >= 100 && p[1] <= H; })) {
+      legend.push({ label: 'Heliport / private strip — not a civil airport (reference only)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = '#6b7280'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 14, y + h / 2, 5, 0, 7); ctx.fill(); ctx.stroke(); } });
+    }
     await figFurnish(base, {
       title: 'Airport Hazards Map',
       meta: figProjectMeta(proj, center),
@@ -3674,23 +3710,26 @@ async function generateAirportFigure(authId) {
     });
     const fmtRow = r => r ? `${r.a.NAME}${r.a.IDENT ? ' (' + r.a.IDENT + ')' : ''}, ${airportTypeLabel(r.a).toLowerCase()}${r.a.PRIVATEUSE == 1 ? ', private use' : ''} — ${figFmtFt(r.distFt)} to nearest ${r.basis}` : 'none within the mapped area';
     // Findings text
-    const civilTxt = 'Nearest civil landing facility: ' + fmtRow(nearestCivil) + (nearestCivil ? (civilHit ? ' — WITHIN 2,500 ft' : ' — outside 2,500 ft') : '');
+    const civilTxt = 'Nearest civil airport (public-use airport): ' + fmtRow(nearestCivil) + (nearestCivil ? (civilHit ? ' — WITHIN 2,500 ft (confirm it is a commercial service airport in the FAA NPIAS — a general aviation field is not a civil airport under 24 CFR 51.301(c))' : ' — outside 2,500 ft') : '');
     const milTxt = 'Nearest military / joint-use airfield: ' + fmtRow(nearestMil) + (nearestMil ? (milHit ? ' — WITHIN 15,000 ft' : ' — outside 15,000 ft') : '');
+    const otherTxt = other.length
+      ? 'Other FAA landing facilities in range, not civil airports under 24 CFR 51.301(c) and not screened (shown for reference only): ' + other.slice(0, 4).map(r => (r.a.NAME || r.a.IDENT) + (r.a.IDENT ? ' (' + r.a.IDENT + ')' : '') + ', ' + airportTypeLabel(r.a).toLowerCase() + (r.a.PRIVATEUSE == 1 ? ', private use' : '')).join('; ') + (other.length > 4 ? '; +' + (other.length - 4) + ' more' : '') + '.'
+      : '';
     const verdict = (civilHit || milHit)
       ? 'Screening distance TRIGGERED — check the ' + (civilHit ? 'RPZ / Clear Zone (civil)' : '') + (civilHit && milHit ? ' and ' : '') + (milHit ? 'Clear Zone + APZ I / APZ II (military)' : '') + ' per the SOP; contact the airport for its zone map.'
       : 'No civil airport within 2,500 ft and no military airfield within 15,000 ft → Write Up 1 (Compliant).';
     // Attach + populate the Source/Ref fields (only fills blanks so reviewer edits are kept)
-    const caption = civilTxt + ' ' + milTxt + ' ' + verdict;
+    const caption = [civilTxt, milTxt, otherTxt, verdict].filter(Boolean).join(' ');
     const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
     figAttach(authId, base.cv, slug + '_Airport_Hazards_Map.jpg', caption);
     const refEl = document.querySelector('[data-field="' + authId + '_ref"]');
     if (refEl && !refEl.value.trim()) { refEl.value = [nearestCivil ? 'Civil: ' + nearestCivil.a.NAME + ' ' + figFmtFt(nearestCivil.distFt) : '', nearestMil ? 'Military: ' + nearestMil.a.NAME + ' ' + figFmtFt(nearestMil.distFt) : ''].filter(Boolean).join(' · '); refEl.dispatchEvent(new Event('input', { bubbles: true })); }
     const srcEl = document.querySelector('[data-field="' + authId + '_source"]');
     if (srcEl && !srcEl.value.trim()) { srcEl.value = 'FAA NASR Airports & Runways (ADIP) — Airport Hazards Map'; srcEl.dispatchEvent(new Event('input', { bubbles: true })); }
-    window._lastAirportFigure = { canvas: base.cv, filename: slug + '_Airport_Hazards_Map.pdf', footer: [civilTxt, milTxt, verdict] };
+    window._lastAirportFigure = { canvas: base.cv, filename: slug + '_Airport_Hazards_Map.pdf', footer: [civilTxt, milTxt, otherTxt, verdict].filter(Boolean) };
     figDownloadPdf(base.cv, slug + '_Airport_Hazards_Map.pdf');   // no footer — findings stay in the worksheet, not on the external figure
     say('✓ Airport Hazards figure generated — PDF downloaded and attached to Supporting Documents. ' + verdict, (civilHit || milHit) ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
-    return { civilTxt, milTxt, verdict, rows };
+    return { civilTxt, milTxt, otherTxt, verdict, rows };
   } catch (e) {
     console.warn('[Airport figure]', e);
     say('✗ Airport figure failed: ' + e.message, 'var(--red,#c00)');
@@ -11420,7 +11459,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v133 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v134 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
   console.log('  v114: AIR QUALITY — "General Conformity Attachment": queries EPA Green Book (all current NAAQS) at the site, applies 40 CFR 93.153(b) de minimis levels, writes a letter-format PDF (figure header standard; project / location / grant) with attainment table, analysis, AZ-RI compliance opinion and agency-concurrence signature block; new Attachment-inputs panel on the Air card (units, sq ft, months, fuel, optional tpy estimates, contact override, preparer title).');
   console.log('  v113b: flood figure frames the parcel boundary (2.2x, 350–1,500 ft) and drops the cross-section / BFE layers so the hexagon codes are gone.');
