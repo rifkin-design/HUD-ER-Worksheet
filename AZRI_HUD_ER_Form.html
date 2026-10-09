@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v141</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v142</div>
   </div>
 </header>
 
@@ -3119,8 +3119,9 @@ function renderSupportingDocs(authId) {
 
 function renderAllSupportingDocs() {
   AUTHORITIES.forEach(a => renderSupportingDocs(a.id));
-  ['packet_fig1', 'packet_plans', 'packet_photos', 'air_greenbook'].forEach(renderSupportingDocs);
+  ['packet_fig1', 'packet_plans', 'packet_photos', 'air_greenbook', 'esa_ipac'].forEach(renderSupportingDocs);
   if (typeof renderCZMGuide === 'function') try { renderCZMGuide(); } catch (e) {}
+  const ipc = document.getElementById('esaIpacCount'); if (ipc) { const d = (supportingDocs.esa_ipac || []); ipc.textContent = d.length ? d.map(x => x.name).join(', ') : 'none'; }
   if (typeof esaRenderTable === 'function') esaRenderTable();
 }
 
@@ -5453,33 +5454,96 @@ async function generateESAConsultation(authId) {
     const office = C.g('esa_fieldOffice') || recip.title;
     const figures = await packetFigures(C, say);
     say('Writing the Section 7 packet…');
-    const P = await pkNewDoc('ESA Section 7 - Effect Determination and Request for ' + (anyNLAA ? 'Concurrence' : 'Technical Assistance'), C.meta);
-    // Transmittal
-    pkP(P, office, { size: 9.5, after: 10 });
-    pkP(P, 'Re: Endangered Species Act Section 7 - ' + (anyNLAA ? 'Request for concurrence with a "may affect, not likely to adversely affect" determination' : 'Documentation of "no effect" determination') + ' - ' + (C.meta.projectName || 'HUD-assisted project') + (C.meta.location ? ', ' + C.meta.location : ''), { bold: true });
-    pkP(P, 'AZ-RI Consultants is preparing the environmental review for the above-referenced project on behalf of ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ', the Responsible Entity under 24 CFR Part 58 for ' + (C.proj.hudProgram || 'HUD') + ' assistance administered by the U.S. Department of Housing and Urban Development. HUD is the federal action agency; the Responsible Entity assumes HUD\'s Section 7 responsibilities under 24 CFR 58.5(e). An official species list was obtained from the Service\'s IPaC system' + (C.g('esa_ipacCode') ? ' (project code ' + C.g('esa_ipacCode') + ')' : '') + (C.g('esa_ipacDate') ? ' on ' + C.g('esa_ipacDate') : '') + '. This letter documents our effect determination for each listed, proposed and candidate species and any designated critical habitat identified by IPaC.');
+    const P = await pkNewDoc('ESA Section 7 - Effect Determination', C.meta);
+    // (v142) Kept simple: no recipient block, "on behalf of" intro, concurrence request or signature — the cover email carries
+    // those. This PDF is the facts (IPaC list, habitat, determinations, basis) and AZ-RI's opinion.
     pkH1(P, 'Species and Critical Habitat Identified by IPaC');
+    pkP(P, 'USFWS IPaC Official Species List' + (C.g('esa_ipacCode') ? ', project code ' + C.g('esa_ipacCode') : '') + (C.g('esa_ipacDate') ? ', dated ' + C.g('esa_ipacDate') : '') + ' (attached).', { size: 9.5 });
     pkTable(P, ['Species', 'Status', 'Suitable habitat on / near site', 'Effect determination'], det.map(d => [d.name + (d.sci ? ' (' + d.sci + ')' : ''), d.status, d.hab === 'none' ? 'No' : d.hab === 'present' ? 'Yes - within limits of disturbance' : 'Possible - in the vicinity', d.det]), [0.34, 0.16, 0.26, 0.24]);
     pkKV(P, [['Designated critical habitat', critHab || 'None designated within the project area']]);
     pkH1(P, 'Basis for Determinations');
     det.forEach(d => { pkH2(P, d.name + ' - ' + d.det); pkP(P, d.basis); if (d.measures.length) { pkP(P, 'Avoidance and minimization measures incorporated into the project:', { bold: true, after: 2 }); pkBullets(P, d.measures); } });
-    pkH1(P, 'Conclusion and Requested Action');
-    if (anyNLAA) pkP(P, 'Based on the above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' has determined that the project may affect, but is not likely to adversely affect, ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ', and will have no effect on the remaining species listed above' + (critHab && !/none/i.test(critHab) ? ' and no effect on designated critical habitat' : '') + '. We respectfully request the Service\'s written concurrence with this determination pursuant to 50 CFR 402.13. The project will not proceed with activities affecting the species\' habitat until concurrence is received.');
-    else pkP(P, 'Based on the above, ' + (C.proj.responsibleEntity || 'the Responsible Entity') + ' has determined that the project will have no effect on federally listed, proposed or candidate species' + (critHab && !/none/i.test(critHab) ? ' or designated critical habitat' : ', and no critical habitat is designated in the project area') + '. A "no effect" determination does not require the Service\'s concurrence (50 CFR 402.14(a)); this documentation and the IPaC official species list will be retained in the Environmental Review Record. Please contact us if the Service has information that would alter this determination.');
-    pkP(P, 'The attached project information, Figure 1 (site location) and plan sheets describe the project and site. Please contact the undersigned with any questions.');
-    pkSignature(P, C.reviewer, C.g('packet_preparerTitle') || 'Environmental Professional', 'AZ-RI Consultants' + (C.g('packet_preparerEmail') ? ' - ' + C.g('packet_preparerEmail') : '') + (C.g('packet_preparerPhone') ? ' - ' + C.g('packet_preparerPhone') : ''));
-    pkP(P, 'Attachments: Project information, Figure 1 and plans (following pages); IPaC Official Species List (separate PDF).', { italic: true, size: 9 });
+    pkH1(P, 'Conclusion');
+    if (anyNLAA) pkP(P, 'In AZ-RI Consultants\' opinion the project may affect, but is not likely to adversely affect, ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ', and will have no effect on the remaining species listed above' + (critHab && !/none/i.test(critHab) ? ' or on designated critical habitat' : '; no critical habitat is designated in the project area') + '. Informal consultation under 50 CFR 402.13 applies.');
+    else pkP(P, 'In AZ-RI Consultants\' opinion the project will have no effect on federally listed, proposed or candidate species' + (critHab && !/none/i.test(critHab) ? ' or designated critical habitat' : ', and no critical habitat is designated in the project area') + '. No consultation with the Service is required (50 CFR 402.14(a)); this determination is documented in the environmental review record.');
+    const ipacDocs = (typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || [];
+    pkP(P, 'Attachments: project information, Figure 1 and plans' + (ipacDocs.length ? '; IPaC Official Species List' : '') + ' (following pages).', { italic: true, size: 9 });
     pkFooter(P); P.doc.addPage(); pkHeader(P, false);
     pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
+    for (const d of ((typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || [])) await pkEmbedDoc(P, d, 'IPaC Official Species List (' + d.name + ')');
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_ESA_Section7_Packet.pdf';
-    const finding = anyNLAA ? 'NLAA determination for ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ' — concurrence requested from ' + recip.agency + ' → Write Up 3 (pending); switch to Write Up 3 (received) when the response arrives.' : 'No effect for all ' + det.length + ' IPaC species; no concurrence required → Write Up 2 (retain IPaC list + this documentation in the ERR).';
+    const finding = anyNLAA ? 'NLAA determination for ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ' — send the packet to ' + recip.agency + ' with the cover email → Write Up 3 (pending); switch to Write Up 3 (received) when the response arrives.' : 'No effect for all ' + det.length + ' IPaC species; no concurrence required → Write Up 2 (retain IPaC list + this documentation in the ERR).';
     pkAttachPdf(authId, doc, name, finding); doc.save(name);
     figFillSourceRef(authId, 'USFWS IPaC official species list; Section 7 effect determination packet', det.map(d => d.name + ': ' + d.det).join('; '));
     const radio = document.querySelector('input[name="' + authId + '_status"][value="' + (anyNLAA ? 'awaiting' : 'compliant') + '"]'); if (radio && !document.querySelector('input[name="' + authId + '_status"]:checked')) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
     say('✓ ESA Section 7 packet generated — PDF downloaded and attached. ' + finding, anyNLAA ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
     return { det, anyNLAA };
   } catch (e) { console.warn('[ESA packet]', e); say('✗ ESA packet failed: ' + e.message, 'var(--red,#c00)'); }
+}
+
+// ---------- 2b) ESA — "Review IPaC with Claude" prompt + import (v142) ----------
+// Workflow: upload the IPaC PDF (⬆ IPaC list button) → copy this prompt into a Claude chat with the PDF attached → Claude
+// evaluates each species, decides whether consultation is needed, and returns a JSON block → paste it into the import box →
+// the species table, critical habitat and rationale fill in → generate the packet if consultation is required.
+function showEsaClaudePanel(open) {
+  const d = document.getElementById('esaClaudePanel'); if (!d) return; d.style.display = ''; if (open !== false) d.open = true; refreshEsaClaudePrompt();
+  if (open !== false) try { d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+}
+function buildEsaClaudePrompt() {
+  const C = packetContext(); const g = C.g; const meta = C.meta; const center = C.center;
+  const scope = (typeof rq === 'function') ? rq('esa', 'scope') : '';
+  const acts = (C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ');
+  const rows = esaRows();
+  const L = [];
+  L.push('You are helping with the Endangered Species Act Section 7 determination for a HUD Part 58 environmental review (24 CFR 58.5(e); 50 CFR Part 402). I have attached the USFWS IPaC Official Species List for the project area' + (((typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || []).length ? '' : ' (if it is not attached, tell me before doing anything else)') + '. Read it and make the determination for each species and for critical habitat.');
+  L.push('');
+  L.push('PROJECT');
+  L.push('- Project: ' + (meta.projectName || '[project name]'));
+  L.push('- Subject Property: ' + (meta.location || '[site address]') + (center ? ' (approx. ' + center[1].toFixed(5) + ', ' + center[0].toFixed(5) + ')' : ''));
+  if (meta.grant) L.push('- ' + meta.grant);
+  L.push('- Activities: ' + (acts || '[activities]') + (g('packet_description') ? ' — ' + g('packet_description') : ''));
+  L.push('- Scope answer: ' + (scope === 'exempt' ? 'acquisition / interior / exterior paint-siding only (HUD "no effect" category)' : scope === 'beyond' ? 'new construction, ground disturbance, exterior expansion or demolition' : 'NOT YET ANSWERED in the worksheet'));
+  L.push('- Existing site conditions: ' + (g('packet_existingUse') || '[describe: buildings, pavement, lawn, forest, wetlands, streams on or adjacent to the site]'));
+  L.push('- Ground disturbance: ' + (g('esa_disturbedAcres') ? g('esa_disturbedAcres') + ' acres' : '[acres]') + '; tree clearing: ' + (g('packet_treeClearingAcres') || '[acres or 0]') + ' acres; in-water / stream work: ' + (g('esa_inWater') || '[yes/no]') + '.');
+  if (rows.length) L.push('- Species already parsed in the worksheet: ' + rows.map(r => r.name + (r.status ? ' (' + r.status + ')' : '')).join('; ') + ' — check these against the PDF and correct any that are wrong.');
+  L.push('');
+  L.push('WHAT TO DO');
+  L.push('1. List every species on the IPaC list with its scientific name and status (endangered, threatened, proposed, candidate, experimental population). Note any designated or proposed critical habitat in the project area, and any IPaC notes about seasonal restrictions, 4(d) rules or determination keys (e.g., the northern long-eared bat / tricolored bat key, the monarch).');
+  L.push('2. For each species: is suitable habitat present within the limits of disturbance, present in the vicinity, or absent — based on the site conditions above and the species\' habitat needs (e.g., bats: trees >= 3" dbh, forest edges, bridges/structures; mussels/fish: in-water work or sediment to streams; plovers/terns/knots: beach-dune-marsh; plants: the specific habitat on the species profile).');
+  L.push('3. Effect determination per species: No effect / May affect, not likely to adversely affect (NLAA) / May affect, likely to adversely affect (LAA). Give the basis in 1-2 sentences, and for any NLAA list the avoidance and minimization measures that make it insignificant or discountable (time-of-year restrictions, buffers, E&S controls, lighting).');
+  L.push('4. Say whether Section 7 consultation is required: no effect for all species → no consultation, documented in the ERR; any NLAA → informal consultation / concurrence request to the USFWS field office; any LAA → formal consultation (tell me to stop and talk to the Service). Flag if an IPaC determination key should be run instead.');
+  L.push('');
+  L.push('OUTPUT, in this order');
+  L.push('1. Determination — one line: "No effect for all species, no consultation required" or "NLAA for <species>; consultation required" or "LAA for <species>; formal consultation".');
+  L.push('2. Species table — species, status, habitat (present / possible / none), determination, basis.');
+  L.push('3. Report text — 2 to 4 client-facing sentences for the Compliance Determinations box, written for HUD, the Responsible Entity and the client: cite the IPaC list by project code and date, name the species, state the determination and the 50 CFR 402 basis. No internal notes, no reference to this chat.');
+  L.push('4. Follow-ups — anything I still need (site visit to confirm trees/structures, a determination key, field office submission, time-of-year commitments to put in the plans).');
+  L.push('5. IMPORT BLOCK — a fenced ```json block exactly in this shape so I can paste it into the worksheet:');
+  L.push('{"ipacCode":"<IPaC project code>","ipacDate":"<list date>","critHab":"<critical habitat finding>","species":[{"name":"<common name>","sci":"<scientific name>","status":"<Endangered|Threatened|Proposed Endangered|Proposed Threatened|Candidate|Experimental Population, Non-Essential>","habitat":"<none|possible|present>","rationale":"<1-2 sentence basis>"}]}');
+  L.push('');
+  L.push('Rules: use only the species on the attached list — do not add species from memory. If the attachment is a different project or the list has expired (older than 90 days from today), say so. If the site conditions above are blank or inconsistent with the IPaC project location, ask before determining.');
+  return L.join('\n');
+}
+function refreshEsaClaudePrompt() { const ta = document.getElementById('esaClaudePrompt'); if (!ta) return; try { ta.value = buildEsaClaudePrompt(); } catch (e) { console.warn('[ESA Claude prompt]', e); } const c = document.getElementById('esaClaudeCopied'); if (c) c.textContent = ''; }
+function copyEsaClaudePrompt() {
+  const ta = document.getElementById('esaClaudePrompt'); if (!ta) return; if (!ta.value.trim()) refreshEsaClaudePrompt();
+  const done = ok => { const c = document.getElementById('esaClaudeCopied'); if (c) { c.textContent = ok ? '✓ Copied — paste it into a Claude chat with the IPaC PDF attached' : '⚠ Copy blocked — select the text and copy it manually'; c.style.color = ok ? '#2f855a' : '#c00'; } };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(() => done(true), () => { ta.select(); done(document.execCommand('copy')); }); else { ta.select(); done(document.execCommand('copy')); }
+}
+function importEsaClaudeResult() {
+  const ta = document.getElementById('esaClaudeImport'); const st = document.getElementById('esaClaudeImportStatus'); if (!ta) return;
+  const say = (t, c) => { if (st) { st.textContent = t; st.style.color = c || '#2f855a'; } };
+  let txt = ta.value.trim(); const m = txt.match(/```json\s*([\s\S]*?)```/i) || txt.match(/(\{[\s\S]*\})/); if (m) txt = m[1].trim();
+  let j; try { j = JSON.parse(txt); } catch (e) { say('✗ Could not read the JSON — paste the whole ```json block from Claude\'s reply.', '#c00'); return; }
+  const sp = Array.isArray(j.species) ? j.species : []; if (!sp.length) { say('✗ No "species" array in the pasted block.', '#c00'); return; }
+  const norm = h => /present/i.test(h) ? 'present' : /possible|vicinity/i.test(h) ? 'possible' : 'none';
+  esaSaveRows(sp.map(x => ({ name: String(x.name || '').trim(), sci: String(x.sci || '').trim(), status: String(x.status || 'Threatened').trim(), habitat: norm(String(x.habitat || '')), rationale: String(x.rationale || '').trim() })).filter(x => x.name));
+  const set = (k, v) => { const el = document.querySelector('[data-field="' + k + '"]'); if (el && v && !el.value.trim()) { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); } };
+  set('esa_ipacCode', j.ipacCode); set('esa_ipacDate', j.ipacDate); set('esa_critHab', j.critHab);
+  esaRenderTable();
+  const any = sp.some(x => norm(String(x.habitat || '')) !== 'none');
+  say('✓ Imported ' + sp.length + ' species. ' + (any ? 'Suitable habitat flagged for ' + sp.filter(x => norm(String(x.habitat || '')) !== 'none').map(x => x.name).join(', ') + ' → consultation required: generate the ESA Section 7 Packet.' : 'No suitable habitat for any species → no effect; insert Write Up 2 and attach the IPaC list.'), any ? '#c00' : '#2f855a');
 }
 
 // ---------- 3) Section 106 (SHPO submittal) ----------
@@ -7742,6 +7806,7 @@ AUTHORITIES.forEach(a => {
             : ''}
         ${mapBtnHtml}
         ${a.id === 'air' ? `<button class="no-print" onclick="uploadSupportingDoc('air_greenbook')" title="Screenshot or PDF of the Green Book state/county section — embedded in the General Conformity attachment" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">⬆ Green Book page</button>` : ''}
+        ${a.id === 'esa' ? `<button class="no-print" onclick="uploadSupportingDoc('esa_ipac')" title="Upload the IPaC Official Species List PDF — embedded in the Section 7 packet and the one you attach to the Claude chat" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">⬆ IPaC list (PDF)</button><button class="no-print" onclick="showEsaClaudePanel()" title="Copy/paste instructions for having Claude read the IPaC list and make the Section 7 determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Review IPaC with Claude</button>` : ''}
         ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportClaudePanel()" title="Copy/paste instructions for having Claude read the airport's RPZ/CZ or APZ map and make the final zone determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Zone review with Claude</button>` : ''}
         ${a.id === 'historic' ? `<button class="no-print" onclick="generateLetter('historic')" title="Generates the Section 106 consultation letter in the state-specific format (DC HPO 5-point / VA DHR ePIX / generic)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📄 106 Letter (state format)</button><button class="no-print" onclick="generateCoverEmail()" title="Generates the matching cover email template (DC HPO / VA DHR)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✉ Cover Email (DC/VA)</button>` : ''}
         <span class="no-print" id="autoStatus_${a.id}" style="font-size:11px;color:var(--gray);"></span>
@@ -7789,10 +7854,35 @@ AUTHORITIES.forEach(a => {
           <div id="docs_air_greenbook" style="margin-top:6px;"></div></div>
       </div>
     </details>` : ''}
+    ${a.id === 'esa' ? `<details id="esaClaudePanel" class="no-print" style="display:none;margin:0 22px 12px;border:1px solid #6b46c1;border-radius:6px;background:#f7f5ff;">
+      <summary style="cursor:pointer;padding:8px 14px;font-weight:700;font-size:12px;color:#44337a;list-style:none;">🤖 Review IPaC with Claude — species, habitat, effect determination, consultation needed?</summary>
+      <div style="padding:4px 16px 12px;font-size:12px;line-height:1.5;color:#2d3748;">
+        <ol style="margin:0 0 10px 18px;padding:0;">
+          <li><b>Run IPaC</b> (Step 2 in the SOP) and download the Official Species List PDF; upload it here with <b>⬆ IPaC list (PDF)</b>. Attached: <span id="esaIpacCount">none</span>.</li>
+          <li>Fill the <b>Section 7 packet inputs</b> below (existing site conditions, tree clearing, in-water work, disturbance) — they go into the prompt so the habitat calls are right.</li>
+          <li><b>Open a new Claude chat</b>, drag in the IPaC PDF, then <b>📋 Copy prompt</b> and paste it as the message.</li>
+          <li><b>Paste Claude's json block</b> into the import box and click <b>📥 Import</b> — the species table, critical habitat and rationale fill in. No suitable habitat → Write Up 2; suitable habitat for any species → generate the <b>ESA Section 7 Packet</b> (facts + opinion only; the cover email handles the concurrence request).</li>
+        </ol>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">
+          <b style="flex:1;">Prompt for Claude</b>
+          <button type="button" onclick="refreshEsaClaudePrompt()" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">↻ Refresh</button>
+          <button type="button" onclick="copyEsaClaudePrompt()" style="background:#6b46c1;border:none;color:white;padding:3px 12px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">📋 Copy prompt</button>
+          <span id="esaClaudeCopied" style="font-size:11px;color:#2f855a;"></span>
+        </div>
+        <textarea id="esaClaudePrompt" rows="16" spellcheck="false" style="width:100%;box-sizing:border-box;font:11.5px/1.45 Menlo,Consolas,monospace;color:#1a202c;background:#fff;border:1px solid #c4b5fd;border-radius:4px;padding:8px;"></textarea>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 5px;">
+          <b style="flex:1;">Claude's result — paste the json block</b>
+          <button type="button" onclick="importEsaClaudeResult()" style="background:#6b46c1;border:none;color:white;padding:3px 12px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">📥 Import</button>
+          <span id="esaClaudeImportStatus" style="font-size:11px;"></span>
+        </div>
+        <textarea id="esaClaudeImport" rows="5" spellcheck="false" placeholder='{"ipacCode":"…","ipacDate":"…","critHab":"…","species":[{"name":"…","sci":"…","status":"…","habitat":"none|possible|present","rationale":"…"}]}' style="width:100%;box-sizing:border-box;font:11.5px/1.45 Menlo,Consolas,monospace;color:#1a202c;background:#fff;border:1px solid #c4b5fd;border-radius:4px;padding:8px;"></textarea>
+      </div>
+    </details>` : ''}
     ${a.id === 'esa' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 7 packet inputs — paste the IPaC official species list <span style="font-weight:400;color:var(--gray);">(shared project facts come from the Project Packet inputs in 1125)</span></summary>
       <div class="field-grid" style="margin-top:10px;">
-        <div class="full"><label>IPaC species list text <span style="font-weight:400;color:var(--gray);">(open the IPaC PDF, select-all / copy the "Endangered Species" pages and paste here)</span></label><textarea data-field="esa_ipacText" style="min-height:90px;font-family:monospace;font-size:11px;" placeholder="Northern Long-eared Bat Myotis septentrionalis   Endangered&#10;Monarch Butterfly Danaus plexippus   Proposed Threatened&#10;…"></textarea></div>
+        <div class="full"><label>IPaC Official Species List attached <span style="font-weight:400;color:var(--gray);">(upload with the ⬆ IPaC list (PDF) button in the card header; embedded in the packet)</span></label><div id="docs_esa_ipac"></div></div>
+        <div class="full"><label>IPaC species list text <span style="font-weight:400;color:var(--gray);">(alternative to the Claude review: open the IPaC PDF, select-all / copy the "Endangered Species" pages and paste here)</span></label><textarea data-field="esa_ipacText" style="min-height:90px;font-family:monospace;font-size:11px;" placeholder="Northern Long-eared Bat Myotis septentrionalis   Endangered&#10;Monarch Butterfly Danaus plexippus   Proposed Threatened&#10;…"></textarea></div>
         <div class="full" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button type="button" onclick="esaParseIpac()" style="background:var(--azri-navy);color:white;border:none;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Parse IPaC list</button><span style="font-size:11px;color:var(--gray);">Then set "suitable habitat" for each species — No → No effect; Possible / Yes → NLAA with avoidance measures and a concurrence request.</span></div>
         <input type="hidden" data-field="esa_speciesJSON">
         <div class="full" id="esaSpeciesTable"></div>
@@ -11926,7 +12016,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v141 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v142 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
