@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v140</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v141</div>
   </div>
 </header>
 
@@ -3860,6 +3860,148 @@ function copyAirportClaudePrompt() {
   const done = ok => { const c = document.getElementById('airportClaudeCopied'); if (c) { c.textContent = ok ? '✓ Copied — paste it into a Claude chat with the zone map attached' : '⚠ Copy blocked — select the text and copy it manually'; c.style.color = ok ? '#2f855a' : '#c00'; } };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(() => done(true), () => { ta.select(); done(document.execCommand('copy')); });
   else { ta.select(); done(document.execCommand('copy')); }
+}
+
+// ===== RADON FIGURE — CDC TRACKING NETWORK COUNTY CHOROPLETH (v141) =====
+// Science-based data review per HUD Notice CPD-23-103: pulls the CDC National Environmental Public Health Tracking
+// Network county radon measures (same data as the Data Explorer screenshot in the SOP), draws every county in the
+// project state colored by mean pre-mitigation radon level, labels the county the site is in, and fills Q3.
+// Data: "Radon Tests from Labs" — measure 971 (mean pre-mitigation level, 10-yr period) and 864 (buildings tested,
+// 10-yr period — the Notice's >=10 results test). "Radon Tests from States" (annual mean, measure 1132) is used
+// instead when the state reports it (none of MD/DE/VA/PA/DC/WV do as of 2026). County boundaries: Census TIGERweb.
+const CDC_DX = 'https://ephtracking.cdc.gov/DataExplorer/';
+const CDC_API = 'https://ephtracking.cdc.gov/apigateway/api/v1/';
+const RADON_MEASURES = { labMean: 971, labTested: 864, stateMean: 1132, stateTested: 742 };
+const STATE_FIPS = { MD: '24', DC: '11', DE: '10', PA: '42', VA: '51', WV: '54', NJ: '34', NY: '36', NC: '37', OH: '39', KY: '21', TN: '47' };
+const TIGER_COUNTIES = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query';
+async function cdcJson(path) {
+  // The Data Explorer backend is not subject to the public API's anonymous-request cap; fall back to the public API
+  // (optionally with a token saved in localStorage.cdcApiToken) if the Explorer endpoint is unavailable.
+  try { const r = await fetch(CDC_DX + path); if (r.ok) { const j = await r.json(); if (!(j && j.code === 429)) return j; } } catch (e) {}
+  const tok = (localStorage.getItem('cdcApiToken') || '').trim();
+  const r2 = await fetch(CDC_API + path + (tok ? '?apiToken=' + encodeURIComponent(tok) : ''));
+  const j2 = await r2.json();
+  if (j2 && j2.code) throw new Error('CDC Tracking Network: ' + (j2.message || j2.status));
+  return j2;
+}
+async function cdcLatestPeriod(measureId) {
+  const t = await cdcJson('temporalchild/' + measureId + '/2/ALL/ALL');
+  if (!Array.isArray(t) || !t.length) return null;
+  const last = t[t.length - 1];
+  return { id: last.temporalId || last.temporal, label: last.minimumTemporal ? last.minimumTemporal + '–' + last.temporal : String(last.temporal) };
+}
+async function cdcCountyRows(measureId, temporalId, stateFips) {
+  const j = await cdcJson('getCoreHolder/' + measureId + '/2/ALL/ALL/' + temporalId + '/0/0');
+  return (j.tableResult || []).filter(r => String(r.geoId).startsWith(stateFips));
+}
+function radonClass(v) { if (v == null || isNaN(v)) return 'nodata'; return v < 2 ? 'low' : v < 4 ? 'mid' : 'high'; }
+const RADON_COLORS = { low: 'rgba(76,175,80,0.55)', mid: 'rgba(255,193,7,0.55)', high: 'rgba(229,57,53,0.60)', nodata: 'rgba(158,158,158,0.35)' };
+async function generateRadonFigure() {
+  const statusEl = document.getElementById('radonFigureStatus');
+  const say = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c || 'var(--azri-navy)'; } };
+  const site = figSiteContext();
+  if (!site) { alert('Select the parcel(s) on the map in 1125 (or enter Lat / Long) before generating the Radon figure.'); return; }
+  const center = site.centroid;
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const st = (typeof STATE_ABBR !== 'undefined' && STATE_ABBR[(proj.siteState || '').trim()]) || (proj.siteState || '').trim().toUpperCase().slice(0, 2);
+  const fips = STATE_FIPS[st];
+  if (!fips) { alert('Project State "' + (proj.siteState || '') + '" is not in the radon state list — enter the Data Explorer value manually.'); return; }
+  try {
+    say('Loading county boundaries (Census TIGERweb)…');
+    const q = await (await fetch(TIGER_COUNTIES + '?' + new URLSearchParams({ where: "STATE='" + fips + "'", outFields: 'GEOID,BASENAME,NAME', returnGeometry: 'true', outSR: '4326', geometryPrecision: '4', f: 'json' }))).json();
+    if (q.error) throw new Error(q.error.message || 'TIGERweb query failed');
+    const counties = q.features || [];
+    if (!counties.length) throw new Error('No counties returned for state ' + st);
+    // Which county is the site in (point-in-polygon on the TIGER rings)
+    const pip = (pt, ring) => { let ins = false; for (let i = 0, k = ring.length - 1; i < ring.length; k = i++) { const xi = ring[i][0], yi = ring[i][1], xk = ring[k][0], yk = ring[k][1]; if (((yi > pt[1]) !== (yk > pt[1])) && (pt[0] < (xk - xi) * (pt[1] - yi) / (yk - yi) + xi)) ins = !ins; } return ins; };
+    const siteCounty = counties.find(f => (f.geometry.rings || []).some(r => pip(center, r)));
+    say('Querying the CDC Tracking Network (radon tests from labs)…');
+    // Prefer state-reported data when the state has it; else lab data (10-yr period)
+    let period = await cdcLatestPeriod(RADON_MEASURES.stateMean), rows = [], tested = [], source = 'state', measureName = '';
+    if (period) { rows = await cdcCountyRows(RADON_MEASURES.stateMean, period.id, fips); }
+    if (rows.length) { tested = await cdcCountyRows(RADON_MEASURES.stateTested, period.id, fips).catch(() => []); measureName = 'Annual Mean Pre-Mitigation Radon Measurement in Tested Buildings (Radon Tests from States)'; }
+    else {
+      source = 'lab'; period = await cdcLatestPeriod(RADON_MEASURES.labMean);
+      if (!period) throw new Error('CDC returned no time periods for the lab radon measure');
+      [rows, tested] = await Promise.all([cdcCountyRows(RADON_MEASURES.labMean, period.id, fips), cdcCountyRows(RADON_MEASURES.labTested, period.id, fips).catch(() => [])]);
+      measureName = 'Mean Pre-mitigation Radon Level in Tested Buildings over a 10-year Period (Radon Tests from Labs)';
+    }
+    const byGeo = {}; rows.forEach(r => { byGeo[r.geoId] = r; });
+    const testedBy = {}; tested.forEach(r => { testedBy[r.geoId] = r; });
+    const val = r => (r && r.suppressionFlag != '1' && r.dataValue != null && r.dataValue !== '') ? parseFloat(r.dataValue) : null;
+    // Map extent: the whole state, from the county rings
+    let xmin = 180, ymin = 90, xmax = -180, ymax = -90;
+    counties.forEach(f => (f.geometry.rings || []).forEach(r => r.forEach(p => { if (p[0] < xmin) xmin = p[0]; if (p[0] > xmax) xmax = p[0]; if (p[1] < ymin) ymin = p[1]; if (p[1] > ymax) ymax = p[1]; })));
+    const mc = [(xmin + xmax) / 2, (ymin + ymax) / 2];
+    const m0 = fig3857(ymin, xmin), m1 = fig3857(ymax, xmax);
+    const halfM = Math.max((m1[0] - m0[0]) / 2, (m1[1] - m0[1]) / 2 * 1500 / 1050) * 1.08;
+    say('Rendering the state radon map…');
+    const base = await figBuildBase(mc, halfM, { basemap: 'streets' });
+    const { ctx, toPx, W, H } = base;
+    // Fill + outline every county; label with name and value where the county is big enough on the canvas
+    counties.forEach(f => {
+      const r = byGeo[f.attributes.GEOID]; const v = val(r); const cls = radonClass(v);
+      ctx.beginPath();
+      (f.geometry.rings || []).forEach(ring => ring.forEach((p, i) => { const px = toPx(p); if (i === 0) ctx.moveTo(px[0], px[1]); else ctx.lineTo(px[0], px[1]); }));
+      ctx.closePath(); ctx.fillStyle = RADON_COLORS[cls]; ctx.fill('evenodd');
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
+    });
+    const labelCounty = (f, bold) => {
+      const ring = (f.geometry.rings || []).reduce((a, b) => (b.length > a.length ? b : a), []); if (!ring.length) return;
+      let sx = 0, sy = 0, bx0 = 1e9, bx1 = -1e9, by0 = 1e9, by1 = -1e9; ring.forEach(p => { const px = toPx(p); sx += px[0]; sy += px[1]; bx0 = Math.min(bx0, px[0]); bx1 = Math.max(bx1, px[0]); by0 = Math.min(by0, px[1]); by1 = Math.max(by1, px[1]); });
+      const cx = sx / ring.length, cy = sy / ring.length; if (cy < FIG_HB + 10 || cy > H - 30) return;
+      const r = byGeo[f.attributes.GEOID]; const v = val(r);
+      const big = (bx1 - bx0) > 70 && (by1 - by0) > 40;
+      const l1 = f.attributes.BASENAME, l2 = v == null ? 'no data' : v.toFixed(1) + ' pCi/L';
+      ctx.textAlign = 'center'; ctx.font = (bold ? 'bold ' : '') + (big ? '12px' : '10px') + ' Arial';
+      const txt = big ? [l1, l2] : [l2]; const w = Math.max(...txt.map(t => ctx.measureText(t).width)) + 8, h = txt.length * 13 + 4;
+      ctx.fillStyle = bold ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)'; ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
+      if (bold) { ctx.strokeStyle = '#e11'; ctx.lineWidth = 1.5; ctx.strokeRect(cx - w / 2, cy - h / 2, w, h); }
+      ctx.fillStyle = '#111'; txt.forEach((t, i) => ctx.fillText(t, cx, cy - h / 2 + 12 + i * 13));
+    };
+    counties.forEach(f => { if (f !== siteCounty) labelCounty(f, false); });
+    if (siteCounty) {
+      ctx.beginPath(); (siteCounty.geometry.rings || []).forEach(ring => ring.forEach((p, i) => { const px = toPx(p); if (i === 0) ctx.moveTo(px[0], px[1]); else ctx.lineTo(px[0], px[1]); })); ctx.closePath();
+      ctx.strokeStyle = '#e11'; ctx.lineWidth = 4; ctx.stroke();
+      labelCounty(siteCounty, true);
+    }
+    // Site marker
+    const sp = toPx(center); ctx.fillStyle = '#e11'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sp[0], sp[1], 7, 0, 7); ctx.fill(); ctx.stroke();
+    const siteLabel = figSiteLabel(proj, center);
+    const sw = (ok, c) => (ctx, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h); };
+    const legend = [
+      { label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = '#e11'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, 6, 0, 7); ctx.fill(); ctx.stroke(); } },
+      { label: 'County of the Subject Property', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#e11'; ctx.lineWidth = 4; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); } },
+      { label: 'Mean radon < 2.0 pCi/L', draw: sw(true, RADON_COLORS.low) },
+      { label: 'Mean radon 2.0 – 3.9 pCi/L', draw: sw(true, RADON_COLORS.mid) },
+      { label: 'Mean radon ≥ 4.0 pCi/L (EPA action level)', draw: sw(true, RADON_COLORS.high) },
+      { label: 'No data / suppressed', draw: sw(true, RADON_COLORS.nodata) }
+    ];
+    await figFurnish(base, {
+      title: 'Radon — County Mean Pre-mitigation Radon Levels',
+      meta: figProjectMeta(proj, center),
+      subtitle: 'CDC National Environmental Public Health Tracking Network · ' + measureName + ' · ' + period.label + ' · HUD Notice CPD-23-103 science-based data review',
+      legend,
+      sources: ['CDC National Environmental Public Health Tracking Network, Radon (' + (source === 'state' ? 'Radon Tests from States' : 'Radon Tests from Labs') + '), ' + period.label, 'County boundaries: U.S. Census Bureau TIGERweb']
+    });
+    // Findings + fill Q3
+    const r = siteCounty ? byGeo[siteCounty.attributes.GEOID] : null; const v = val(r);
+    const nT = siteCounty && testedBy[siteCounty.attributes.GEOID] ? parseFloat(testedBy[siteCounty.attributes.GEOID].dataValue) : null;
+    const cName = siteCounty ? siteCounty.attributes.NAME : 'the project county';
+    const insufficient = (nT != null && nT < 10) || v == null;
+    const findings = cName + ', ' + st + ': ' + (v == null ? 'no CDC radon value (suppressed or not reported)' : 'mean pre-mitigation radon ' + v.toFixed(1) + ' pCi/L') + ' (' + (source === 'state' ? 'state tests' : 'lab tests') + ', ' + period.label + (nT != null ? '; ' + nT.toLocaleString() + ' buildings tested' : '') + ').' + (insufficient ? ' Fewer than 10 documented results — lack of scientific data per CPD-23-103.' : (v < 4 ? ' Below 4.0 pCi/L → Write Up 1.' : ' At or above 4.0 pCi/L → Write Up 2 (mitigation + post-mitigation testing).'));
+    const srcEl = document.querySelector('[data-field="contamRadonSource"]'), valEl = document.querySelector('[data-field="contamRadonValue"]');
+    if (srcEl) { srcEl.value = insufficient ? 'insufficient' : source; srcEl.dispatchEvent(new Event('change', { bubbles: true })); }
+    if (valEl && v != null) { valEl.value = v.toFixed(1); valEl.dispatchEvent(new Event('input', { bubbles: true })); }
+    const slug = figSlug(proj);
+    figAttach('contam', base.cv, slug + '_Radon_County_Map.jpg', findings);
+    figDownloadPdf(base.cv, slug + '_Radon_County_Map.pdf');
+    say('✓ Radon figure generated — PDF downloaded and attached to Contamination Supporting Documents. ' + findings + ' Click Insert Radon Write-Up.', insufficient ? 'var(--red,#c00)' : (v < 4 ? 'var(--green,#2f855a)' : 'var(--red,#c00)'));
+    return { county: cName, value: v, tested: nT, period: period.label, source };
+  } catch (e) {
+    console.warn('[Radon figure]', e);
+    say('✗ Radon figure failed: ' + e.message + ' — use the Data Explorer screenshot method in the SOP.', 'var(--red,#c00)');
+  }
 }
 
 // ===== COASTAL BARRIER RESOURCES FIGURE (CBRA, 16 U.S.C. 3501; §58.6(c)) =====
@@ -7831,7 +7973,9 @@ AUTHORITIES.forEach(a => {
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;text-transform:none;letter-spacing:0;font-weight:400;color:#2d3748;cursor:pointer;"><input type="checkbox" data-field="contamRadonFHA">FHA project (testing required — Write Up 3)</label>
           </div>
           <div class="no-print" style="flex:0 0 auto;">
+            <button type="button" onclick="generateRadonFigure()" title="Pulls the CDC Tracking Network county radon measure for the project state, draws the county map with the site's county highlighted, attaches the PDF and fills the Data source / Concentration fields" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;margin-right:6px;">🗺 Radon Figure (CDC county data)</button>
             <button type="button" onclick="insertRadonWriteUp()" style="background:var(--azri-navy);color:white;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⤓ Insert Radon Write-Up</button>
+            <span id="radonFigureStatus" style="display:block;font-size:11px;color:var(--gray);margin-top:4px;"></span>
           </div>
         </div>
         <div id="radonWriteUpStatus" class="no-print" style="font-size:11.5px;color:#4a5568;margin-top:4px;"></div>
@@ -11782,7 +11926,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v140 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v141 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
