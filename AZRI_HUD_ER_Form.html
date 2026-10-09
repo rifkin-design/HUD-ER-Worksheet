@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v145</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v146</div>
   </div>
 </header>
 
@@ -4265,7 +4265,7 @@ async function generateFloodFigure(authId) {
         if (prox.elevFt != null) lines.push('Site ground elevation (USGS 3DEP): ≈ ' + Math.round(prox.elevFt) + ' ft NAVD88' + (prox.bfe && prox.bfe.attrs && prox.bfe.attrs.ELEV != null ? ' (' + (prox.elevFt - prox.bfe.attrs.ELEV >= 0 ? '+' : '') + (prox.elevFt - prox.bfe.attrs.ELEV).toFixed(1) + ' ft vs. nearest BFE)' : ''));
         ctx.font = '12px Arial';
         const bw = Math.max(...lines.map(t => ctx.measureText(t).width)) + 16, bh = lines.length * 17 + 10;
-        const bx = PW - bw - 10, by = PH - bh - 66;   // bottom-right of the vicinity panel, above the scale-bar row
+        const bx = PW - bw - 10, by = PH - bh - 96;   /* v146: clear the scale-bar box */   // bottom-right of the vicinity panel, above the scale-bar row
         ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
         ctx.fillStyle = '#1f2937'; lines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
       }
@@ -4549,7 +4549,7 @@ async function generateSSAFigure(authId) {
       else lines.push('No EPA-designated Sole Source Aquifer within ' + searchedMi + ' miles of the Subject Property');
       ctx.font = '12px Arial';
       const bw = Math.max(...lines.map(t => ctx.measureText(t).width)) + 16, bh = lines.length * 17 + 10;
-      const bx = PW - bw - 10, by = PH - bh - 66;   // above the scale-bar row so a wide note never overlaps it
+      const bx = PW - bw - 10, by = PH - bh - 96;   /* v146: clear the scale-bar box */   // above the scale-bar row so a wide note never overlaps it
       ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
       ctx.fillStyle = '#1f2937'; ctx.textAlign = 'left'; lines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
       const vicMi = vicHalfFt * 2 / 5280;
@@ -4623,7 +4623,7 @@ async function figSplitPane(o) {
     if (o.noteLines && o.noteLines.length) {
       ctx.font = '12px Arial';
       const bw = Math.min(PW - 20, Math.max(...o.noteLines.map(t => ctx.measureText(t).width)) + 16), bh = o.noteLines.length * 17 + 10;
-      const bx = PW - bw - 10, by = PH - bh - 66;
+      const bx = PW - bw - 10, by = PH - bh - 96;   /* v146: clear the scale-bar box */
       ctx.fillStyle = 'rgba(255,255,255,0.94)'; ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
       ctx.fillStyle = '#1f2937'; ctx.textAlign = 'left'; o.noteLines.forEach((t, i) => ctx.fillText(t, bx + 8, by + 18 + i * 17));
     }
@@ -4637,7 +4637,7 @@ async function figSplitPane(o) {
   ctx.drawImage(detail.cv, 0, FIG_HB); ctx.drawImage(vic.cv, PW + GAP, FIG_HB);
   ctx.strokeStyle = '#0f2a44'; ctx.lineWidth = 1; ctx.strokeRect(0.5, FIG_HB + 0.5, PW - 1, PH - 1); ctx.strokeRect(PW + GAP + 0.5, FIG_HB + 0.5, PW - 1, PH - 1);
   await figDrawHeader(ctx, W, { title: o.title, meta: o.meta, subtitle: o.subtitle });
-  figDrawLegend(ctx, o.legend, 16, null, FIG_HB + PH - 70);
+  figDrawLegend(ctx, o.legend, 16, null, FIG_HB + PH - 96);   /* v146: clear the scale-bar box */
   figDrawSources(ctx, W, H, figSources(detail, o.sources));
   return { cv, detail, vic };
 }
@@ -12176,7 +12176,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v145 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v146 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
