@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v150</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v151</div>
   </div>
 </header>
 
@@ -4120,6 +4120,7 @@ function azrZones(kind) {
 // apz1 / apz2: 'Y' compatible, 'N' not compatible; d1 / d2 = max dwelling units per acre; f1 / f2 = max floor-area ratio.
 const AZR_LU = [
   { c: '11.11', p: 'a single-family detached home', t: 'Residential — single units, detached (single-family home)', apz1: 'N', apz2: 'Y', d2: 2, note: 'max 1–2 dwelling units per acre in APZ II' },
+  { c: '11.11i', p: 'one single-family detached home on an existing lot of record', t: 'Residential — ONE single-family home on an existing lot of record (infill)', apz1: 'N', apz2: 'Y', infill: true },
   { c: '11.12', t: 'Residential — single units, semidetached', apz1: 'N', apz2: 'N' },
   { c: '11.13', t: 'Residential — single units, attached row (townhouses)', apz1: 'N', apz2: 'N' },
   { c: '11.2',  t: 'Residential — two units (duplex)', apz1: 'N', apz2: 'N' },
@@ -4172,7 +4173,8 @@ function azrLuPrefill() {
   if (!azrF('azr_lu')) return;
   if (!azrV('azr_lu') && !azrV('azr_lu_touched')) { const g = azrLuGuess(); if (g) azrSet('azr_lu', g); }
   if (!azrV('azr_lu_acres')) { const a = azrSiteAcres(); if (a > 0) azrSet('azr_lu_acres', +a.toFixed(3)); }
-  if (!azrV('azr_lu_units') && /^11\.11$/.test(azrV('azr_lu'))) azrSet('azr_lu_units', 1);
+  if (!azrV('azr_lu_units') && /^11\.11i?$/.test(azrV('azr_lu'))) azrSet('azr_lu_units', 1);
+  const sr = document.getElementById('azrLuSupportRow'); if (sr) sr.style.display = azrV('azr_lu') === '11.11i' ? '' : 'none';
 }
 // Evaluate the selected use against the table for the zone it is in → { ans: 'yes'|'no'|'', why }
 function azrLuEval(zoneType) {
@@ -4182,6 +4184,10 @@ function azrLuEval(zoneType) {
   const acres = azrN('azr_lu_acres', 0), units = azrN('azr_lu_units', 0), gfa = azrN('azr_lu_gfa', 0);
   const what = lu.t.replace(/^Residential — /, '').replace(/^single units, detached \(single-family home\)$/, 'single-family detached housing');
   const base = 'The proposed use, ' + (lu.p || lu.t.split(' — ').pop().replace(/\s*\(.*\)\s*/, '').toLowerCase()) + ' (SLUCM ' + lu.c + '),';
+  if (lu.infill && rec === 'Y') {
+    const sup = azrV('azr_lu_support');
+    return { ans: 'yes', why: 'The project is the construction of ' + lu.p + ' (SLUCM 11.11) in an established, already developed residential neighborhood. Single-family detached housing is a compatible use in ' + z + ' under the DoD Land Use Compatibility Recommendations (DoD Instruction 4165.57). A single dwelling is the minimum residential use the lot can support; the applicant does not own or control the surrounding developed parcels and therefore cannot reduce the existing density of the area, and the project does not create a new subdivision or change the established land-use pattern.' + (sup ? ' ' + sup.replace(/\s*$/, '').replace(/([^.])$/, '$1.') : '') };
+  }
   if (rec === 'N') return { ans: 'no', why: base + ' is not recommended in ' + z + ' under the DoD Land Use Compatibility Recommendations (DoD Instruction 4165.57).' };
   if (lim.d) {
     if (!(acres > 0) || !(units > 0)) return { ans: '', why: 'Enter the number of dwelling units and the lot acreage to test the ' + lim.d + ' units-per-acre limit.' };
@@ -8732,6 +8738,8 @@ AUTHORITIES.forEach(a => {
             <label>Building floor area (sq ft) <input type="number" data-field="azr_lu_gfa" oninput="azrUpdate()" style="width:80px;"></label>
             <input type="hidden" data-field="azr_lu_touched" value="">
           </div>
+          <div id="azrLuSupportRow" style="margin-top:4px;"><label style="display:block;">Supporting basis for the infill finding (optional — printed in the write-up) <input type="text" data-field="azr_lu_support" oninput="azrUpdate()" placeholder="e.g. The City of Dover Code, Sec. __ (Airport Environs Overlay), permits one single-family dwelling on an existing lot of record in APZ II; Dover AFB had no objection (email, 10/__/2026)." style="width:100%;font-size:11.5px;"></label>
+          </div>
           <div style="font-size:11px;color:#718096;margin-top:3px;">Pre-filled from the project description and the parcel acreage — check them. Units matter for housing (density limit); floor area matters for retail / office / recreation (floor-area-ratio limit).</div>
           <div style="margin-top:4px;">Generally consistent? <select data-field="azr_apz_consistent" onchange="azrUpdate()" style="font-size:11.5px;"><option value="">— answer —</option><option value="yes">Yes — generally consistent</option><option value="no">No — not consistent</option></select> <span id="azrLuNote" style="font-size:11px;color:#4a5568;"></span></div>
         </div>
@@ -12924,7 +12932,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v150 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v151 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v151: APZ land-use check — new option "ONE single-family home on an existing lot of record (infill)": generally consistent in APZ II with the infill rationale (minimum use of the lot; applicant does not control surrounding density) plus an optional supporting-basis line in the write-up.');
   console.log('  v150: Zone review — built-in DoD APZ land-use compatibility table (SLUCM uses, density and floor-area-ratio limits); pre-fills the use from the project description and acreage from the parcel, and answers §51.303(b) automatically with the reason in the map banner and write-up.');
   console.log('  v149: Paste zone settings — clearer example text, an empty-box message, and ZONES lines that wrap across lines are accepted.');
   console.log('  v148: Zone review panel — live preview is now the real Zone Review Map on the basemap (same look as the Airport Hazards Figure, incl. the distance to the nearest runway end); Step 1 wording clarifies the worksheet cannot read the official map.');
