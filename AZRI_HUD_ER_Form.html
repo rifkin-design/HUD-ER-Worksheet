@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v148</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v150</div>
   </div>
 </header>
 
@@ -4116,6 +4116,88 @@ function azrZones(kind) {
   return { kind, ap, zones, hit: hits[0] || null, hits, nearest };
 }
 
+// (v150) DoD Land Use Compatibility Recommendations for APZs (DoDI 4165.57 / AICUZ program table, by SLUCM code).
+// apz1 / apz2: 'Y' compatible, 'N' not compatible; d1 / d2 = max dwelling units per acre; f1 / f2 = max floor-area ratio.
+const AZR_LU = [
+  { c: '11.11', p: 'a single-family detached home', t: 'Residential — single units, detached (single-family home)', apz1: 'N', apz2: 'Y', d2: 2, note: 'max 1–2 dwelling units per acre in APZ II' },
+  { c: '11.12', t: 'Residential — single units, semidetached', apz1: 'N', apz2: 'N' },
+  { c: '11.13', t: 'Residential — single units, attached row (townhouses)', apz1: 'N', apz2: 'N' },
+  { c: '11.2',  t: 'Residential — two units (duplex)', apz1: 'N', apz2: 'N' },
+  { c: '11.3',  t: 'Residential — apartments (walk-up or elevator)', apz1: 'N', apz2: 'N' },
+  { c: '12',    t: 'Group quarters', apz1: 'N', apz2: 'N' },
+  { c: '14',    t: 'Mobile home parks or courts', apz1: 'N', apz2: 'N' },
+  { c: '15',    t: 'Transient lodgings (hotels, motels)', apz1: 'N', apz2: 'N' },
+  { c: '16',    t: 'Other residential', apz1: 'N', apz2: 'N' },
+  { c: '65.1',  t: 'Hospitals, nursing homes, other medical facilities', apz1: 'N', apz2: 'N' },
+  { c: '68',    t: 'Educational services (schools, daycare)', apz1: 'N', apz2: 'N' },
+  { c: '69.1',  t: 'Churches / chapels', apz1: 'N', apz2: 'N' },
+  { c: '72',    t: 'Public assembly (auditoriums, amphitheaters, spectator sports)', apz1: 'N', apz2: 'N' },
+  { c: '58',    t: 'Eating and drinking establishments', apz1: 'N', apz2: 'N' },
+  { c: '52',    t: 'Retail — building materials, hardware, farm equipment', apz1: 'Y', apz2: 'Y', f1: 0.12, f2: 0.24, note: 'low floor-area ratio' },
+  { c: '53',    t: 'Retail — shopping centers / general merchandise', apz1: 'N', apz2: 'Y', f2: 0.16 },
+  { c: '54',    t: 'Retail — food', apz1: 'N', apz2: 'Y', f2: 0.24 },
+  { c: '59',    t: 'Retail — other', apz1: 'N', apz2: 'Y', f2: 0.16 },
+  { c: '61',    t: 'Offices — finance, insurance, real estate', apz1: 'N', apz2: 'Y', f2: 0.22 },
+  { c: '65',    t: 'Offices — professional services', apz1: 'N', apz2: 'Y', f2: 0.22 },
+  { c: '67',    t: 'Government services', apz1: 'N', apz2: 'Y', f2: 0.24 },
+  { c: '73',    t: 'Amusements (fairgrounds, driving ranges)', apz1: 'N', apz2: 'Y' },
+  { c: '74',    t: 'Recreational activities (golf courses, stables, water recreation)', apz1: 'Y', apz2: 'Y', f1: 0.11, f2: 0.22, note: 'low intensity; no clubhouses, meeting places or tot lots' },
+  { c: '76',    t: 'Parks / open space', apz1: 'Y', apz2: 'Y', note: 'low intensity; no tot lots, clubhouses or meeting places' },
+  { c: '81',    t: 'Agriculture', apz1: 'Y', apz2: 'Y' },
+  { c: '91',    t: 'Undeveloped land', apz1: 'Y', apz2: 'Y' }
+];
+function azrLuGuess() {
+  const pf = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const desc = String(pf.projectDescription || (azrF('projectDescription') || {}).value || '').toLowerCase();
+  if (/single[- ]family|single family|detached (home|house|dwelling)/.test(desc)) return '11.11';
+  if (/townho|row ?house/.test(desc)) return '11.13';
+  if (/duplex|two[- ]family/.test(desc)) return '11.2';
+  if (/apartment|multi[- ]?family|senior housing|affordable housing units/.test(desc)) return '11.3';
+  if (/group home|shelter|dormitor/.test(desc)) return '12';
+  if (/school|daycare|day care|child care/.test(desc)) return '68';
+  if (/church|chapel/.test(desc)) return '69.1';
+  if (/clinic|hospital|nursing|medical/.test(desc)) return '65.1';
+  if (/\bpark\b|playground|trail|open space/.test(desc)) return '76';
+  return '';
+}
+function azrSiteAcres() {
+  const z = window._azr || {}; const s2 = z.site || {};
+  const fromProps = (s2.parcels || []).reduce((t, f) => t + (parseFloat(((f || {}).properties || {}).ACRES) || 0), 0);
+  if (fromProps > 0) return fromProps;
+  try { if (typeof turf !== 'undefined' && s2.boundary) return turf.area(s2.boundary) / 4046.856; } catch (e) {}
+  return 0;
+}
+// Prefill the land-use inputs once from the project description / parcel (the reviewer can change them)
+function azrLuPrefill() {
+  if (!azrF('azr_lu')) return;
+  if (!azrV('azr_lu') && !azrV('azr_lu_touched')) { const g = azrLuGuess(); if (g) azrSet('azr_lu', g); }
+  if (!azrV('azr_lu_acres')) { const a = azrSiteAcres(); if (a > 0) azrSet('azr_lu_acres', +a.toFixed(3)); }
+  if (!azrV('azr_lu_units') && /^11\.11$/.test(azrV('azr_lu'))) azrSet('azr_lu_units', 1);
+}
+// Evaluate the selected use against the table for the zone it is in → { ans: 'yes'|'no'|'', why }
+function azrLuEval(zoneType) {
+  const lu = AZR_LU.find(x => x.c === azrV('azr_lu')); if (!lu) return { ans: '', why: '' };
+  const z = zoneType === 'apz1' ? 'APZ I' : 'APZ II', rec = zoneType === 'apz1' ? lu.apz1 : lu.apz2;
+  const lim = zoneType === 'apz1' ? { d: lu.d1, f: lu.f1 } : { d: lu.d2, f: lu.f2 };
+  const acres = azrN('azr_lu_acres', 0), units = azrN('azr_lu_units', 0), gfa = azrN('azr_lu_gfa', 0);
+  const what = lu.t.replace(/^Residential — /, '').replace(/^single units, detached \(single-family home\)$/, 'single-family detached housing');
+  const base = 'The proposed use, ' + (lu.p || lu.t.split(' — ').pop().replace(/\s*\(.*\)\s*/, '').toLowerCase()) + ' (SLUCM ' + lu.c + '),';
+  if (rec === 'N') return { ans: 'no', why: base + ' is not recommended in ' + z + ' under the DoD Land Use Compatibility Recommendations (DoD Instruction 4165.57).' };
+  if (lim.d) {
+    if (!(acres > 0) || !(units > 0)) return { ans: '', why: 'Enter the number of dwelling units and the lot acreage to test the ' + lim.d + ' units-per-acre limit.' };
+    const dens = units / acres;
+    const t = base + ' on a ' + acres.toFixed(2) + '-acre lot is a density of approximately ' + dens.toFixed(1) + ' dwelling units per acre; the DoD Land Use Compatibility Recommendations (DoD Instruction 4165.57) recommend ' + what + ' in ' + z + ' only at a maximum of 1–2 dwelling units per acre';
+    return dens <= lim.d ? { ans: 'yes', why: t + ', which the project meets.' } : { ans: 'no', why: t + ', which the project exceeds.' };
+  }
+  if (lim.f) {
+    if (!(acres > 0) || !(gfa > 0)) return { ans: '', why: 'Enter the building floor area (sq ft) and lot acreage to test the maximum floor-area ratio of ' + lim.f + '.' };
+    const far = gfa / (acres * 43560);
+    const t = base + ' has a floor-area ratio of approximately ' + far.toFixed(2) + '; the DoD Land Use Compatibility Recommendations (DoD Instruction 4165.57) recommend a maximum of ' + lim.f + ' in ' + z;
+    return far <= lim.f ? { ans: 'yes', why: t + ', which the project meets.' } : { ans: 'no', why: t + ', which the project exceeds.' };
+  }
+  return { ans: 'yes', why: base + ' is compatible in ' + z + ' under the DoD Land Use Compatibility Recommendations (DoD Instruction 4165.57)' + (lu.note ? ', provided it is ' + lu.note : '') + '.' };
+}
+
 // 24 CFR 51.303 decision for one airport's result
 function azrDecide(r) {
   if (!r) return null;
@@ -4143,7 +4225,11 @@ function azrDecide(r) {
     if (scope === 'nc') return Object.assign(D, { verdict: 'no', headline: 'NOT ACCEPTABLE', line: inTxt, sub: 'New construction or substantial rehabilitation within a ' + (h.type === 'cz' ? 'military Clear Zone' : 'Runway Protection Zone / Clear Zone') + ' cannot be approved (24 CFR 51.303(a)(1)).', basis: '24 CFR 51.303(a)(1)', wu: null, status: 'followup' });
     return Object.assign(D, { verdict: 'pending', headline: 'ANSWER PROJECT TYPE', line: inTxt + ' Answer ✔ Review Questions (project type) to apply 24 CFR 51.303(a).', wu: null });
   }
+  const ev = azrV('azr_lu') ? azrLuEval(h.type) : { ans: '', why: '' };
+  if (azrV('azr_lu')) { azrSet('azr_apz_consistent', ev.ans); D.luWhy = ev.why; if (!ev.ans) return Object.assign(D, { verdict: 'pending', headline: 'COMPLETE THE LAND-USE CHECK', line: inTxt + ' ' + ev.why, wu: null }); }
   const cons = azrV('azr_apz_consistent');
+  if (cons === 'yes' && ev.why) return Object.assign(D, { verdict: 'cond', headline: 'ACCEPTABLE', line: inTxt, sub: ev.why + ' The project is therefore generally consistent with the DoD guidelines (24 CFR 51.303(b)).', basis: '24 CFR 51.303(b)', wu: 5, status: 'followup' });
+  if (cons === 'no' && ev.why) return Object.assign(D, { verdict: 'no', headline: 'NOT ACCEPTABLE', line: inTxt, sub: ev.why + ' The project is therefore not generally consistent with the DoD guidelines (24 CFR 51.303(b)).', basis: '24 CFR 51.303(b)', wu: null, status: 'followup' });
   if (cons === 'yes') return Object.assign(D, { verdict: 'cond', headline: 'ACCEPTABLE', line: inTxt, sub: 'The proposed use is generally consistent with the DoD Land Use Compatibility Guidelines for Accident Potential Zones (DoD Instruction 4165.57; 24 CFR 51.303(b)).', basis: '24 CFR 51.303(b)', wu: 5, status: 'followup' });
   if (cons === 'no') return Object.assign(D, { verdict: 'no', headline: 'NOT ACCEPTABLE', line: inTxt, sub: 'The proposed use is not generally consistent with the DoD Land Use Compatibility Guidelines for Accident Potential Zones (DoD Instruction 4165.57; 24 CFR 51.303(b)).', basis: '24 CFR 51.303(b)', wu: null, status: 'followup' });
   return Object.assign(D, { verdict: 'pending', headline: 'ANSWER APZ COMPATIBILITY', line: inTxt + ' Answer the DoD land-use compatibility question below.', wu: null });
@@ -4164,11 +4250,13 @@ function azrUpdate() {
   const resEl = document.getElementById('azrResult'); if (!resEl) return;
   const z = window._azr;
   if (!z || (!z.mil && !z.civ)) { resEl.innerHTML = z ? '<span style="color:#2f855a;">No zone review needed.</span>' : '<span style="color:#718096;">Click <b>↻ Load runways</b> (or run the Airport Hazards Figure) to start.</span>'; azrPreview([]); return; }
+  azrLuPrefill();
   const dec = azrResults();
   const anyCz = dec.some(d => d.r.hit && (d.r.hit.type === 'cz' || d.r.hit.type === 'rpz'));
   const anyApz = dec.some(d => d.r.hit && (d.r.hit.type === 'apz1' || d.r.hit.type === 'apz2'));
   const q1 = document.getElementById('azrQ_apz'), q2 = document.getElementById('azrQ_assure'), q3 = document.getElementById('azrQ_npias');
   if (q1) q1.style.display = anyApz ? '' : 'none';
+  if (anyApz) { const cs = azrF('azr_apz_consistent'), ln = document.getElementById('azrLuNote'); if (cs) cs.disabled = !!azrV('azr_lu'); if (ln) ln.textContent = azrV('azr_lu') ? '(set automatically from the DoD table — choose \u201canswer by hand\u201d above to override)' : ''; }
   if (q2) q2.style.display = anyCz ? '' : 'none';
   if (q3) q3.style.display = dec.some(d => d.kind === 'civ' && d.r.hit) ? '' : 'none';
   ['mil', 'civ'].forEach(k => { const w = document.getElementById('azr_' + k + '_stdwarn'); if (w) w.style.display = azrV('azr_' + k + '_src') === 'standard' ? '' : 'none'; });
@@ -4250,8 +4338,10 @@ function azrPreview(dec) {
 // Paste-in from the Claude chat: lines like  "ZONES mil: preset=af_b; cz_len=3000; …; ends=32,14; consistent=no; map=Dover AFB AICUZ Study, 2008"
 function azrApplyPaste() {
   const ta = document.getElementById('azrPaste'), msg = document.getElementById('azrPasteMsg');
-  const txt = (ta && ta.value) || ''; let n = 0;
-  txt.split(/\n/).forEach(line => {
+  const txt = ((ta && ta.value) || '').trim(); let n = 0;
+  if (!txt) { if (msg) { msg.textContent = '⚠ The box is empty — the gray text is only an example. Paste the ZONES line from Claude\'s reply.'; msg.style.color = '#c00'; } return; }
+  // (v149) a ZONES line may wrap onto several lines when copied — rejoin, then split at each "ZONES mil:" / "ZONES civ:"
+  txt.replace(/\s*\n\s*/g, ' ').replace(/[`*]/g, '').split(/(?=ZONES\s+(?:mil|civ)\s*:)/i).forEach(line => {
     const m = line.match(/ZONES\s+(mil|civ)\s*:\s*(.*)$/i); if (!m) return;
     const kind = m[1].toLowerCase(); const kv = {};
     m[2].split(/;\s*/).forEach(p => { const i = p.indexOf('='); if (i > 0) kv[p.slice(0, i).trim().toLowerCase()] = p.slice(i + 1).trim(); });
@@ -8625,7 +8715,7 @@ AUTHORITIES.forEach(a => {
         </div>
 
         <details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:11.5px;color:#44337a;font-weight:600;">Paste zone settings from the Claude chat</summary>
-          <textarea id="azrPaste" rows="3" placeholder="ZONES mil: preset=af_b; cz_len=3000; cz_w1=3000; cz_w2=3000; apz1_len=5000; apz1_w=3000; apz2_len=7000; apz2_w=3000; ends=32,14; consistent=no; map=Dover AFB AICUZ Study, Figure 4-2 (2008)" style="width:100%;box-sizing:border-box;font:11px Menlo,Consolas,monospace;margin-top:4px;"></textarea>
+          <textarea id="azrPaste" rows="3" placeholder="Paste the ZONES line from Claude's reply here. Example — ZONES mil: preset=af_b; cz_len=3000; cz_w1=3000; cz_w2=3000; apz1_len=5000; apz1_w=3000; apz2_len=7000; apz2_w=3000; ends=32,14; consistent=no; map=Dover AFB AICUZ Study, Figure 4-2 (2008)" style="width:100%;box-sizing:border-box;font:11px Menlo,Consolas,monospace;margin-top:4px;"></textarea>
           <button type="button" onclick="azrApplyPaste()" style="background:#6b46c1;border:none;color:white;padding:3px 12px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">Apply</button> <span id="azrPasteMsg" style="font-size:11px;"></span>
         </details>
 
@@ -8633,9 +8723,18 @@ AUTHORITIES.forEach(a => {
         <div id="azrQ_npias" style="display:none;margin-bottom:5px;">Is the civil airport an existing <b>commercial service</b> airport in the FAA NPIAS (24 CFR 51.301(c))?
           <select data-field="azr_civ_npias" onchange="azrUpdate()" style="font-size:11.5px;"><option value="">— answer —</option><option value="yes">Yes — commercial service</option><option value="no">No — general aviation / not in NPIAS as commercial service</option></select></div>
         <div id="azrQ_assure" style="display:none;margin-bottom:5px;"><label><input type="checkbox" data-field="azr_assurance" onchange="azrUpdate()"> The project will <b>not be frequently used or occupied by people</b>, and the airport operator's written assurance (no plans to acquire the land) will be obtained — §51.303(a)(2)</label></div>
-        <div id="azrQ_apz" style="display:none;margin-bottom:5px;">Is the proposed use <b>generally consistent</b> with the DoD Land Use Compatibility Guidelines for that APZ (DoDI 4165.57; §51.303(b))?
-          <select data-field="azr_apz_consistent" onchange="azrUpdate()" style="font-size:11.5px;"><option value="">— answer —</option><option value="yes">Yes — generally consistent</option><option value="no">No — not consistent</option></select>
-          <span style="color:#718096;font-size:11px;">(e.g. residential uses are generally not compatible in APZ I; low-density single-family can be in APZ II)</span></div>
+        <div id="azrQ_apz" style="display:none;margin-bottom:6px;border:1px solid #cbd5e0;border-radius:5px;background:#fff;padding:7px 10px;">
+          <div style="font-weight:700;color:#0f2a44;margin-bottom:3px;">DoD land-use compatibility check (DoDI 4165.57; §51.303(b))</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <label>Proposed use <select data-field="azr_lu" onchange="azrSet('azr_lu_touched','1');azrUpdate()" style="font-size:11.5px;max-width:420px;"><option value="">— answer by hand (below) —</option>${AZR_LU.map(x => `<option value="${x.c}">${x.c} · ${x.t}</option>`).join('')}</select></label>
+            <label>Dwelling units <input type="number" data-field="azr_lu_units" oninput="azrUpdate()" style="width:55px;"></label>
+            <label>Lot acres <input type="number" step="0.001" data-field="azr_lu_acres" oninput="azrUpdate()" style="width:70px;"></label>
+            <label>Building floor area (sq ft) <input type="number" data-field="azr_lu_gfa" oninput="azrUpdate()" style="width:80px;"></label>
+            <input type="hidden" data-field="azr_lu_touched" value="">
+          </div>
+          <div style="font-size:11px;color:#718096;margin-top:3px;">Pre-filled from the project description and the parcel acreage — check them. Units matter for housing (density limit); floor area matters for retail / office / recreation (floor-area-ratio limit).</div>
+          <div style="margin-top:4px;">Generally consistent? <select data-field="azr_apz_consistent" onchange="azrUpdate()" style="font-size:11.5px;"><option value="">— answer —</option><option value="yes">Yes — generally consistent</option><option value="no">No — not consistent</option></select> <span id="azrLuNote" style="font-size:11px;color:#4a5568;"></span></div>
+        </div>
         <div id="azrResult" style="margin:6px 0;"></div>
         <img id="azrPreviewImg" alt="Zone Review Map preview" onclick="azrOpenPreview()" style="display:none;width:100%;border:1px solid #cbd5e0;border-radius:4px;cursor:zoom-in;">
         <canvas id="azrPreview" width="760" height="380" style="width:100%;max-width:760px;border:1px solid #cbd5e0;border-radius:4px;background:#f8fafc;"></canvas>
@@ -12825,7 +12924,9 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v148 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v150 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v150: Zone review — built-in DoD APZ land-use compatibility table (SLUCM uses, density and floor-area-ratio limits); pre-fills the use from the project description and acreage from the parcel, and answers §51.303(b) automatically with the reason in the map banner and write-up.');
+  console.log('  v149: Paste zone settings — clearer example text, an empty-box message, and ZONES lines that wrap across lines are accepted.');
   console.log('  v148: Zone review panel — live preview is now the real Zone Review Map on the basemap (same look as the Airport Hazards Figure, incl. the distance to the nearest runway end); Step 1 wording clarifies the worksheet cannot read the official map.');
   console.log('  v147: Airport Hazards — 📐 Zone review map: links to the official RPZ / AICUZ map, draws RPZ / CZ / APZ I / APZ II off the FAA runway ends (standard FAA / DoD dimensions, adjustable to the official map or set from the Claude chat\'s ZONES line), tests the Subject Property boundary, applies 24 CFR 51.303, inserts the write-up and makes the final Zone Review Map stamped ACCEPTABLE / NOT ACCEPTABLE.');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
