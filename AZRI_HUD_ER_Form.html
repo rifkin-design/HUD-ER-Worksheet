@@ -602,7 +602,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v146</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v147</div>
   </div>
 </header>
 
@@ -1673,7 +1673,7 @@ const AUTHORITY_SOP = {
       <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;"><b>What counts as a "civil airport":</b> under 24 CFR 51.301(c) it is <i>an existing commercial service airport designated in the FAA NPIAS</i>. Heliports and private strips are therefore never civil airports (that is also why NEPAssist's airport layer leaves them out), and neither is a general aviation field. FAA NASR cannot flag commercial service, so the figure screens every public-use airport at 2,500 ft; if one lands inside the ring, confirm its NPIAS role (<a href="https://www.faa.gov/airports/planning_capacity/npias" target="_blank" rel="noopener">FAA NPIAS report, Appendix A</a>) before contacting it, and say so in the write-up if it is general aviation.</div>
       <div style="margin:4px 0 6px 0;font-size:11.5px;color:#4a5568;">Fallback if the FAA service is down: <a href="https://nepassisttool.epa.gov/nepassist/nepamap.aspx" target="_blank" rel="noopener">NEPAssist</a> → Transportation → Airport Points + Polygons → Measure; note that NEPAssist measures to the airport point, so add the runway length to your margin before calling it clear.</div>
     </div>
-    <div><b>Step 4 — Determine compliance / follow-up</b> (the figure's status line tells you which branch you are in)
+    <div><b>Step 4 — Determine compliance / follow-up</b> <span style="font-weight:400;">(v147: when a distance is triggered, <b>📐 Zone review map</b> on this card links to the zone map, draws the RPZ / CZ / APZs off the FAA runway ends, applies §51.303 with the scope answer, inserts the write-up and makes the final Zone Review Map marked ACCEPTABLE / NOT ACCEPTABLE)</span> (the figure's status line tells you which branch you are in)
       <div style="margin:5px 0;"><b>(A) No civil runway end ≤2,500 ft &amp; no military runway end ≤15,000 ft</b> → Compliant → <b>Write Up 1</b> (cite the figure: nearest civil airport and military airfield with their runway-end distances).</div>
       <div style="margin:5px 0;"><b>(B) Civil airport runway end ≤2,500 ft</b> — confirm it is a commercial service airport in the NPIAS, then check the Runway Protection Zone/Clear Zone (RPZ/CZ); contact the airport operator for its ALP / RPZ map:
         <ul style="margin:4px 0 4px 18px;">
@@ -3769,7 +3769,7 @@ async function generateAirportFigure(authId) {
     window._lastAirportFigure = { canvas: base.cv, filename: slug + '_Airport_Hazards_Map.pdf', footer: [civilTxt, milTxt, otherTxt, verdict].filter(Boolean) };
     // (v136) keep the screening result for the "ask Claude" zone-review prompt; open that panel when a distance is triggered
     window._lastAirportFindings = { civilHit, milHit, civilTxt, milTxt, civilName: nearestCivil ? nearestCivil.a.NAME + (nearestCivil.a.IDENT ? ' (' + nearestCivil.a.IDENT + ')' : '') : '', milName: nearestMil ? nearestMil.a.NAME + (nearestMil.a.IDENT ? ' (' + nearestMil.a.IDENT + ')' : '') : '', civilDist: nearestCivil ? figFmtFt(nearestCivil.distFt) : '', milDist: nearestMil ? figFmtFt(nearestMil.distFt) : '' };
-    if (civilHit || milHit) showAirportClaudePanel(true); else refreshAirportClaudePrompt();
+    if (civilHit || milHit) { showAirportClaudePanel(false); window._azr = null; showAirportZonePanel(true); } else refreshAirportClaudePrompt();   // (v147) zone review panel takes over when triggered
     figDownloadPdf(base.cv, slug + '_Airport_Hazards_Map.pdf');   // no footer — findings stay in the worksheet, not on the external figure
     say('✓ Airport Hazards figure generated — PDF downloaded and attached to Supporting Documents. ' + verdict, (civilHit || milHit) ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
     return { civilTxt, milTxt, otherTxt, verdict, rows };
@@ -3845,6 +3845,10 @@ function buildAirportClaudePrompt() {
   L.push('2. Basis — how you placed the Subject Property on the zone map (runway, roads, landmarks, scale bar, map title and date) and how confident you are. If the map does not let you place the site with confidence, say so and tell me exactly what map or data to get instead of guessing.');
   L.push('3. Report text — 2 to 4 client-facing sentences for the Compliance Determinations box, written for HUD, the Responsible Entity and the client: cite the zone map by title and date and the Airport Hazards Figure, state the zone finding and the §51.303 basis. No internal notes, no reference to this chat or to desktop screening.');
   L.push('4. Follow-ups — anything I still need to obtain or do (NPIAS confirmation, buyer/tenant notice, airport-operator assurance, Certifying Officer consistency finding, a better map).');
+  L.push('5. Zone settings for the AZ-RI worksheet — one line per screen, exactly in this format, so the worksheet can redraw the zones to match the official map (use 0 for a zone the map does not show; ends = the runway ends that have zones on the map, or all):');
+  if (mil) L.push('   ZONES mil: preset=af_b|navy_b|army_b|class_a|custom; cz_len=; cz_w1=; cz_w2=; apz1_len=; apz1_w=; apz2_len=; apz2_w=; ends=; consistent=yes|no|n/a; map=<map title, figure no., date>');
+  if (civil) L.push('   ZONES civ: preset=custom; start=; len=; w1=; w2=; ends=; npias=yes|no; map=<map title, sheet no., date>');
+  L.push('   (cz_w1 / w1 = width at the runway end, cz_w2 / w2 = width at the outer edge, all in feet. If the map shows curved or split APZs that rectangles cannot represent, say so.)');
   L.push('');
   L.push('Rules: the zone map governs — never infer a zone boundary from the 2,500 ft / 15,000 ft screening rings, and never assume the site is clear because it is far from the runway. Quote the map\'s own zone labels. If anything in the attachments conflicts with the screening result above, say so.');
   return L.join('\n');
@@ -3862,6 +3866,524 @@ function copyAirportClaudePrompt() {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(() => done(true), () => { ta.select(); done(document.execCommand('copy')); });
   else { ta.select(); done(document.execCommand('copy')); }
 }
+
+// ===== AIRPORT HAZARDS — ZONE REVIEW & FINAL ZONE MAP (v147) =====
+// When the Airport Hazards Figure triggers a screening distance, this panel (1) links to the airport's /
+// installation's official zone map, (2) draws the RPZ (civil) or Clear Zone + APZ I + APZ II (military) off each
+// FAA runway end — starting from the standard FAA / DoD dimensions, which the reviewer adjusts to match the official
+// map — tests the Subject Property boundary against every zone, applies the 24 CFR 51.303 decision rules with the
+// Review Questions scope answer, and (3) makes the final external "Zone Review Map" marked ACCEPTABLE / NOT ACCEPTABLE.
+// 24 CFR 51.305(b): only zones provided by the airport operator are recognised, so the map's source line says whether
+// the drawn limits came from the official map (title / date) or from standard dimensions.
+const AZR_MIL_PRESETS = {
+  af_b:    { label: 'Air Force — Class B runway (DoD standard)', short: 'Air Force Class B runway', cz: [3000, 3000, 3000], apz1: [5000, 3000], apz2: [7000, 3000] },
+  navy_b:  { label: 'Navy / Marine Corps — Class B runway (DoD standard)', short: 'Navy / Marine Corps Class B runway', cz: [3000, 1500, 2284], apz1: [5000, 3000], apz2: [7000, 3000] },
+  army_b:  { label: 'Army — Class B runway (DoD standard)', short: 'Army Class B runway', cz: [3000, 1000, 1000], apz1: [5000, 1000], apz2: [7000, 1000] },
+  class_a: { label: 'Class A runway — any service (DoD standard)', short: 'Class A runway', cz: [3000, 1000, 1000], apz1: [2500, 1000], apz2: [2500, 1000] },
+  custom:  { label: 'Custom — dimensions from the official map', short: '' }
+};
+// FAA AC 150/5300-13B approach RPZ (begins 200 ft beyond the runway end): [start, length, inner width, outer width]
+const AZR_CIV_PRESETS = {
+  vis_small: { label: 'Visual / not lower than 1 mile — small aircraft only (Cat A–B)', rpz: [200, 1000, 250, 450] },
+  vis_ab:    { label: 'Visual / not lower than 1 mile — Cat A–B', rpz: [200, 1000, 500, 700] },
+  vis_cd:    { label: 'Visual / not lower than 1 mile — Cat C–D–E', rpz: [200, 1700, 500, 1010] },
+  qtr:       { label: 'Not lower than 3/4 mile — all aircraft', rpz: [200, 1700, 1000, 1510] },
+  lt_qtr:    { label: 'Lower than 3/4 mile — all aircraft', rpz: [200, 2500, 1000, 1750] },
+  custom:    { label: 'Custom — dimensions from the official map' }
+};
+const AZR_ZONE = {
+  cz:   { name: 'Clear Zone', short: 'CZ',     rank: 3, fill: 'rgba(220,38,38,0.38)', line: '#b91c1c' },
+  rpz:  { name: 'Runway Protection Zone', short: 'RPZ', rank: 3, fill: 'rgba(220,38,38,0.38)', line: '#b91c1c' },
+  apz1: { name: 'APZ I',  short: 'APZ I',  rank: 2, fill: 'rgba(234,88,12,0.30)', line: '#c2410c' },
+  apz2: { name: 'APZ II', short: 'APZ II', rank: 1, fill: 'rgba(234,179,8,0.30)', line: '#a16207' }
+};
+function azrF(name) { return document.querySelector('[data-field="' + name + '"]'); }
+function azrV(name) { const el = azrF(name); return el ? (el.type === 'checkbox' ? el.checked : String(el.value || '').trim()) : ''; }
+function azrN(name, dflt) { const v = parseFloat(azrV(name)); return isNaN(v) ? dflt : v; }
+function azrSet(name, v) { const el = azrF(name); if (!el) return; if (el.type === 'checkbox') el.checked = !!v; else el.value = v; }
+function azrEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+// Preset → dimension fields (only when the reviewer picks a preset; loading a saved review keeps its own numbers)
+function azrApplyPreset(kind) {
+  if (kind === 'mil') {
+    const p = AZR_MIL_PRESETS[azrV('azr_mil_preset')]; if (!p || !p.cz) { azrUpdate(); return; }
+    azrSet('azr_mil_cz_len', p.cz[0]); azrSet('azr_mil_cz_w1', p.cz[1]); azrSet('azr_mil_cz_w2', p.cz[2]);
+    azrSet('azr_mil_apz1_len', p.apz1[0]); azrSet('azr_mil_apz1_w', p.apz1[1]);
+    azrSet('azr_mil_apz2_len', p.apz2[0]); azrSet('azr_mil_apz2_w', p.apz2[1]);
+  } else {
+    const p = AZR_CIV_PRESETS[azrV('azr_civ_preset')]; if (!p || !p.rpz) { azrUpdate(); return; }
+    azrSet('azr_civ_start', p.rpz[0]); azrSet('azr_civ_len', p.rpz[1]); azrSet('azr_civ_w1', p.rpz[2]); azrSet('azr_civ_w2', p.rpz[3]);
+  }
+  azrUpdate();
+}
+function azrMarkCustom(kind) {   // typing a dimension switches the preset label to Custom so the map's source line stays honest
+  const sel = azrF('azr_' + kind + '_preset'); if (sel && sel.value !== 'custom') sel.value = 'custom';
+  azrUpdate();
+}
+
+// --- geometry (local feet around a reference point) ---
+function azrK(lat) { return { kx: 111320 * Math.cos(lat * Math.PI / 180) * FT_PER_M, ky: 110574 * FT_PER_M }; }
+function azrOffset(pt, eFt, nFt) { const k = azrK(pt[1]); return [pt[0] + eFt / k.kx, pt[1] + nFt / k.ky]; }
+// Two runway ends from an FAA runway polygon: principal axis of the vertices, ends at the extreme projections,
+// centred across the width. Each end gets its outward unit vector (east, north) and its designator half.
+function azrRunwayEnds(f) {
+  const ring = ((f.geometry || {}).rings || [])[0]; if (!ring || ring.length < 4) return [];
+  const pts = ring.slice(0, ring.length - 1);
+  const m = [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
+  const k = azrK(m[1]); const L = pts.map(p => [(p[0] - m[0]) * k.kx, (p[1] - m[1]) * k.ky]);
+  let sxx = 0, syy = 0, sxy = 0; L.forEach(p => { sxx += p[0] * p[0]; syy += p[1] * p[1]; sxy += p[0] * p[1]; });
+  const th = 0.5 * Math.atan2(2 * sxy, sxx - syy), u = [Math.cos(th), Math.sin(th)], v = [-u[1], u[0]];
+  const s = L.map(p => p[0] * u[0] + p[1] * u[1]), t = L.map(p => p[0] * v[0] + p[1] * v[1]);
+  const smin = Math.min(...s), smax = Math.max(...s), tmid = (Math.min(...t) + Math.max(...t)) / 2;
+  const lenFt = smax - smin;
+  const desig = String((f.attributes || {}).DESIGNATOR || '').trim();
+  if (/^H/i.test(desig) || lenFt < 600) return [];   // helipads / pads are not runways for Subpart D
+  const parts = desig.split('/').map(x => x.trim()).filter(Boolean);
+  const mk = (sv, dir) => {
+    const e = sv * u[0] + tmid * v[0], n = sv * u[1] + tmid * v[1];
+    const brgOut = (Math.atan2(dir[0], dir[1]) * 180 / Math.PI + 360) % 360, landing = (brgOut + 180) % 360;
+    let label = parts[0] || desig;
+    if (parts.length > 1) {
+      const diff = p => { const h = (parseInt(p, 10) || 0) * 10; const d = Math.abs(((landing - h) % 360 + 540) % 360 - 180); return d; };
+      label = parts.slice().sort((a, b) => diff(a) - diff(b))[0];
+    }
+    return { label, runway: desig, pt: [m[0] + e / k.kx, m[1] + n / k.ky], u: dir, runwayLenFt: lenFt };
+  };
+  return [mk(smin, [-u[0], -u[1]]), mk(smax, u)];
+}
+function azrQuad(end, s0, s1, w0, w1) {
+  const ux = end.u[0], uy = end.u[1], vx = -uy, vy = ux;
+  const P = (s, t) => azrOffset(end.pt, ux * s + vx * t, uy * s + vy * t);
+  return [P(s0, -w0 / 2), P(s1, -w1 / 2), P(s1, w1 / 2), P(s0, w0 / 2), P(s0, -w0 / 2)];
+}
+function azrPip(p, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i], b = ring[j];
+    if (((a[1] > p[1]) !== (b[1] > p[1])) && (p[0] < (b[0] - a[0]) * (p[1] - a[1]) / ((b[1] - a[1]) || 1e-12) + a[0])) inside = !inside;
+  }
+  return inside;
+}
+function azrSegX(a, b, c, d) {
+  const o = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  const d1 = o(c, d, a), d2 = o(c, d, b), d3 = o(a, b, c), d4 = o(a, b, d);
+  return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
+}
+function azrPtSeg(p, a, b) {
+  const abx = b[0] - a[0], aby = b[1] - a[1], ab2 = abx * abx + aby * aby || 1e-9;
+  let t = ((p[0] - a[0]) * abx + (p[1] - a[1]) * aby) / ab2; t = Math.max(0, Math.min(1, t));
+  const q = [a[0] + t * abx, a[1] + t * aby];
+  return { d: Math.hypot(p[0] - q[0], p[1] - q[1]), q };
+}
+// Site rings (local ft) vs one zone ring (local ft): inside?, else min distance + the two closest points
+function azrTest(siteRings, zone) {
+  for (const r of siteRings) {
+    if (r.length === 1) { if (azrPip(r[0], zone)) return { inside: true, distFt: 0 }; continue; }
+    if (r.some(p => azrPip(p, zone)) || zone.some(p => azrPip(p, r))) return { inside: true, distFt: 0 };
+    for (let i = 0; i < r.length - 1; i++) for (let j = 0; j < zone.length - 1; j++) if (azrSegX(r[i], r[i + 1], zone[j], zone[j + 1])) return { inside: true, distFt: 0 };
+  }
+  let best = null;
+  const consider = (d, a, b) => { if (!best || d < best.distFt) best = { inside: false, distFt: d, a, b }; };
+  siteRings.forEach(r => {
+    r.forEach(p => { for (let j = 0; j < zone.length - 1; j++) { const x = azrPtSeg(p, zone[j], zone[j + 1]); consider(x.d, p, x.q); } });
+    if (r.length > 1) zone.forEach(p => { for (let i = 0; i < r.length - 1; i++) { const x = azrPtSeg(p, r[i], r[i + 1]); consider(x.d, x.q, p); } });
+  });
+  return best || { inside: false, distFt: Infinity };
+}
+
+// --- loading the triggered airports + all their runways ---
+async function azrLoad() {
+  const box = document.getElementById('azrStatus');
+  const say = (t, c) => { if (box) { box.innerHTML = t; box.style.color = c || '#2d3748'; } };
+  const site = figSiteContext();
+  if (!site) { say('Select the parcel(s) in 1125 (or enter Lat / Long) first.', '#c00'); return null; }
+  const center = site.centroid;
+  try {
+    say('Loading FAA airports and runways…');
+    const norm = s => String(s || '').replace(/[{}]/g, '').toUpperCase();
+    const AF = 'GLOBAL_ID,IDENT,NAME,TYPE_CODE,MIL_CODE,PRIVATEUSE,OPERSTATUS,SERVCITY,STATE';
+    const [airports, runways] = await Promise.all([
+      faaQuery(FAA_AIRPORTS_URL, center, 3.6, AF, true),
+      faaQuery(FAA_RUNWAYS_URL, center, 3.6, 'AIRPORT_ID,DESIGNATOR,LENGTH,WIDTH', true).catch(() => [])
+    ]);
+    const have = new Set(airports.map(f => norm(f.attributes.GLOBAL_ID)));
+    const missing = [...new Set(runways.map(f => norm(f.attributes.AIRPORT_ID)).filter(id => id && !have.has(id)))];
+    if (missing.length) {
+      const where = missing.map(id => "UPPER(GLOBAL_ID) LIKE '%" + id.replace(/'/g, "''") + "%'").join(' OR ');
+      try { const r = await fetch(FAA_AIRPORTS_URL + '?' + new URLSearchParams({ f: 'json', where, outFields: AF, returnGeometry: 'true', outSR: '4326' })); const j = await r.json(); (j.features || []).forEach(f => airports.push(f)); } catch (e) {}
+    }
+    const byAp = {}; runways.forEach(f => { const k = norm(f.attributes.AIRPORT_ID); (byAp[k] = byAp[k] || []).push(f); });
+    const rows = airports.filter(f => String(f.attributes.OPERSTATUS || 'OPERATIONAL').toUpperCase() !== 'CLOSED').map(f => {
+      const a = f.attributes; let best = null;
+      (byAp[norm(a.GLOBAL_ID)] || []).forEach(rw => (rw.geometry.rings || []).forEach(ring => { const n = figNearestOnRing(center, ring); if (n && (!best || n.distFt < best.distFt)) best = n; }));
+      const arp = [f.geometry.x, f.geometry.y];
+      return { a, kind: airportKind(a), distFt: best ? best.distFt : figDistFt(center, arp), hasRunway: !!best, id: norm(a.GLOBAL_ID) };
+    });
+    const pick = kinds => rows.filter(r => kinds.includes(r.kind)).sort((x, y) => x.distFt - y.distFt)[0] || null;
+    const civ = pick(['civil']), mil = pick(['military', 'joint']);
+    const out = { site, center, civ: null, mil: null };
+    const loadAirport = async (row) => {
+      // ALL runways of the airport (the 3.6 mi search can miss a far runway whose APZs still matter)
+      let rws = [];
+      try {
+        const r = await fetch(FAA_RUNWAYS_URL + '?' + new URLSearchParams({ f: 'json', where: "UPPER(AIRPORT_ID) LIKE '%" + row.id.replace(/'/g, "''") + "%'", outFields: 'AIRPORT_ID,DESIGNATOR,LENGTH,WIDTH', returnGeometry: 'true', outSR: '4326' }));
+        const j = await r.json(); rws = j.features || [];
+      } catch (e) {}
+      if (!rws.length) rws = byAp[row.id] || [];
+      const ends = []; rws.forEach(f => azrRunwayEnds(f).forEach(e => ends.push(e)));
+      ends.forEach(e => { e.distFt = figDistFt(center, e.pt); });
+      return { name: row.a.NAME || row.a.IDENT, ident: row.a.IDENT || '', state: row.a.STATE || '', distFt: row.distFt, runways: rws.filter(f => azrRunwayEnds(f).length), ends };
+    };
+    if (mil && mil.distFt <= AIRPORT_MIL_FT) out.mil = await loadAirport(mil);
+    if (civ && civ.distFt <= AIRPORT_CIVIL_FT) out.civ = await loadAirport(civ);
+    window._azr = out;
+    if (!out.mil && !out.civ) { say('No civil airport runway end within 2,500 ft and no military runway end within 15,000 ft — no zone review needed (Write Up 1).', '#2f855a'); azrRender(); return out; }
+    say('✓ Loaded ' + [out.mil ? out.mil.name + ' (' + out.mil.ends.length + ' runway ends)' : '', out.civ ? out.civ.name + ' (' + out.civ.ends.length + ' runway ends)' : ''].filter(Boolean).join(' and ') + '. Set the zones to match the official map below.', '#2f855a');
+    azrRender();
+    return out;
+  } catch (e) {
+    console.warn('[Zone review]', e);
+    say('✗ Could not load FAA runways: ' + azrEsc(e.message), '#c00');
+    return null;
+  }
+}
+
+// Panel scaffolding that depends on the loaded airports (links, runway-end checkboxes, which boxes show)
+function azrRender() {
+  const z = window._azr || {};
+  ['mil', 'civ'].forEach(kind => {
+    const boxEl = document.getElementById('azr_' + kind + '_box'); if (!boxEl) return;
+    const ap = z[kind];
+    boxEl.style.display = ap ? '' : 'none';
+    const title = document.getElementById('azr_' + kind + '_title');
+    if (title && ap) title.textContent = ap.name + (ap.ident ? ' (' + ap.ident + ')' : '') + ' — nearest runway end ' + figFmtFt(ap.distFt);
+    const endsEl = document.getElementById('azr_' + kind + '_endsUi');
+    if (endsEl && ap) {
+      const on = azrEndsOn(kind, ap);
+      endsEl.innerHTML = ap.ends.length
+        ? ap.ends.slice().sort((a, b) => a.distFt - b.distFt).map(e => `<label style="margin-right:12px;white-space:nowrap;"><input type="checkbox" value="${azrEsc(e.label)}" ${on.has(e.label) ? 'checked' : ''} onchange="azrEndsChanged('${kind}')"> Rwy ${azrEsc(e.label)} <span style="color:#718096;">(${figFmtFt(e.distFt)})</span></label>`).join('')
+        : '<span style="color:#c00;">No FAA runway geometry for this airport — zones cannot be drawn; use 🤖 Zone review with Claude and record the result by hand.</span>';
+    }
+    const linksEl = document.getElementById('azr_' + kind + '_links');
+    if (linksEl && ap) {
+      const g = q => 'https://www.google.com/search?q=' + encodeURIComponent(q);
+      const L = kind === 'mil'
+        ? [[g('"' + ap.name + '" AICUZ study'), 'AICUZ study (search)'], [g('"' + ap.name + '" accident potential zone APZ map'), 'APZ / Clear Zone map (search)'], [g('"' + ap.name + '" air installation compatible use zone county zoning overlay'), 'County AICUZ / airport-environs overlay (search)']]
+        : [[ap.ident ? 'https://adip.faa.gov/agis/public/#/airportData/' + encodeURIComponent(ap.ident) : 'https://adip.faa.gov/agis/public/#/public', 'FAA ADIP airport record (runways, approach minimums)'], [g('"' + ap.name + '" airport layout plan runway protection zone'), 'Airport Layout Plan / RPZ exhibit (search)'], ['https://www.faa.gov/airports/planning_capacity/npias', 'FAA NPIAS — confirm commercial service']];
+      linksEl.innerHTML = L.map(l => `<a href="${l[0]}" target="_blank" rel="noopener" style="margin-right:14px;">${azrEsc(l[1])} ↗</a>`).join('');
+    }
+  });
+  azrUpdate();
+}
+function azrEndsOn(kind, ap) {
+  const raw = azrV('azr_' + kind + '_ends');
+  return new Set(raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : ap.ends.map(e => e.label));
+}
+function azrEndsChanged(kind) {
+  const els = document.querySelectorAll('#azr_' + kind + '_endsUi input[type=checkbox]');
+  const on = [...els].filter(c => c.checked).map(c => c.value);
+  azrSet('azr_' + kind + '_ends', on.length === els.length ? '' : (on.join(',') || '-'));
+  azrUpdate();
+}
+
+// Build every zone for one airport from the current dimension fields, and test the Subject Property against them
+function azrZones(kind) {
+  const z = window._azr || {}; const ap = z[kind]; if (!ap) return null;
+  const on = azrEndsOn(kind, ap);
+  const zones = [];
+  ap.ends.forEach(e => {
+    if (!on.has(e.label)) return;
+    if (kind === 'mil') {
+      const czL = azrN('azr_mil_cz_len', 0), w1 = azrN('azr_mil_cz_w1', 0), w2 = azrN('azr_mil_cz_w2', w1);
+      const a1L = azrN('azr_mil_apz1_len', 0), a1W = azrN('azr_mil_apz1_w', 0), a2L = azrN('azr_mil_apz2_len', 0), a2W = azrN('azr_mil_apz2_w', 0);
+      if (czL > 0 && w1 > 0) zones.push({ type: 'cz', end: e, ring: azrQuad(e, 0, czL, w1, w2) });
+      if (a1L > 0 && a1W > 0) zones.push({ type: 'apz1', end: e, ring: azrQuad(e, czL, czL + a1L, a1W, a1W) });
+      if (a2L > 0 && a2W > 0) zones.push({ type: 'apz2', end: e, ring: azrQuad(e, czL + a1L, czL + a1L + a2L, a2W, a2W) });
+    } else {
+      const s0 = azrN('azr_civ_start', 200), L = azrN('azr_civ_len', 0), w1 = azrN('azr_civ_w1', 0), w2 = azrN('azr_civ_w2', w1);
+      if (L > 0 && w1 > 0) zones.push({ type: 'rpz', end: e, ring: azrQuad(e, s0, s0 + L, w1, w2) });
+    }
+  });
+  // test in local ft around the site
+  const c = z.center, k = azrK(c[1]); const toL = q => [(q[0] - c[0]) * k.kx, (q[1] - c[1]) * k.ky];
+  const fromL = p => [c[0] + p[0] / k.kx, c[1] + p[1] / k.ky];
+  const g = z.site && z.site.boundary && z.site.boundary.geometry;
+  const siteRings = g ? (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []).map(r => r.map(toL)) : [];
+  if (!siteRings.length) siteRings.push([[0, 0]]);
+  zones.forEach(zn => { const t = azrTest(siteRings, zn.ring.map(toL)); zn.inside = t.inside; zn.distFt = t.distFt; if (t.a) { zn.near = [fromL(t.a), fromL(t.b)]; } });
+  const hits = zones.filter(zn => zn.inside).sort((x, y) => AZR_ZONE[y.type].rank - AZR_ZONE[x.type].rank);
+  const nearest = zones.filter(zn => !zn.inside).sort((x, y) => x.distFt - y.distFt)[0] || null;
+  return { kind, ap, zones, hit: hits[0] || null, hits, nearest };
+}
+
+// 24 CFR 51.303 decision for one airport's result
+function azrDecide(r) {
+  if (!r) return null;
+  const scopeEl = document.querySelector('input[name="exq_airport_scope"]:checked');
+  const scope = scopeEl ? scopeEl.value : '';
+  const nm = r.ap.name + (r.ap.ident ? ' (' + r.ap.ident + ')' : '');
+  const src = azrV('azr_' + r.kind + '_src') || 'official', mapT = azrV('azr_' + r.kind + '_map');
+  const D = { kind: r.kind, r, name: nm, src, mapTitle: mapT, issues: [] };
+  if (!r.ap.ends.length) return Object.assign(D, { verdict: 'pending', headline: 'NO RUNWAY GEOMETRY', line: 'FAA has no runway geometry for ' + nm + ' — determine the zone from the official map (🤖 Zone review with Claude).', wu: null });
+  if (!r.zones.length) return Object.assign(D, { verdict: 'pending', headline: 'NO ZONES DRAWN', line: 'Turn on at least one runway end and enter the zone dimensions.', wu: null });
+  if (src === 'official' && !mapT) D.issues.push('Enter the official zone map title and date (it is cited on the map and in the write-up).');
+  const zoneTxt = zn => AZR_ZONE[zn.type].name + ' of Runway ' + zn.end.label;
+  const nearTxt = r.nearest ? 'The nearest zone, ' + zoneTxt(r.nearest) + ', is approximately ' + figFmtFt(r.nearest.distFt) + ' from the Subject Property.' : '';
+  if (r.kind === 'civ') {
+    const npias = azrV('azr_civ_npias');
+    if (!r.hit) return Object.assign(D, { verdict: 'ok', headline: 'ACCEPTABLE', line: 'The Subject Property is outside the Runway Protection Zone(s) of ' + nm + '.', sub: nearTxt, basis: '24 CFR Part 51 Subpart D', wu: 2, status: 'compliant' });
+    if (npias === 'no') return Object.assign(D, { verdict: 'ok', headline: 'ACCEPTABLE', line: nm + ' is not a commercial service airport in the FAA NPIAS and is therefore not a civil airport under 24 CFR 51.301(c).', sub: '', basis: '24 CFR 51.301(c)', wu: 2, status: 'compliant', notCivil: true });
+    if (npias !== 'yes') return Object.assign(D, { verdict: 'pending', headline: 'CONFIRM NPIAS STATUS', line: 'The Subject Property is within the ' + zoneTxt(r.hit) + ' — confirm whether ' + nm + ' is a commercial service airport in the NPIAS.', wu: null });
+  }
+  if (!r.hit) return Object.assign(D, { verdict: 'ok', headline: 'ACCEPTABLE', line: 'The Subject Property is outside the Clear Zone and Accident Potential Zones (APZ I / APZ II) of ' + nm + '.', sub: nearTxt, basis: '24 CFR Part 51 Subpart D', wu: 4, status: 'compliant' });
+  const h = r.hit, inTxt = 'The Subject Property is within the ' + zoneTxt(h) + ' of ' + nm + '.';
+  if (h.type === 'cz' || h.type === 'rpz') {
+    if (azrV('azr_assurance')) return Object.assign(D, { verdict: 'cond', headline: 'ACCEPTABLE', line: inTxt, sub: 'The project will not be frequently used or occupied by people; the airport operator\'s written assurance that the land will not be acquired for a Clear Zone program is required (24 CFR 51.303(a)(2)).', basis: '24 CFR 51.303(a)(2)', wu: 6, status: 'followup' });
+    if (scope === 'existing') return Object.assign(D, { verdict: 'cond', headline: 'ACCEPTABLE', line: inTxt, sub: 'Acquisition / existing structure only — the buyer must sign a HUD- or RE-approved notice of the airport hazard (24 CFR 51.303(a)(3)).', basis: '24 CFR 51.303(a)(3)', wu: h.type === 'cz' ? 7 : 3, status: 'followup' });
+    if (scope === 'nc') return Object.assign(D, { verdict: 'no', headline: 'NOT ACCEPTABLE', line: inTxt, sub: 'New construction or substantial rehabilitation within a ' + (h.type === 'cz' ? 'military Clear Zone' : 'Runway Protection Zone / Clear Zone') + ' cannot be approved (24 CFR 51.303(a)(1)).', basis: '24 CFR 51.303(a)(1)', wu: null, status: 'followup' });
+    return Object.assign(D, { verdict: 'pending', headline: 'ANSWER PROJECT TYPE', line: inTxt + ' Answer ✔ Review Questions (project type) to apply 24 CFR 51.303(a).', wu: null });
+  }
+  const cons = azrV('azr_apz_consistent');
+  if (cons === 'yes') return Object.assign(D, { verdict: 'cond', headline: 'ACCEPTABLE', line: inTxt, sub: 'The proposed use is generally consistent with the DoD Land Use Compatibility Guidelines for Accident Potential Zones (DoD Instruction 4165.57; 24 CFR 51.303(b)).', basis: '24 CFR 51.303(b)', wu: 5, status: 'followup' });
+  if (cons === 'no') return Object.assign(D, { verdict: 'no', headline: 'NOT ACCEPTABLE', line: inTxt, sub: 'The proposed use is not generally consistent with the DoD Land Use Compatibility Guidelines for Accident Potential Zones (DoD Instruction 4165.57; 24 CFR 51.303(b)).', basis: '24 CFR 51.303(b)', wu: null, status: 'followup' });
+  return Object.assign(D, { verdict: 'pending', headline: 'ANSWER APZ COMPATIBILITY', line: inTxt + ' Answer the DoD land-use compatibility question below.', wu: null });
+}
+function azrResults() {
+  const out = [];
+  ['mil', 'civ'].forEach(k => { const r = azrZones(k); if (r) out.push(azrDecide(r)); });
+  return out;
+}
+function azrOverall(dec) {
+  if (!dec.length) return null;
+  const order = { no: 3, pending: 2, cond: 1, ok: 0 };
+  return dec.slice().sort((a, b) => order[b.verdict] - order[a.verdict])[0].verdict;
+}
+
+// Live refresh of the questions / result / preview (no network)
+function azrUpdate() {
+  const resEl = document.getElementById('azrResult'); if (!resEl) return;
+  const z = window._azr;
+  if (!z || (!z.mil && !z.civ)) { resEl.innerHTML = z ? '<span style="color:#2f855a;">No zone review needed.</span>' : '<span style="color:#718096;">Click <b>↻ Load runways</b> (or run the Airport Hazards Figure) to start.</span>'; azrPreview([]); return; }
+  const dec = azrResults();
+  const anyCz = dec.some(d => d.r.hit && (d.r.hit.type === 'cz' || d.r.hit.type === 'rpz'));
+  const anyApz = dec.some(d => d.r.hit && (d.r.hit.type === 'apz1' || d.r.hit.type === 'apz2'));
+  const q1 = document.getElementById('azrQ_apz'), q2 = document.getElementById('azrQ_assure'), q3 = document.getElementById('azrQ_npias');
+  if (q1) q1.style.display = anyApz ? '' : 'none';
+  if (q2) q2.style.display = anyCz ? '' : 'none';
+  if (q3) q3.style.display = dec.some(d => d.kind === 'civ' && d.r.hit) ? '' : 'none';
+  ['mil', 'civ'].forEach(k => { const w = document.getElementById('azr_' + k + '_stdwarn'); if (w) w.style.display = azrV('azr_' + k + '_src') === 'standard' ? '' : 'none'; });
+  const col = { ok: '#2f855a', cond: '#2f855a', no: '#c53030', pending: '#b7791f' };
+  resEl.innerHTML = dec.map(d => `<div style="border-left:4px solid ${col[d.verdict]};background:#fff;padding:6px 10px;margin-bottom:6px;">
+      <b style="color:${col[d.verdict]};">${azrEsc(d.headline)}</b>${d.wu ? ` <span style="color:#4a5568;">→ Write Up ${d.wu}</span>` : ''}<br>${azrEsc(d.line)}${d.sub ? '<br><span style="color:#4a5568;">' + azrEsc(d.sub) + '</span>' : ''}
+      ${d.issues.length ? '<br><span style="color:#b7791f;">⚠ ' + d.issues.map(azrEsc).join(' ') + '</span>' : ''}</div>`).join('');
+  azrPreview(dec);
+}
+
+// Map extent (lng/lat bbox) for the site + the zones that matter: any zone the site is in, the nearest zone,
+// and every zone of the runway ends nearest the site.
+function azrFrame(dec) {
+  const z = window._azr; const pts = [z.center];
+  const g = z.site && z.site.boundary && z.site.boundary.geometry;
+  if (g) (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []).forEach(r => r.forEach(q => pts.push(q)));
+  dec.forEach(d => {
+    const keyEnds = new Set();
+    if (d.r.hit) keyEnds.add(d.r.hit.end); if (d.r.nearest) keyEnds.add(d.r.nearest.end);
+    d.r.zones.forEach(zn => { if (keyEnds.has(zn.end) || zn.inside || zn.distFt < 2500) zn.ring.forEach(q => pts.push(q)); });
+  });
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+}
+// Small schematic preview (no basemap) so the reviewer can line the zones up with the official map before making the figure
+function azrPreview(dec) {
+  const cv = document.getElementById('azrPreview'); if (!cv) return;
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, W, H);
+  const z = window._azr;
+  if (!z || !dec.length) { ctx.fillStyle = '#a0aec0'; ctx.font = '13px Arial'; ctx.textAlign = 'center'; ctx.fillText('Zone preview appears here', W / 2, H / 2); return; }
+  const b = azrFrame(dec), k = azrK(z.center[1]);
+  const wFt = (b.maxX - b.minX) * k.kx, hFt = (b.maxY - b.minY) * k.ky;
+  const sc = Math.min((W - 40) / (wFt || 1), (H - 40) / (hFt || 1));
+  const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
+  const P = q => [W / 2 + (q[0] - cx) * k.kx * sc, H / 2 - (q[1] - cy) * k.ky * sc];
+  const poly = (ring, fill, line, lw) => { ctx.beginPath(); ring.forEach((q, i) => { const p = P(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (line) { ctx.strokeStyle = line; ctx.lineWidth = lw || 1.5; ctx.stroke(); } };
+  dec.forEach(d => {
+    d.r.zones.slice().sort((x, y) => AZR_ZONE[x.type].rank - AZR_ZONE[y.type].rank).forEach(zn => poly(zn.ring, AZR_ZONE[zn.type].fill, AZR_ZONE[zn.type].line, 1.5));
+    d.r.ap.runways.forEach(f => (f.geometry.rings || []).forEach(rg => poly(rg, '#374151', '#111', 1)));
+    ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
+    d.r.ap.ends.forEach(e => { const p = P(azrOffset(e.pt, e.u[0] * 350, e.u[1] * 350)); if (p[0] > 0 && p[0] < W && p[1] > 0 && p[1] < H) { ctx.fillStyle = '#111'; ctx.fillText(e.label, p[0], p[1] + 4); } });
+  });
+  const g = z.site.boundary && z.site.boundary.geometry;
+  (g ? (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(p => p[0]) : []) : []).forEach(r => poly(r, 'rgba(225,17,17,0.25)', '#e11', 2));
+  const c = P(z.center); ctx.fillStyle = '#e11'; ctx.beginPath(); ctx.arc(c[0], c[1], 5, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.font = 'bold 11px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#9b1c1c'; ctx.fillText('Subject Property', c[0] + 8, c[1] - 6);
+  // scale bar
+  const step = [500, 1000, 2000, 5000, 10000].find(s => s * sc > 70) || 10000;
+  ctx.fillStyle = '#111'; ctx.fillRect(12, H - 16, step * sc, 4); ctx.font = '10px Arial'; ctx.textAlign = 'left'; ctx.fillText(step.toLocaleString() + ' ft', 12, H - 20);
+}
+
+// Paste-in from the Claude chat: lines like  "ZONES mil: preset=af_b; cz_len=3000; …; ends=32,14; consistent=no; map=Dover AFB AICUZ Study, 2008"
+function azrApplyPaste() {
+  const ta = document.getElementById('azrPaste'), msg = document.getElementById('azrPasteMsg');
+  const txt = (ta && ta.value) || ''; let n = 0;
+  txt.split(/\n/).forEach(line => {
+    const m = line.match(/ZONES\s+(mil|civ)\s*:\s*(.*)$/i); if (!m) return;
+    const kind = m[1].toLowerCase(); const kv = {};
+    m[2].split(/;\s*/).forEach(p => { const i = p.indexOf('='); if (i > 0) kv[p.slice(0, i).trim().toLowerCase()] = p.slice(i + 1).trim(); });
+    const num = (key, field) => { if (kv[key] != null && kv[key] !== '' && !isNaN(parseFloat(kv[key]))) { azrSet(field, parseFloat(kv[key])); n++; } };
+    if (kv.preset && (kind === 'mil' ? AZR_MIL_PRESETS : AZR_CIV_PRESETS)[kv.preset]) { azrSet('azr_' + kind + '_preset', kv.preset); if (kv.preset !== 'custom') azrApplyPreset(kind); }
+    if (kind === 'mil') { num('cz_len', 'azr_mil_cz_len'); num('cz_w1', 'azr_mil_cz_w1'); num('cz_w2', 'azr_mil_cz_w2'); num('apz1_len', 'azr_mil_apz1_len'); num('apz1_w', 'azr_mil_apz1_w'); num('apz2_len', 'azr_mil_apz2_len'); num('apz2_w', 'azr_mil_apz2_w'); }
+    else { num('start', 'azr_civ_start'); num('len', 'azr_civ_len'); num('w1', 'azr_civ_w1'); num('w2', 'azr_civ_w2'); }
+    if (kv.ends) { azrSet('azr_' + kind + '_ends', /^all$/i.test(kv.ends) ? '' : kv.ends.replace(/\s+/g, '')); n++; }
+    if (kv.map) { azrSet('azr_' + kind + '_map', kv.map); azrSet('azr_' + kind + '_src', 'official'); n++; }
+    if (kind === 'mil' && /^(yes|no)$/i.test(kv.consistent || '')) { azrSet('azr_apz_consistent', kv.consistent.toLowerCase()); n++; }
+    if (kind === 'civ' && /^(yes|no)$/i.test(kv.npias || '')) { azrSet('azr_civ_npias', kv.npias.toLowerCase()); n++; }
+  });
+  if (msg) { msg.textContent = n ? '✓ Applied ' + n + ' setting(s) — check the preview against the official map.' : '⚠ No "ZONES mil:" / "ZONES civ:" line found.'; msg.style.color = n ? '#2f855a' : '#c00'; }
+  azrRender();
+}
+
+function showAirportZonePanel(open) {
+  const d = document.getElementById('airportZonePanel'); if (!d) return;
+  d.style.display = ''; if (open !== false) d.open = true;
+  if (!window._azr) azrLoad(); else azrRender();
+  if (open !== false) try { d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+}
+
+// Client-facing Compliance Determinations text for the current result
+function azrWriteUpText(dec) {
+  const paras = [];
+  dec.forEach(d => {
+    const r = d.r, mil = d.kind === 'mil';
+    const kindTxt = mil ? 'military airfield' : 'civil airport';
+    const scr = mil ? '15,000-foot' : '2,500-foot';
+    const preset = mil ? AZR_MIL_PRESETS[azrV('azr_mil_preset')] : AZR_CIV_PRESETS[azrV('azr_civ_preset')];
+    const zonesWord = mil ? 'Clear Zone (CZ) and Accident Potential Zone (APZ I and APZ II)' : 'Runway Protection Zone (RPZ)';
+    const srcSent = d.src === 'standard'
+      ? 'The ' + zonesWord + ' limits shown on the Airport Zone Review Map were drawn from the runway ends to the standard ' + (mil ? 'Department of Defense dimensions' + (preset && preset.short ? ' for a ' + preset.short : '') + ' (DoD Instruction 4165.57; 32 CFR Part 256)' : 'FAA dimensions (FAA Advisory Circular 150/5300-13B)') + '.'
+      : 'The ' + zonesWord + ' limits shown on the Airport Zone Review Map were taken from the ' + (d.mapTitle || '[zone map title and date]') + '.';
+    let t = 'The Airport Hazards Map shows that the nearest runway end of ' + d.name + ', a ' + kindTxt + ', is located approximately ' + figFmtFt(r.ap.distFt) + ' from the Subject Property, within the ' + scr + ' screening distance of 24 CFR Part 51 Subpart D. ' + srcSent + ' ';
+    if (d.notCivil) t += d.name + ' is not a commercial service airport designated in the FAA National Plan of Integrated Airport Systems (NPIAS) and is therefore not a civil airport under 24 CFR 51.301(c). ';
+    if (!r.hit) {
+      t += 'The Subject Property is not located within ' + (mil ? 'the military Clear Zone or any Accident Potential Zone' : 'a Runway Protection Zone / Clear Zone') + (r.nearest ? '; the nearest zone, the ' + AZR_ZONE[r.nearest.type].name + ' of Runway ' + r.nearest.end.label + ', is approximately ' + figFmtFt(r.nearest.distFt) + ' from the Subject Property' : '') + '. The project is therefore in compliance with Airport Hazards requirements (24 CFR Part 51 Subpart D; 24 CFR §58.6(d)).';
+    } else if (d.notCivil) {
+      t += 'The project is therefore in compliance with Airport Hazards requirements (24 CFR Part 51 Subpart D; 24 CFR §58.6(d)).';
+    } else {
+      t += 'The Subject Property is located within the ' + AZR_ZONE[r.hit.type].name + ' of Runway ' + r.hit.end.label + '. ';
+      if (d.verdict === 'no') t += d.sub + ' The project therefore cannot proceed at this location as proposed.';
+      else if (d.verdict === 'cond') t += d.sub;
+      else t += '[Determination pending — ' + d.line + ']';
+      const bp = (typeof BOILERPLATE !== 'undefined' && BOILERPLATE.airport && d.wu) ? BOILERPLATE.airport[d.wu - 1] : null;
+      const fu = bp && bp.text.indexOf('Required Follow up') >= 0 ? bp.text.slice(bp.text.indexOf('Required Follow up')) : '';
+      if (fu && d.verdict === 'cond') t += '\n\n' + fu;
+    }
+    paras.push(t);
+  });
+  return paras.join('\n\n');
+}
+function azrInsertWriteUp() {
+  const msg = document.getElementById('azrActMsg');
+  const dec = azrResults(); if (!dec.length) { if (msg) msg.textContent = 'Load the runways first.'; return; }
+  if (dec.some(d => d.verdict === 'pending')) { if (msg) { msg.textContent = '⚠ Finish the open item(s) in the result box first.'; msg.style.color = '#b7791f'; } return; }
+  const ta = document.querySelector('[data-field="airport_notes"]'); if (!ta) return;
+  if (ta.value.trim() && !confirm('Replace the current Airport Hazards Compliance Determinations text with the zone-review write-up?')) return;
+  ta.value = azrWriteUpText(dec); ta.dispatchEvent(new Event('input', { bubbles: true }));
+  const status = dec.every(d => d.status === 'compliant') ? 'compliant' : 'followup';
+  const radio = document.querySelector('input[name="airport_status"][value="' + status + '"]');
+  if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+  const refEl = document.querySelector('[data-field="airport_ref"]');
+  if (refEl) { const zt = dec.map(d => d.name + ': ' + (d.r.hit ? 'in ' + AZR_ZONE[d.r.hit.type].short + ' (Rwy ' + d.r.hit.end.label + ')' : 'outside zones') + ' — ' + d.headline).join(' · '); refEl.value = (refEl.value.split(' || Zones:')[0] + ' || Zones: ' + zt).trim(); refEl.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (msg) { msg.textContent = '✓ Write-up inserted and status set to ' + (status === 'compliant' ? 'Compliant' : 'Follow-Up') + '.'; msg.style.color = '#2f855a'; }
+}
+
+// Final external figure: the zones, runways and Subject Property on the basemap, stamped ACCEPTABLE / NOT ACCEPTABLE
+async function generateAirportZoneMap() {
+  const msg = document.getElementById('azrActMsg');
+  const say = (t, c) => { if (msg) { msg.textContent = t; msg.style.color = c || '#2d3748'; } };
+  if (!window._azr) { await azrLoad(); }
+  const z = window._azr; if (!z || (!z.mil && !z.civ)) { say('No triggered airport — the Airport Hazards Map alone documents compliance (Write Up 1).', '#2f855a'); return; }
+  const dec = azrResults();
+  if (dec.some(d => d.verdict === 'pending')) { say('⚠ Finish the open item(s) in the result box first.', '#b7791f'); return; }
+  const missingTitle = dec.filter(d => d.src === 'official' && !d.mapTitle);
+  if (missingTitle.length) { say('⚠ Enter the official zone map title and date (or switch the zone source to standard dimensions).', '#b7791f'); return; }
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  try {
+    say('Rendering the Zone Review Map…');
+    const b = azrFrame(dec), k = azrK(z.center[1]);
+    const ctr = [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
+    const halfFt = Math.max((b.maxX - b.minX) * k.kx, (b.maxY - b.minY) * k.ky) / 2 * 1.18 + 600;
+    const base = await figBuildBase(ctr, Math.max(halfFt, 1500) / FT_PER_M, { basemap: 'streets' });
+    if (!base.tilesOk) throw new Error('basemap tiles could not be loaded');
+    const { ctx, toPx, W, H } = base;
+    const poly = (ring, fill, line, lw, dash) => { ctx.beginPath(); ring.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (line) { ctx.setLineDash(dash || []); ctx.strokeStyle = line; ctx.lineWidth = lw || 2; ctx.stroke(); ctx.setLineDash([]); } };
+    const types = new Set();
+    dec.forEach(d => {
+      d.r.zones.slice().sort((x, y) => AZR_ZONE[x.type].rank - AZR_ZONE[y.type].rank).forEach(zn => { poly(zn.ring, AZR_ZONE[zn.type].fill, AZR_ZONE[zn.type].line, 2.5); types.add(zn.type); });
+      d.r.ap.runways.forEach(f => (f.geometry.rings || []).forEach(rg => poly(rg, 'rgba(55,65,81,0.9)', '#111', 1.5)));
+    });
+    // zone labels at the zone centres (only those on the map)
+    ctx.textAlign = 'center';
+    dec.forEach(d => d.r.zones.forEach(zn => {
+      const n = zn.ring.length - 1; const cxy = [zn.ring.slice(0, n).reduce((s, q) => s + q[0], 0) / n, zn.ring.slice(0, n).reduce((s, q) => s + q[1], 0) / n];
+      const p = toPx(cxy); if (p[0] < 40 || p[0] > W - 40 || p[1] < FIG_HB + 20 || p[1] > H - 100) return;
+      const txt = AZR_ZONE[zn.type].short + ' — Rwy ' + zn.end.label; ctx.font = 'bold 13px Arial'; const w = ctx.measureText(txt).width;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(p[0] - w / 2 - 4, p[1] - 12, w + 8, 18); ctx.fillStyle = AZR_ZONE[zn.type].line; ctx.fillText(txt, p[0], p[1] + 2);
+    }));
+    // runway end labels
+    ctx.font = 'bold 12px Arial';
+    dec.forEach(d => d.r.ap.ends.forEach(e => { const p = toPx(azrOffset(e.pt, -e.u[0] * 600, -e.u[1] * 600)); if (p[0] < 10 || p[0] > W - 10 || p[1] < FIG_HB + 10 || p[1] > H - 90) return; const t = 'Rwy ' + e.label; const w = ctx.measureText(t).width; ctx.fillStyle = 'rgba(17,17,17,0.85)'; ctx.fillRect(p[0] - w / 2 - 4, p[1] - 11, w + 8, 16); ctx.fillStyle = '#fff'; ctx.fillText(t, p[0], p[1] + 2); }));
+    figDrawSite(base, z.site, z.center);
+    // distance to the nearest zone when outside
+    dec.forEach(d => {
+      if (d.r.hit || !d.r.nearest || !d.r.nearest.near) return;
+      const a = toPx(d.r.nearest.near[0]), bb = toPx(d.r.nearest.near[1]);
+      ctx.setLineDash([8, 6]); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(bb[0], bb[1]); ctx.stroke(); ctx.setLineDash([]);
+      const t = figFmtFt(d.r.nearest.distFt) + ' to ' + AZR_ZONE[d.r.nearest.type].short; ctx.font = 'bold 12px Arial'; const w = ctx.measureText(t).width;
+      const mx = (a[0] + bb[0]) / 2, my = (a[1] + bb[1]) / 2; ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(mx - w / 2 - 4, my - 22, w + 8, 17); ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.fillText(t, mx, my - 9);
+    });
+    const legend = [{ label: 'Subject Property — ' + figSiteLabel(proj, z.center), draw: (c, x, y, w, h) => { c.fillStyle = 'rgba(225,17,17,0.15)'; c.fillRect(x, y, w, h); c.strokeStyle = '#e11'; c.lineWidth = 3; c.strokeRect(x, y, w, h); } }];
+    ['rpz', 'cz', 'apz1', 'apz2'].filter(t => types.has(t)).forEach(t => legend.push({ label: AZR_ZONE[t].name + (t === 'cz' ? ' (CZ)' : t === 'rpz' ? ' (RPZ)' : ''), draw: (c, x, y, w, h) => { c.fillStyle = AZR_ZONE[t].fill; c.fillRect(x, y, w, h); c.strokeStyle = AZR_ZONE[t].line; c.lineWidth = 2.5; c.strokeRect(x, y, w, h); } }));
+    legend.push({ label: 'Runway (FAA)', draw: (c, x, y, w, h) => { c.fillStyle = 'rgba(55,65,81,0.9)'; c.fillRect(x, y + 3, w, h - 6); } });
+    const srcLines = ['FAA NASR runways (FAA ADIP)'];
+    dec.forEach(d => {
+      const mil = d.kind === 'mil'; const what = mil ? d.name + ' Clear Zone / APZ limits' : d.name + ' Runway Protection Zone limits';
+      if (d.src === 'standard') { const p = mil ? AZR_MIL_PRESETS[azrV('azr_mil_preset')] : AZR_CIV_PRESETS[azrV('azr_civ_preset')]; srcLines.push(what + ': ' + (mil ? 'DoD standard dimensions' + (p && p.short ? ', ' + p.short : '') + ' (DoDI 4165.57)' : 'FAA standard dimensions (AC 150/5300-13B)' + (p && p.rpz ? ', ' + p.label : ''))); }
+      else srcLines.push(what + ': ' + d.mapTitle);
+    });
+    await figFurnish(base, {
+      title: 'Airport Hazards — Zone Review Map',
+      meta: figProjectMeta(proj, z.center),
+      subtitle: '24 CFR Part 51 Subpart D · §58.6(d) · Subject Property relative to the ' + (z.mil ? 'Clear Zone and Accident Potential Zones' : '') + (z.mil && z.civ ? ' and the ' : '') + (z.civ ? 'Runway Protection Zone' : ''),
+      legend, sources: srcLines
+    });
+    // Result banner (top-left, under the header)
+    const overall = azrOverall(dec), ok = overall !== 'no';
+    let bx = 16, by = FIG_HB + 14; const bw = Math.min(W * 0.56, 820);
+    ctx.font = '13px Arial';
+    const wrap = (txt, maxW) => { const out = []; let line = ''; String(txt || '').split(/\s+/).forEach(w => { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }); if (line) out.push(line); return out; };
+    const body = []; dec.forEach(d => { wrap(d.line, bw - 28).forEach(l => body.push(l)); if (d.sub) wrap(d.sub, bw - 28).forEach(l => body.push(l)); });
+    const bh = 44 + body.length * 17 + 8;
+    // keep the banner off the Subject Property: top-left, else top-right (under the north arrow), else bottom-right
+    { const sp = toPx(z.center), m = 40;
+      const cands = [[16, FIG_HB + 14], [W - bw - 16, FIG_HB + 96], [W - bw - 16, H - bh - 110]];
+      const free = cands.find(([x, y]) => !(sp[0] > x - m && sp[0] < x + bw + m && sp[1] > y - m && sp[1] < y + bh + m)) || cands[0];
+      bx = free[0]; by = free[1]; }
+    ctx.fillStyle = ok ? 'rgba(240,253,244,0.96)' : 'rgba(254,242,242,0.96)'; ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = ok ? '#15803d' : '#b91c1c'; ctx.fillRect(bx, by, 8, bh);
+    ctx.strokeStyle = ok ? '#15803d' : '#b91c1c'; ctx.lineWidth = 2; ctx.strokeRect(bx, by, bw, bh);
+    ctx.textAlign = 'left'; ctx.font = 'bold 22px Arial'; ctx.fillStyle = ok ? '#15803d' : '#b91c1c'; ctx.fillText(ok ? '✓ ACCEPTABLE' : '✗ NOT ACCEPTABLE', bx + 20, by + 30);
+    ctx.font = '13px Arial'; ctx.fillStyle = '#111'; body.forEach((l, i) => ctx.fillText(l, bx + 20, by + 52 + i * 17));
+    const slug = (proj.projectName || 'Project').replace(/[^A-Za-z0-9_\- ]/g, '').replace(/\s+/g, '_').slice(0, 60);
+    const caption = dec.map(d => d.headline + ': ' + d.line + (d.sub ? ' ' + d.sub : '')).join(' ');
+    figAttach('airport', base.cv, slug + '_Airport_Zone_Review_Map.jpg', caption);
+    figDownloadPdf(base.cv, slug + '_Airport_Zone_Review_Map.pdf');
+    say('✓ Zone Review Map (' + (ok ? 'ACCEPTABLE' : 'NOT ACCEPTABLE') + ') downloaded and attached to Supporting Documents.', ok ? '#2f855a' : '#c53030');
+  } catch (e) {
+    console.warn('[Zone map]', e);
+    say('✗ Zone map failed: ' + e.message, '#c00');
+  }
+}
+document.addEventListener('change', e => { if (e.target && e.target.name === 'exq_airport_scope') { try { azrUpdate(); } catch (x) {} } });
+
 
 // ===== RADON FIGURE — CDC TRACKING NETWORK COUNTY CHOROPLETH (v141) =====
 // Science-based data review per HUD Notice CPD-23-103: pulls the CDC National Environmental Public Health Tracking
@@ -7971,6 +8493,7 @@ AUTHORITIES.forEach(a => {
         ${a.id === 'air' ? `<button class="no-print" onclick="uploadSupportingDoc('air_greenbook')" title="Screenshot or PDF of the Green Book state/county section — embedded in the General Conformity attachment" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">⬆ Green Book page</button>` : ''}
         ${a.id === 'esa' ? `<button class="no-print" onclick="uploadSupportingDoc('esa_ipac')" title="Upload the IPaC Official Species List PDF — embedded in the Section 7 packet and the one you attach to the Claude chat" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">⬆ IPaC list (PDF)</button><button class="no-print" onclick="showEsaClaudePanel()" title="Copy/paste instructions for having Claude read the IPaC list and make the Section 7 determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Review IPaC with Claude</button>` : ''}
         ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportClaudePanel()" title="Copy/paste instructions for having Claude read the airport's RPZ/CZ or APZ map and make the final zone determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Zone review with Claude</button>` : ''}
+        ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportZonePanel()" title="Find the official RPZ / Clear Zone / APZ map, draw the zones off the FAA runway ends, apply 24 CFR 51.303 and make the final Zone Review Map (Acceptable / Not Acceptable)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📐 Zone review map</button>` : ''}
         ${a.id === 'historic' ? `<button class="no-print" onclick="generateNRHPFigure('historic')" title="NPS National Register points and districts around the Subject Property — Step 1 of the SOP (the NR Map)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🗺 National Register Map (NR Map)</button>` : ''}
         ${a.id === 'historic' ? `<button class="no-print" onclick="generateLetter('historic')" title="Generates the Section 106 consultation letter in the state-specific format (DC HPO 5-point / VA DHR ePIX / generic)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📄 106 Letter (state format)</button><button class="no-print" onclick="generateCoverEmail()" title="Generates the matching cover email template (DC HPO / VA DHR)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✉ Cover Email (DC/VA)</button>` : ''}
         <span class="no-print" id="autoStatus_${a.id}" style="font-size:11px;color:var(--gray);"></span>
@@ -7996,6 +8519,87 @@ AUTHORITIES.forEach(a => {
         </div>
         <textarea id="airportClaudePrompt" rows="20" spellcheck="false" style="width:100%;box-sizing:border-box;font:11.5px/1.45 Menlo,Consolas,monospace;color:#1a202c;background:#fff;border:1px solid #c4b5fd;border-radius:4px;padding:8px;"></textarea>
         <div style="font-size:11px;color:#718096;margin-top:4px;">Edit the text freely before copying — e.g. delete the civil or military section if only one applies, or add what you already know about the map.</div>
+      </div>
+    </details>` : ''}
+    ${a.id === 'airport' ? `<details id="airportZonePanel" class="no-print" style="display:none;margin:0 22px 12px;border:1px solid #0f2a44;border-radius:6px;background:#f5f8fc;">
+      <summary style="cursor:pointer;padding:8px 14px;font-weight:700;font-size:12px;color:#0f2a44;list-style:none;">📐 Zone review &amp; final Zone Review Map — RPZ (civil) · Clear Zone / APZ I / APZ II (military) <span style="font-weight:400;color:#4a5568;">· opens automatically when the figure triggers a screening distance</span></summary>
+      <style>#airportZonePanel label{text-transform:none;letter-spacing:0;font-weight:400;font-size:11.5px;color:#2d3748;display:inline;}</style>
+      <div style="padding:4px 16px 12px;font-size:12px;line-height:1.5;color:#2d3748;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+          <button type="button" onclick="azrLoad()" style="background:white;border:1px solid #0f2a44;color:#0f2a44;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">↻ Load runways</button>
+          <span id="azrStatus" style="font-size:11.5px;color:#718096;">Runway ends and zones load from the FAA runway polygons for the airport(s) inside the screening distance.</span>
+        </div>
+
+        <div style="font-weight:700;color:#0f2a44;margin:6px 0 3px;">Step 1 — Find the official zone map</div>
+        <div style="margin-bottom:4px;">HUD recognizes only the zones provided by the airport operator (24 CFR 51.305(b)). Civil → the Airport Layout Plan / RPZ exhibit. Military → the installation's AICUZ study or APZ map (check the shared drive for a copy from a prior AZ-RI review first, e.g. Dover AFB). Attach it so it travels with the ERR:
+          <button type="button" onclick="uploadSupportingDoc('airport')" style="background:white;border:1px solid #0f2a44;color:#0f2a44;padding:2px 9px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">⬆ Attach zone map</button></div>
+
+        <div style="font-weight:700;color:#0f2a44;margin:10px 0 3px;">Step 2 — Draw the zones to match it</div>
+        <div style="margin-bottom:6px;color:#4a5568;">The zones start at the standard dimensions. Line the preview up with the official map — change the dimensions or turn off runway ends that have no zone on the map. If the official map shows curved or split APZs, use 🤖 Zone review with Claude and paste its <b>ZONES</b> line below.</div>
+
+        <div id="azr_mil_box" style="display:none;border:1px solid #cbd5e0;border-radius:5px;background:#fff;padding:8px 10px;margin-bottom:8px;">
+          <div style="font-weight:700;color:#1d4ed8;">Military / joint-use airfield — <span id="azr_mil_title"></span></div>
+          <div id="azr_mil_links" style="margin:3px 0 6px;font-size:11.5px;"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:5px;">
+            <label>Zone set <select data-field="azr_mil_preset" onchange="azrApplyPreset('mil')" style="font-size:11.5px;">${Object.entries(AZR_MIL_PRESETS).map(([k, p]) => `<option value="${k}">${p.label}</option>`).join('')}</select></label>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px;font-size:11.5px;">
+            <label>CZ length (ft) <input type="number" data-field="azr_mil_cz_len" value="3000" oninput="azrMarkCustom('mil')" style="width:70px;"></label>
+            <label>CZ width at rwy end <input type="number" data-field="azr_mil_cz_w1" value="3000" oninput="azrMarkCustom('mil')" style="width:70px;"></label>
+            <label>CZ width at outer edge <input type="number" data-field="azr_mil_cz_w2" value="3000" oninput="azrMarkCustom('mil')" style="width:70px;"></label>
+            <label>APZ I length <input type="number" data-field="azr_mil_apz1_len" value="5000" oninput="azrMarkCustom('mil')" style="width:70px;"></label>
+            <label>APZ I width <input type="number" data-field="azr_mil_apz1_w" value="3000" oninput="azrMarkCustom('mil')" style="width:70px;"></label>
+            <label>APZ II length <input type="number" data-field="azr_mil_apz2_len" value="7000" oninput="azrMarkCustom('mil')" style="width:70px;"></label>
+            <label>APZ II width <input type="number" data-field="azr_mil_apz2_w" value="3000" oninput="azrMarkCustom('mil')" style="width:70px;"></label>
+          </div>
+          <div style="margin-top:5px;font-size:11.5px;"><b>Runway ends with zones:</b> <span id="azr_mil_endsUi"></span><input type="hidden" data-field="azr_mil_ends" value=""></div>
+          <div style="margin-top:5px;font-size:11.5px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <label>Zone limits from <select data-field="azr_mil_src" onchange="azrUpdate()" style="font-size:11.5px;"><option value="official">the official AICUZ / APZ map</option><option value="standard">standard dimensions (official map not available)</option></select></label>
+            <label style="flex:1;min-width:240px;">Map title &amp; date <input type="text" data-field="azr_mil_map" oninput="azrUpdate()" placeholder="e.g. Dover AFB AICUZ Study, Figure 4-2 (2008)" style="width:100%;font-size:11.5px;"></label>
+          </div>
+          <div id="azr_mil_stdwarn" style="display:none;margin-top:4px;font-size:11px;color:#b7791f;">⚠ Standard dimensions only approximate the installation's zones — HUD recognizes the operator-provided zones (24 CFR 51.305(b)). The map and write-up will say the limits are standard DoD dimensions.</div>
+        </div>
+
+        <div id="azr_civ_box" style="display:none;border:1px solid #cbd5e0;border-radius:5px;background:#fff;padding:8px 10px;margin-bottom:8px;">
+          <div style="font-weight:700;color:#d32f2f;">Civil airport — <span id="azr_civ_title"></span></div>
+          <div id="azr_civ_links" style="margin:3px 0 6px;font-size:11.5px;"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:5px;">
+            <label>RPZ set <select data-field="azr_civ_preset" onchange="azrApplyPreset('civ')" style="font-size:11.5px;">${Object.entries(AZR_CIV_PRESETS).map(([k, p]) => `<option value="${k}"${k === 'lt_qtr' ? ' selected' : ''}>${p.label}</option>`).join('')}</select></label>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px;font-size:11.5px;">
+            <label>Starts beyond rwy end (ft) <input type="number" data-field="azr_civ_start" value="200" oninput="azrMarkCustom('civ')" style="width:70px;"></label>
+            <label>RPZ length <input type="number" data-field="azr_civ_len" value="2500" oninput="azrMarkCustom('civ')" style="width:70px;"></label>
+            <label>Inner width <input type="number" data-field="azr_civ_w1" value="1000" oninput="azrMarkCustom('civ')" style="width:70px;"></label>
+            <label>Outer width <input type="number" data-field="azr_civ_w2" value="1750" oninput="azrMarkCustom('civ')" style="width:70px;"></label>
+          </div>
+          <div style="margin-top:5px;font-size:11.5px;"><b>Runway ends with an RPZ:</b> <span id="azr_civ_endsUi"></span><input type="hidden" data-field="azr_civ_ends" value=""></div>
+          <div style="margin-top:5px;font-size:11.5px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <label>Zone limits from <select data-field="azr_civ_src" onchange="azrUpdate()" style="font-size:11.5px;"><option value="official">the official ALP / RPZ exhibit</option><option value="standard">standard FAA dimensions (official map not available)</option></select></label>
+            <label style="flex:1;min-width:240px;">Map title &amp; date <input type="text" data-field="azr_civ_map" oninput="azrUpdate()" placeholder="e.g. BWI Airport Layout Plan, Sheet 3 (2021)" style="width:100%;font-size:11.5px;"></label>
+          </div>
+          <div id="azr_civ_stdwarn" style="display:none;margin-top:4px;font-size:11px;color:#b7791f;">⚠ Standard dimensions only approximate the airport's RPZ — HUD recognizes the operator-provided zones (24 CFR 51.305(b)). The map and write-up will say the limits are standard FAA dimensions.</div>
+        </div>
+
+        <details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:11.5px;color:#44337a;font-weight:600;">Paste zone settings from the Claude chat</summary>
+          <textarea id="azrPaste" rows="3" placeholder="ZONES mil: preset=af_b; cz_len=3000; cz_w1=3000; cz_w2=3000; apz1_len=5000; apz1_w=3000; apz2_len=7000; apz2_w=3000; ends=32,14; consistent=no; map=Dover AFB AICUZ Study, Figure 4-2 (2008)" style="width:100%;box-sizing:border-box;font:11px Menlo,Consolas,monospace;margin-top:4px;"></textarea>
+          <button type="button" onclick="azrApplyPaste()" style="background:#6b46c1;border:none;color:white;padding:3px 12px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">Apply</button> <span id="azrPasteMsg" style="font-size:11px;"></span>
+        </details>
+
+        <div style="font-weight:700;color:#0f2a44;margin:10px 0 3px;">Step 3 — Review &amp; final map</div>
+        <div id="azrQ_npias" style="display:none;margin-bottom:5px;">Is the civil airport an existing <b>commercial service</b> airport in the FAA NPIAS (24 CFR 51.301(c))?
+          <select data-field="azr_civ_npias" onchange="azrUpdate()" style="font-size:11.5px;"><option value="">— answer —</option><option value="yes">Yes — commercial service</option><option value="no">No — general aviation / not in NPIAS as commercial service</option></select></div>
+        <div id="azrQ_assure" style="display:none;margin-bottom:5px;"><label><input type="checkbox" data-field="azr_assurance" onchange="azrUpdate()"> The project will <b>not be frequently used or occupied by people</b>, and the airport operator's written assurance (no plans to acquire the land) will be obtained — §51.303(a)(2)</label></div>
+        <div id="azrQ_apz" style="display:none;margin-bottom:5px;">Is the proposed use <b>generally consistent</b> with the DoD Land Use Compatibility Guidelines for that APZ (DoDI 4165.57; §51.303(b))?
+          <select data-field="azr_apz_consistent" onchange="azrUpdate()" style="font-size:11.5px;"><option value="">— answer —</option><option value="yes">Yes — generally consistent</option><option value="no">No — not consistent</option></select>
+          <span style="color:#718096;font-size:11px;">(e.g. residential uses are generally not compatible in APZ I; low-density single-family can be in APZ II)</span></div>
+        <div id="azrResult" style="margin:6px 0;"></div>
+        <canvas id="azrPreview" width="760" height="380" style="width:100%;max-width:760px;border:1px solid #cbd5e0;border-radius:4px;background:#f8fafc;"></canvas>
+        <div style="font-size:11px;color:#718096;margin:2px 0 8px;">Preview only (no basemap). The final map adds the basemap, AZ-RI header, project / site / grant numbers, legend and sources.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button type="button" onclick="generateAirportZoneMap()" style="background:#0f2a44;border:none;color:white;padding:5px 14px;border-radius:3px;font-size:11.5px;cursor:pointer;font-weight:700;">🗺 Create Zone Review Map (PDF)</button>
+          <button type="button" onclick="azrInsertWriteUp()" style="background:white;border:1px solid #0f2a44;color:#0f2a44;padding:5px 12px;border-radius:3px;font-size:11.5px;cursor:pointer;font-weight:600;">✍ Insert write-up &amp; set status</button>
+          <span id="azrActMsg" style="font-size:11.5px;"></span>
+        </div>
       </div>
     </details>` : ''}
     ${a.id === 'air' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
@@ -12176,7 +12780,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v146 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v147 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v147: Airport Hazards — 📐 Zone review map: links to the official RPZ / AICUZ map, draws RPZ / CZ / APZ I / APZ II off the FAA runway ends (standard FAA / DoD dimensions, adjustable to the official map or set from the Claude chat\'s ZONES line), tests the Subject Property boundary, applies 24 CFR 51.303, inserts the write-up and makes the final Zone Review Map stamped ACCEPTABLE / NOT ACCEPTABLE.');
   console.log('  v135: FIGURES — every map now carries a Sources footer (thematic data + Subject Property boundary source + basemap) and a labelled header line: Project · Site address · Grant No(s). (all grant numbers from the funding sources; falls back to HEROS no., then the funding program when no grant number is entered). Split-pane scale bars moved up clear of the footer.');
   console.log('  v134: Airport Hazards — heliports, seaplane bases and private-use strips are no longer screened as civil airports (24 CFR 51.301(c): civil airport = commercial service airport in the NPIAS). They draw as gray reference dots with no distance; findings/Ref list only public-use airports and military airfields, with a NPIAS-confirmation note when a civil airport is inside 2,500 ft. SOP text corrected to match.');
   console.log('  v115: Farmland Protection figure — Census Urban Area test on the parcel + NRCS SSURGO map units (live Soil Data Access query) colored by farmland class, map-unit symbols, on-site class percentages; finding routes to Write Up 2 / 3 / 4-5.');
