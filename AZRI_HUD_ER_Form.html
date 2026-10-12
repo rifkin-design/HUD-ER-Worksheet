@@ -293,6 +293,11 @@
   #sideNav a.nav-sub.st-awaiting .nav-dot { background: #b7791f; }
   #sideNav a.nav-sub.st-na .nav-dot, #sideNav a.nav-sub.st-exempt .nav-dot { background: #718096; }
   .authority { scroll-margin-top: 14px; }
+  /* (v152) collapsible authority cards — screen only; printing always shows everything */
+  @media screen { .authority.auth-collapsed > :not(.authority-header) { display: none !important; } }
+  .auth-collapse-btn { background: none; border: 1px solid var(--border,#cbd5e0); color: var(--azri-navy,#0f2a44); width: 22px; height: 22px; border-radius: 4px; font-size: 12px; line-height: 1; cursor: pointer; margin-right: 8px; vertical-align: middle; padding: 0; }
+  .auth-collapse-btn:hover { background: var(--gray-bg,#f1f5f9); }
+  .auth-collapse-all { background: white; border: 1px solid var(--azri-navy,#0f2a44); color: var(--azri-navy,#0f2a44); padding: 2px 9px; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: 600; margin-left: 6px; text-transform: none; letter-spacing: 0; }
   #sideNavReopen {
     position: fixed; top: 84px; left: 0; z-index: 1100; display: none;
     background: var(--azri-navy, #0f2a44); color: #fff; border: none; border-radius: 0 8px 8px 0;
@@ -602,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v151</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v152</div>
   </div>
 </header>
 
@@ -6603,7 +6608,7 @@ const MAP_GENERATORS = {
   wetlands:  { fn: 'generateWetlandsFigure', label: '🗺 Wetlands Figure (USFWS NWI)' },
   wsr:       { fn: 'generateWSRFigure', label: '🗺 Wild & Scenic Rivers Figure (NWSRS + NPS NRI)' },
   noise:     { fn: 'generateNoiseScreeningFigure', label: '🗺 Noise Screening Figure (roads 1,000 ft · rail 3,000 ft · airports 15 mi)' },
-  esa:       { fn: 'generateESAConsultation', label: '📄 ESA Section 7 Packet (effect determination)' },
+  // esa: Section 7 packet button removed in v152 — AZ-RI prepares the Section 7 packet itself (generateESAConsultation is kept, just not on the card)
   historic:  { fn: 'generateHistoricConsultation', label: '📄 Section 106 Packet (SHPO submittal)' },
   czm:       { fn: 'generateCZMConsultation', label: '📄 CZM Consistency Packet' },
   explos:    { fn: 'generateExplosAttachment', label: '📄 AST / ASD Calculation Attachment (HEROS)' },
@@ -8572,6 +8577,19 @@ function copyClientQuestions() {
 
 function closeClientQuestions() { document.getElementById('clientQuestionsModal').style.display = 'none'; }
 
+// ===== (v152) COLLAPSIBLE AUTHORITY CARDS =====
+// ▾ / ▸ on each card hides everything below the header (status buttons and tool buttons stay visible).
+// Remembered per browser (localStorage); printing always shows the full card.
+function authCollapsedSet() { try { return new Set(JSON.parse(localStorage.getItem('azriAuthCollapsed') || '[]')); } catch (e) { return new Set(); } }
+function setAuthCollapsed(id, on, noSave) {
+  const card = document.getElementById('auth_' + id); if (!card) return;
+  card.classList.toggle('auth-collapsed', !!on);
+  const b = document.getElementById('authCollapse_' + id); if (b) { b.textContent = on ? '▸' : '▾'; b.title = on ? 'Expand this section' : 'Collapse this section'; }
+  if (!noSave) { const st = authCollapsedSet(); on ? st.add(id) : st.delete(id); try { localStorage.setItem('azriAuthCollapsed', JSON.stringify([...st])); } catch (e) {} }
+}
+function toggleAuthCollapse(id) { const card = document.getElementById('auth_' + id); setAuthCollapsed(id, !(card && card.classList.contains('auth-collapsed'))); }
+function setAllAuthCollapsed(on) { AUTHORITIES.forEach(a => setAuthCollapsed(a.id, on, true)); try { localStorage.setItem('azriAuthCollapsed', JSON.stringify(on ? AUTHORITIES.map(a => a.id) : [])); } catch (e) {} }
+
 // ===== RENDER AUTHORITIES =====
 const authContainer = document.getElementById('authorities-container');
 AUTHORITIES.forEach(a => {
@@ -8586,6 +8604,7 @@ AUTHORITIES.forEach(a => {
       ? 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR §50.4 & 58.5'
       : 'HUD HOUSING ENVIRONMENTAL STANDARDS';
     if (a.id === 'housing_map') hdr.classList.add('map-section');
+    hdr.insertAdjacentHTML('beforeend', '<span class="no-print" style="float:right;"><button type="button" class="auth-collapse-all" onclick="setAllAuthCollapsed(true)">Collapse all</button><button type="button" class="auth-collapse-all" onclick="setAllAuthCollapsed(false)">Expand all</button></span>');
     authContainer.appendChild(hdr);
   }
   const div = document.createElement('div');
@@ -8614,7 +8633,7 @@ AUTHORITIES.forEach(a => {
   div.innerHTML = `
     <div class="authority-header">
       <div>
-        <div class="authority-title"><span class="auth-num">${AUTHORITIES.filter(x => !/^ea_/.test(x.id)).indexOf(a) + 1}</span>${a.name}</div>
+        <div class="authority-title"><button type="button" class="auth-collapse-btn no-print" onclick="toggleAuthCollapse('${a.id}')" title="Collapse / expand this section" id="authCollapse_${a.id}">▾</button><span class="auth-num">${AUTHORITIES.filter(x => !/^ea_/.test(x.id)).indexOf(a) + 1}</span>${a.name}</div>
         <div class="authority-cite" data-auth-cite="${a.id}">${a.cite}</div>
         <div class="authority-help">${a.help}</div>
       </div>
@@ -9135,6 +9154,13 @@ AUTHORITIES.forEach(a => {
     sub.classList.add('auth-sub'); div.appendChild(sub);
   }
 });
+// (v152) restore each card's collapsed state; any tool / Review Questions button in a collapsed header re-opens the card
+try { const st = authCollapsedSet(); AUTHORITIES.forEach(a => { if (st.has(a.id)) setAuthCollapsed(a.id, true, true); }); } catch (e) {}
+document.addEventListener('click', e => {
+  const btn = e.target && e.target.closest && e.target.closest('.authority-header button:not(.auth-collapse-btn)');
+  if (!btn) return; const card = btn.closest('.authority');
+  if (card && card.classList.contains('auth-collapsed')) setAuthCollapsed(card.dataset.authId, false);
+}, true);
 
 // (v95) Build every authority's Review Questions panel OPEN inside its section so the reviewer
 // sees per-section which authorities may be exempt and why (and saved answers restore on load).
@@ -12932,7 +12958,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v151 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v152 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v152: ESA Section 7 Packet button removed from Endangered Species (AZ-RI prepares it); every authority card gets a ▾/▸ collapse toggle (plus Collapse all / Expand all on the group headers), remembered per browser, always expanded when printing.');
   console.log('  v151: APZ land-use check — new option "ONE single-family home on an existing lot of record (infill)": generally consistent in APZ II with the infill rationale (minimum use of the lot; applicant does not control surrounding density) plus an optional supporting-basis line in the write-up.');
   console.log('  v150: Zone review — built-in DoD APZ land-use compatibility table (SLUCM uses, density and floor-area-ratio limits); pre-fills the use from the project description and acreage from the parcel, and answers §51.303(b) automatically with the reason in the map banner and write-up.');
   console.log('  v149: Paste zone settings — clearer example text, an empty-box message, and ZONES lines that wrap across lines are accepted.');
