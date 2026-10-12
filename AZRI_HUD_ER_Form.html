@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v152</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v153</div>
   </div>
 </header>
 
@@ -1917,7 +1917,7 @@ const AUTHORITY_SOP = {
       <ol style="margin:6px 0 6px 18px;padding:0;">
         <li><b>National Register map.</b> Open the <a href="https://www.nps.gov/subjects/nationalregister/data-downloads.htm" target="_blank" rel="noopener">NPS National Register</a> / <a href="https://npgallery.nps.gov/NRHP/SearchResults?view=list" target="_blank" rel="noopener">NRHP map viewer ("NR Map")</a> and check whether the Subject Property or anything in the APE is listed/eligible. Or click <b>🗺 National Register Map (NR Map)</b> on this card — it pulls the NPS National Register listed properties and districts, draws them with distances, downloads the PDF, attaches it and fills the listed-resources field.</li>
         <li><b>Identify the SHPO contact.</b> Confirm the current reviewer in the <a href="https://ncshpo.org/directory/" target="_blank" rel="noopener">NCSHPO directory</a> (ncshpo.org/directory), then use the state-specific portal/contact below.</li>
-        <li><b>TDAT (only if ground disturbance).</b> If the scope includes ground disturbance, run HUD's <a href="https://egis.hud.gov/tdat/" target="_blank" rel="noopener">Tribal Directory Assessment Tool ("TDAT")</a> (egis.hud.gov/tdat) to identify Tribes with interest in the project area, and notify the listed THPOs separately. No ground disturbance → no TDAT/Tribal notice needed.</li>
+        <li><b>TDAT (only if ground disturbance).</b> If the scope includes ground disturbance, run HUD's <a href="https://egis.hud.gov/tdat/" target="_blank" rel="noopener">Tribal Directory Assessment Tool ("TDAT")</a> (egis.hud.gov/tdat) to identify Tribes with interest in the project area, and notify the listed THPOs separately. <i>(v153: the 📄 Section 106 Packet now looks the project county up in TDAT automatically and lists the Tribes and their TDAT contacts.)</i> No ground disturbance → no TDAT/Tribal notice needed.</li>
         <li><b>Define the APE</b> as the project parcel(s) plus any area where ground-disturbing, visual, or atmospheric/audible effects could occur.</li>
       </ol>
     </div>
@@ -6374,6 +6374,24 @@ async function generateNRHPFigure(authId) {
 }
 
 // ---------- 3) Section 106 (SHPO submittal) ----------
+// ===== (v153) HUD TDAT — tribes with an interest in the project county (HUD eGIS TDAT MapServer) =====
+// Layer 5 = tribe-by-county (GEOID = 5-digit county FIPS), layer 4 = tribal contacts (by TRIBAL_ID). County from Census TIGERweb.
+const TDAT_BASE = 'https://egis.hud.gov/arcgis/rest/services/tdat/TDAT/MapServer/';
+async function tdatLookup(center) {
+  const q = (layer, params) => fetch(TDAT_BASE + layer + '/query?' + new URLSearchParams(Object.assign({ f: 'json', returnGeometry: 'false' }, params))).then(r => r.json());
+  const cj = await (await fetch(TIGER_COUNTIES + '?' + new URLSearchParams({ f: 'json', geometry: center[0] + ',' + center[1], geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'GEOID,NAME', returnGeometry: 'false' }))).json();
+  const cty = ((cj.features || [])[0] || {}).attributes; if (!cty) throw new Error('county not found');
+  const a = await q(5, { where: "GEOID='" + cty.GEOID + "'", outFields: 'TRIBAL_ID,TRIBAL_NAME,COUNTY_NAME,STATE_NAME' });
+  if (a.error) throw new Error(a.error.message || 'TDAT query failed');
+  const rows = a.features || [];
+  const ids = [...new Set(rows.map(f => f.attributes.TRIBAL_ID))];
+  let contacts = [];
+  if (ids.length) { const c = await q(4, { where: 'TRIBAL_ID IN (' + ids.join(',') + ')', outFields: 'TRIBAL_ID,TRIBAL_NAME,CONTACT_NAME,TITLE,MAILING_INFO,WORK_PHONE,EMAIL,THPO' }); contacts = (c.features || []).map(f => f.attributes); }
+  const tribes = ids.map(id => { const r = rows.find(f => f.attributes.TRIBAL_ID === id).attributes; const cs = contacts.filter(c => c.TRIBAL_ID === id); return { name: r.TRIBAL_NAME, contacts: cs.sort((x, y) => (/^y|1|true/i.test(String(y.THPO)) ? 1 : 0) - (/^y|1|true/i.test(String(x.THPO)) ? 1 : 0)) }; }).sort((x, y) => x.name.localeCompare(y.name));
+  const county = (rows[0] ? rows[0].attributes.COUNTY_NAME + ' County, ' + rows[0].attributes.STATE_NAME : cty.NAME);
+  return { county, geoid: cty.GEOID, tribes, date: new Date().toLocaleDateString() };
+}
+
 async function generateHistoricConsultation(authId) {
   authId = authId || 'historic'; const say = packetSay('autoStatus_' + authId);
   const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before generating the Section 106 packet.'); return; }
@@ -6384,6 +6402,9 @@ async function generateHistoricConsultation(authId) {
     const figures = await packetFigures(C, say);
     const nr = window._lastNRHPFigure || null;
     const nrDocs = ((typeof supportingDocs !== 'undefined' && supportingDocs[authId]) || []).filter(d => /NR_Map/i.test(d.name));
+    const nrCap = (nrDocs[0] && nrDocs[0].caption) || '';
+    let tdat = null;
+    if (ground === 'yes') { say('Looking up Tribes in HUD TDAT…'); try { tdat = await tdatLookup(C.center); window._lastTDAT = tdat; } catch (e) { console.warn('[TDAT]', e); } }
     say('Writing the Section 106 packet…');
     const P = await pkNewDoc('NHPA Section 106 - Project Submittal', C.meta);
     // (v145) Kept simple: no recipient block, intro, APE figure, request or signature — the cover email / state portal carry
@@ -6393,14 +6414,21 @@ async function generateHistoricConsultation(authId) {
     pkH1(P, 'Identification of Historic Properties');
     pkKV(P, [
       ['Structures on the property', C.g('packet_yearBuilt') ? 'Existing structure(s) built circa ' + C.g('packet_yearBuilt') + (age === 'yes' ? ' (50+ years old)' : age === 'no' ? ' (under 50 years old)' : '') : (age === 'no' ? 'No structures 50 years old or older (or vacant site)' : '[year built]')],
-      ['National Register (NPS NR Map)', nr ? nr.findings : (C.g('hist_nrhp') || 'Run the National Register Map on this card')],
-      ['State inventory (listed / eligible / surveyed)', C.g('hist_nrhp') || '[state inventory results]'],
-      ['Previous surveys / SHPO file numbers', C.g('hist_priorSurvey')],
-      ['Consulting parties', C.g('hist_parties')],
-      ['Tribes notified (HUD TDAT)', C.g('hist_tribes') ? C.g('hist_tribes').split(/\n/).filter(Boolean).join('; ') : (ground === 'yes' ? '[paste the HUD TDAT list]' : 'Not applicable - no ground disturbance')]
+      ['National Register (NPS NR Map)', nr ? nr.findings : (nrCap || 'National Register map attached')],
+      ['Tribes with an interest in the county (HUD TDAT)', ground !== 'yes' ? 'Not applicable - no ground disturbance' : (tdat ? (tdat.tribes.length ? tdat.tribes.map(t => t.name).join('; ') + ' (' + tdat.county + ', HUD TDAT ' + tdat.date + ')' : 'None listed for ' + tdat.county + ' (HUD TDAT ' + tdat.date + ')') : 'HUD TDAT lookup unavailable - run TDAT at egis.hud.gov/tdat for the project county')]
     ]);
+    if (ground === 'yes' && tdat && tdat.tribes.length) {
+      pkH1(P, 'Tribal Consultation - HUD Tribal Directory Assessment Tool (TDAT)');
+      pkP(P, 'The undertaking involves ground disturbance. The following federally recognized Tribes have identified ' + tdat.county + ' as an area of interest in HUD\'s Tribal Directory Assessment Tool (TDAT, accessed ' + tdat.date + ') and are being notified:');
+      tdat.tribes.forEach(t => {
+        pkH2(P, t.name);
+        const cs = t.contacts.slice(0, 3);
+        if (!cs.length) pkP(P, 'No contact listed in TDAT.', { italic: true });
+        cs.forEach(c => pkP(P, [c.CONTACT_NAME, c.TITLE].filter(Boolean).join(', ') + (/^y|1|true/i.test(String(c.THPO)) ? ' (THPO)' : '') + (c.MAILING_INFO ? ' - ' + String(c.MAILING_INFO).replace(/\s*\n\s*/g, ', ') : '') + (c.WORK_PHONE ? ' - ' + c.WORK_PHONE : '') + (c.EMAIL ? ' - ' + c.EMAIL : ''), { indent: 10, after: 3 }));
+      });
+    }
     pkH1(P, 'Finding');
-    pkP(P, C.g('hist_finding') || ('In AZ-RI Consultants\' opinion, based on the identification efforts described above, the undertaking will result in ' + (age === 'yes' ? '"no adverse effect" on historic properties (36 CFR 800.5(b))' : '"no historic properties affected" (36 CFR 800.4(d)(1))') + '.'));
+    pkP(P, ('In AZ-RI Consultants\' opinion, based on the identification efforts described above, the undertaking will result in ' + (age === 'yes' ? '"no adverse effect" on historic properties (36 CFR 800.5(b))' : '"no historic properties affected" (36 CFR 800.4(d)(1))') + '.'));
     pkP(P, 'Attachments: National Register map; project information, Figure 1 (site location) and plan sheets (following pages).', { italic: true, size: 9 });
     if (nr && nr.cv) pkImagePage(P, pkCanvasToJpeg(nr.cv), nr.cv.width, nr.cv.height, 'Figure: National Register of Historic Places map (NPS NRHP spatial data).');
     else for (const d of nrDocs) await pkEmbedDoc(P, d, 'National Register map (' + d.name + ')');
@@ -6409,7 +6437,7 @@ async function generateHistoricConsultation(authId) {
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_Section106_Packet.pdf';
     pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency); doc.save(name);
     figFillSourceRef(authId, 'Section 106 submittal packet (' + recip.agency + ')', 'Submitted ' + new Date().toLocaleDateString());
-    say('✓ Section 106 packet generated — PDF downloaded and attached. Submit via ' + (recip.portal ? 'the state portal (see letter)' : 'email to the SHPO') + '; mark Awaiting Response until concurrence arrives.', 'var(--azri-navy)');
+    say('✓ Section 106 packet generated — PDF downloaded and attached. Submit via ' + (recip.portal ? 'the state SHPO portal' : 'email to the SHPO') + '; mark Awaiting Response until concurrence arrives.', 'var(--azri-navy)');
   } catch (e) { console.warn('[106 packet]', e); say('✗ Section 106 packet failed: ' + e.message, 'var(--red,#c00)'); }
 }
 
@@ -8654,7 +8682,6 @@ AUTHORITIES.forEach(a => {
         ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportClaudePanel()" title="Copy/paste instructions for having Claude read the airport's RPZ/CZ or APZ map and make the final zone determination" style="background:white;border:1px solid #6b46c1;color:#6b46c1;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🤖 Zone review with Claude</button>` : ''}
         ${a.id === 'airport' ? `<button class="no-print" onclick="showAirportZonePanel()" title="Find the official RPZ / Clear Zone / APZ map, draw the zones off the FAA runway ends, apply 24 CFR 51.303 and make the final Zone Review Map (Acceptable / Not Acceptable)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📐 Zone review map</button>` : ''}
         ${a.id === 'historic' ? `<button class="no-print" onclick="generateNRHPFigure('historic')" title="NPS National Register points and districts around the Subject Property — Step 1 of the SOP (the NR Map)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">🗺 National Register Map (NR Map)</button>` : ''}
-        ${a.id === 'historic' ? `<button class="no-print" onclick="generateLetter('historic')" title="Generates the Section 106 consultation letter in the state-specific format (DC HPO 5-point / VA DHR ePIX / generic)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">📄 106 Letter (state format)</button><button class="no-print" onclick="generateCoverEmail()" title="Generates the matching cover email template (DC HPO / VA DHR)" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">✉ Cover Email (DC/VA)</button>` : ''}
         <span class="no-print" id="autoStatus_${a.id}" style="font-size:11px;color:var(--gray);"></span>
       </div>
     </div>
@@ -8830,20 +8857,6 @@ AUTHORITIES.forEach(a => {
         <div><label>Ground disturbance (acres)</label><input type="text" data-field="esa_disturbedAcres" placeholder="e.g., 0.6"></div>
         <div><label>Existing site conditions (one line)</label><input type="text" data-field="esa_existingUse" placeholder="e.g., vacant 2-story commercial building with paved lot; mowed lawn, no forest or wetlands"></div>
         <div><label>Designated critical habitat in project area</label><input type="text" data-field="esa_critHab" placeholder="auto-filled from IPaC when found; e.g., None designated"></div>
-      </div>
-    </details>` : ''}
-    ${a.id === 'historic' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
-      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 106 packet inputs <span style="font-weight:400;color:var(--gray);">(inventory results, Tribal list; shared project facts come from 1125)</span></summary>
-      <div class="field-grid" style="margin-top:10px;">
-        <div><label>Ground disturbance (acres)</label><input type="text" data-field="hist_disturbedAcres" placeholder="e.g., 0.6"></div>
-        <div><label>Max excavation depth (ft)</label><input type="text" data-field="hist_excavDepthFt" placeholder="e.g., 8"></div>
-        <div><label>Year built (existing structures)</label><input type="text" data-field="hist_yearBuilt" placeholder="defaults to the parcel record"></div>
-        <div class="full"><label>State inventory results — NRHP-listed / eligible resources or historic districts near the site <span style="font-weight:400;color:var(--gray);">(the NR Map fills the listed ones; add MEDUSA / CHRIS / HistoryQuest / V-CRIS / PA-SHARE eligible results)</span></label><input type="text" data-field="hist_nrhp" placeholder="e.g., None in MEDUSA / CHRIS / PA-SHARE within the APE; or list resource names and inventory numbers"></div>
-        <div class="full"><label>Previous surveys / SHPO file numbers</label><input type="text" data-field="hist_priorSurvey"></div>
-        <div class="full"><label>Consulting parties (local government, historical society, applicant)</label><input type="text" data-field="hist_parties"></div>
-        <div class="full"><label>Tribes to notify (paste the HUD TDAT list, one per line — required when there is ground disturbance)</label><textarea data-field="hist_tribes" style="min-height:50px;"></textarea></div>
-        <div class="full"><label>Proposed finding override (optional)</label><textarea data-field="hist_finding" style="min-height:44px;" placeholder="Default: 'no historic properties affected' (no 50+ yr structures) or 'no adverse effect' (50+ yr structure present)"></textarea></div>
-        <div class="full"><label>SHPO file no. (if assigned)</label><input type="text" data-field="hist_shpoFile"></div>
       </div>
     </details>` : ''}
     ${a.id === 'czm' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
@@ -12958,7 +12971,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v152 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v153 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v153: Historic Preservation — removed the Section 106 packet inputs panel and the 106 Letter / Cover Email buttons; the Section 106 packet now looks up the Tribes for the project county in HUD TDAT (when there is ground disturbance) and lists them with their TDAT contacts.');
   console.log('  v152: ESA Section 7 Packet button removed from Endangered Species (AZ-RI prepares it); every authority card gets a ▾/▸ collapse toggle (plus Collapse all / Expand all on the group headers), remembered per browser, always expanded when printing.');
   console.log('  v151: APZ land-use check — new option "ONE single-family home on an existing lot of record (infill)": generally consistent in APZ II with the infill rationale (minimum use of the lot; applicant does not control surrounding density) plus an optional supporting-basis line in the write-up.');
   console.log('  v150: Zone review — built-in DoD APZ land-use compatibility table (SLUCM uses, density and floor-area-ratio limits); pre-fills the use from the project description and acreage from the parcel, and answers §51.303(b) automatically with the reason in the map banner and write-up.');
