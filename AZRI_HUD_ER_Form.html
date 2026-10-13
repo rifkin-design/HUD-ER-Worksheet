@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v154</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v155</div>
   </div>
 </header>
 
@@ -1445,9 +1445,11 @@
     <label style="font-size:12px;display:inline-flex;gap:6px;align-items:center;margin-bottom:8px;"><input type="checkbox" data-field="cr_includeEmpty" onchange="crRefreshAppendices()"> Give every authority an appendix (authorities with no documents get a "no supporting documentation required" page)</label>
     <div id="crApxList"></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+      <button type="button" id="crRegenBtn" onclick="regenerateAllAttachments()" title="Re-run every generated map and packet already attached, using the current project name, address, grant and other 1125 details. Replaces the old generated copies; your own uploaded files are left alone." style="background:#fff;color:#0f2a44;font-weight:700;border:1px solid #0f2a44;padding:8px 16px;border-radius:4px;cursor:pointer;">⟳ Regenerate all figures &amp; packets</button>
       <button type="button" onclick="buildClientReportPdf()" style="background:#0f2a44;color:#fff;font-weight:700;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">📄 Build Client Report (PDF)</button>
       <span id="crStatus" style="font-size:12px;color:#718096;"></span>
     </div>
+    <div id="crRegenStatus" style="font-size:12px;color:#718096;margin-top:6px;line-height:1.45;"></div>
   </div>
 </section>
 
@@ -3556,13 +3558,95 @@ async function figFurnish(base, o) {
 function figAttach(authId, canvas, name, caption) {
   const data = canvas.toDataURL('image/jpeg', 0.9);
   if (typeof supportingDocs === 'undefined') return data;
-  if (!supportingDocs[authId]) supportingDocs[authId] = [];
-  supportingDocs[authId] = supportingDocs[authId].filter(d => !(d.auto && d.name === name));
-  supportingDocs[authId].push({ name, size: Math.round(data.length * 0.75), type: 'image/jpeg', uploadedAt: new Date().toISOString(), data, auto: true, caption: caption || '' });
+  supDocPutAuto(authId, { name, size: Math.round(data.length * 0.75), type: 'image/jpeg', uploadedAt: new Date().toISOString(), data, auto: true, caption: caption || '' });
   if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId);
   return data;
 }
+
+// ===== (v155) AUTO-GENERATED DOCUMENT KINDS + "REGENERATE ALL" =====
+// Generated files are named <ProjectName>_<Kind>. When the project name (or anything else in the figure
+// header) changes, a regenerated file must REPLACE the earlier copy even though its name changed — so
+// auto docs are matched by kind (filename suffix), not by full name. Reviewer-uploaded files (no .auto)
+// are never touched.
+const REGEN_KINDS = [
+  { suffix: '_Airport_Hazards_Map.jpg',            auth: 'airport',   label: 'Airport Hazards Map',            run: () => generateAirportFigure('airport') },
+  { suffix: '_Airport_Zone_Review_Map.jpg',        auth: 'airport',   label: 'Airport Zone Review Map',        run: () => generateAirportZoneMap() },
+  { suffix: '_CBRS_Map.jpg',                       auth: 'cbra',      label: 'CBRS Map',                       run: () => generateCBRSFigure('cbra') },
+  { suffix: '_FIRM_Map.jpg',                       auth: 'flood_ins', label: 'FIRM Map',                       run: () => generateFloodFigure('flood_ins') },
+  { suffix: '_Air_Quality_General_Conformity.pdf', auth: 'air',       label: 'Air Quality attachment',         run: () => generateAirQualityAttachment('air') },
+  { suffix: '_CZM_Consistency_Packet.pdf',         auth: 'czm',       label: 'CZM Consistency Packet',         run: () => generateCZMConsultation('czm') },
+  { suffix: '_DCMP_Fed_Con_Form.pdf',              auth: 'czm',       label: 'DCMP Fed Con Form',              run: () => fillDCMPForm('czm') },
+  { suffix: '_Radon_County_Map.jpg',               auth: 'contam',    label: 'Radon County Map',               run: () => generateRadonFigure() },
+  { suffix: '_ESA_Section7_Packet.pdf',            auth: 'esa',       label: 'ESA Section 7 Packet',           run: () => generateESAConsultation('esa') },
+  { suffix: '_AST_ASD_Calculations.pdf',           auth: 'explos',    label: 'AST / ASD attachment',           run: () => generateExplosAttachment('explos') },
+  { suffix: '_Farmland_Map.jpg',                   auth: 'farm',      label: 'Farmland Map',                   run: () => generateFarmlandFigure('farm') },
+  { suffix: '_Floodplain_Management_Map.jpg',      auth: 'flood_mgt', label: 'Floodplain Management Map',      run: () => generateFloodFigure('flood_mgt') },
+  { suffix: '_NR_Map.jpg',                         auth: 'historic',  label: 'National Register Map',          run: () => generateNRHPFigure('historic') },
+  { suffix: '_Section106_Packet.pdf',              auth: 'historic',  label: 'Section 106 Packet',             run: () => generateHistoricConsultation('historic') },
+  { suffix: '_Noise_Screening_Map.jpg',            auth: 'noise',     label: 'Noise Screening Map',            run: () => generateNoiseScreeningFigure('noise') },
+  { suffix: '_SSA_Map.jpg',                        auth: 'aquifer',   label: 'Sole Source Aquifer Map',        run: () => generateSSAFigure('aquifer') },
+  { suffix: '_Wetlands_Map.jpg',                   auth: 'wetlands',  label: 'Wetlands Map',                   run: () => generateWetlandsFigure('wetlands') },
+  { suffix: '_Wild_Scenic_Rivers_Map.jpg',         auth: 'wsr',       label: 'Wild & Scenic Rivers Map',       run: () => generateWSRFigure('wsr') },
+];
+function regenKindOf(name) { return REGEN_KINDS.find(k => String(name || '').endsWith(k.suffix)) || null; }
+// Put a generated doc into an authority's list, replacing any earlier auto copy of the same kind
+// (same name OR same suffix) in place — keeps its position and its "include in report" tick.
+function supDocPutAuto(authId, doc) {
+  if (typeof supportingDocs === 'undefined') return;
+  const arr = supportingDocs[authId] || [];
+  const kind = regenKindOf(doc.name);
+  const isOld = d => d && d.auto && (d.name === doc.name || (kind && String(d.name || '').endsWith(kind.suffix)));
+  const firstOld = arr.findIndex(isOld);
+  if (firstOld >= 0 && arr[firstOld].excludeFromReport) doc.excludeFromReport = true;
+  const keep = arr.filter(d => !isOld(d));
+  const pos = firstOld < 0 ? keep.length : arr.slice(0, firstOld).filter(d => !isOld(d)).length;
+  keep.splice(pos, 0, doc);
+  supportingDocs[authId] = keep;
+}
+// Re-run every generator whose figure / packet is already attached, with the current 1125 project
+// fields. Runs quietly: no PDF downloads, no pop-up alerts (they're collected and listed instead).
+async function regenerateAllAttachments() {
+  const btn = document.getElementById('crRegenBtn'), st = document.getElementById('crRegenStatus');
+  const say = (t, c) => { if (st) { st.innerHTML = t; st.style.color = c || '#2d3748'; } };
+  if (typeof supportingDocs === 'undefined') return;
+  const todo = REGEN_KINDS.filter(k => Object.keys(supportingDocs).some(a => (supportingDocs[a] || []).some(d => d.auto && String(d.name || '').endsWith(k.suffix))));
+  if (!todo.length) { say('Nothing to regenerate yet — no generated figures or packets are attached.', '#718096'); return; }
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const slug = figSlug(proj);
+  const origAlert = window.alert, origConfirm = window.confirm;
+  let alerts = [];
+  window._azrBatch = true;
+  window.alert = m => { alerts.push(String(m)); };
+  window.confirm = () => false;
+  if (btn) btn.disabled = true;
+  const done = [], failed = [];
+  try {
+    for (let i = 0; i < todo.length; i++) {
+      const k = todo[i];
+      say('⟳ Regenerating ' + (i + 1) + ' of ' + todo.length + ': ' + k.label + '…', 'var(--azri-navy,#0f2a44)');
+      const start = new Date().toISOString(); alerts = [];
+      try {
+        await Promise.race([Promise.resolve().then(k.run), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out after 2 min')), 120000))]);
+      } catch (e) { alerts.push(e.message || String(e)); }
+      const newName = slug + k.suffix;
+      const ok = (supportingDocs[k.auth] || []).some(d => d.auto && d.name === newName && d.uploadedAt >= start);
+      if (ok) done.push(k.label);
+      else failed.push(k.label + (alerts.length ? ' — ' + alerts[0] : ' — check that card\'s status line'));
+    }
+  } finally {
+    window._azrBatch = false; window.alert = origAlert; window.confirm = origConfirm;
+    if (btn) btn.disabled = false;
+    Object.keys(supportingDocs).forEach(a => { try { renderSupportingDocs(a); } catch (e) {} });
+    if (typeof crRefreshAppendices === 'function') crRefreshAppendices();
+  }
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  say('✓ Regenerated ' + done.length + ' of ' + todo.length + ' with the current project details.' +
+      (failed.length ? '<br><b style="color:#c53030;">Not regenerated (old copy left in place):</b> ' + failed.map(esc).join(' · ') : '') +
+      '<br>Save the review JSON to keep the new versions.', failed.length ? '#b7791f' : 'var(--green,#2f855a)');
+}
+
 function figDownloadPdf(canvas, filename, footerLines) {
+  if (window._azrBatch) return;   // (v155) "Regenerate all" attaches only — no downloads
   if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
@@ -5854,12 +5938,10 @@ async function generateAirQualityAttachment(authId) {
     const fname = slug + '_Air_Quality_General_Conformity.pdf';
     const dataUrl = doc.output('datauristring');
     if (typeof supportingDocs !== 'undefined') {
-      if (!supportingDocs[authId]) supportingDocs[authId] = [];
-      supportingDocs[authId] = supportingDocs[authId].filter(d => !(d.auto && d.name === fname));
-      supportingDocs[authId].push({ name: fname, size: Math.round(dataUrl.length * 0.75), type: 'application/pdf', uploadedAt: new Date().toISOString(), data: dataUrl, auto: true, caption: opinion });
+      supDocPutAuto(authId, { name: fname, size: Math.round(dataUrl.length * 0.75), type: 'application/pdf', uploadedAt: new Date().toISOString(), data: dataUrl, auto: true, caption: opinion });
       if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId);
     }
-    doc.save(fname);
+    if (!window._azrBatch) doc.save(fname);
     const summary = !applies ? 'Attainment for all current NAAQS — General Conformity does not apply → Write Up 3.' : (exceeds.length ? 'Emissions exceed de minimis for ' + exceeds.join(', ') + ' — conformity determination required.' : hits.map(h => h._layer.naaqs + ': ' + h.area_name + ' ' + h.current_status + (h.classification ? ' (' + h.classification + ')' : '')).join('; ') + ' — below de minimis → Write Up 4 + state addendum (' + (stateAbbr || 'state') + ').');
     figFillSourceRef(authId, 'EPA Green Book (Nonattainment Areas) — General Conformity Evaluation', !applies ? 'Attainment, all NAAQS' : hits.map(h => h._layer.naaqs + ' ' + h.current_status).join('; '));
     say('✓ Air Quality attachment generated — PDF downloaded and attached to Supporting Documents. ' + summary, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
@@ -5927,7 +6009,7 @@ function pkImagePage(P, dataUrl, w, h, caption) {
 }
 function pkSignature(P, name, title, firmLine) { pkEnsure(P, 70); P.y += 20; P.doc.setDrawColor(30, 30, 30); P.doc.setLineWidth(0.6); P.doc.line(P.M, P.y, P.M + 220, P.y); P.y += 12; P.doc.setFont('helvetica', 'normal'); P.doc.setFontSize(9.5); P.doc.text(pkSafe(name || '[Name]'), P.M, P.y); P.y += 12; P.doc.text(pkSafe(title || 'Environmental Professional'), P.M, P.y); P.y += 12; P.doc.text(pkSafe(firmLine || 'AZ-RI Consultants'), P.M, P.y); P.y += 18; }
 function pkFinish(P) { pkFooter(P); return P.doc; }
-function pkAttachPdf(authId, doc, name, caption) { const data = doc.output('datauristring'); if (typeof supportingDocs === 'undefined') return; if (!supportingDocs[authId]) supportingDocs[authId] = []; supportingDocs[authId] = supportingDocs[authId].filter(d => !(d.auto && d.name === name)); supportingDocs[authId].push({ name, size: Math.round(data.length * 0.75), type: 'application/pdf', uploadedAt: new Date().toISOString(), data, auto: true, caption: caption || '' }); if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId); }
+function pkAttachPdf(authId, doc, name, caption) { const data = doc.output('datauristring'); if (typeof supportingDocs === 'undefined') return; supDocPutAuto(authId, { name, size: Math.round(data.length * 0.75), type: 'application/pdf', uploadedAt: new Date().toISOString(), data, auto: true, caption: caption || '' }); if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId); }
 function pkCanvasToJpeg(cv, q) { return cv.toDataURL('image/jpeg', q || 0.85); }
 
 // ---------- project / packet inputs ----------
@@ -6148,7 +6230,7 @@ async function generateESAConsultation(authId) {
     for (const d of ((typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || [])) await pkEmbedDoc(P, d, 'IPaC Official Species List (' + d.name + ')');
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_ESA_Section7_Packet.pdf';
     const finding = anyNLAA ? 'NLAA determination for ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ' — send the packet to ' + recip.agency + ' with the cover email → Write Up 3 (pending); switch to Write Up 3 (received) when the response arrives.' : 'No effect for all ' + det.length + ' IPaC species; no concurrence required → Write Up 2 (retain IPaC list + this documentation in the ERR).';
-    pkAttachPdf(authId, doc, name, finding); doc.save(name);
+    pkAttachPdf(authId, doc, name, finding); if (!window._azrBatch) doc.save(name);
     figFillSourceRef(authId, 'USFWS IPaC official species list; Section 7 effect determination packet', det.map(d => d.name + ': ' + d.det).join('; '));
     const radio = document.querySelector('input[name="' + authId + '_status"][value="' + (anyNLAA ? 'awaiting' : 'compliant') + '"]'); if (radio && !document.querySelector('input[name="' + authId + '_status"]:checked')) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
     say('✓ ESA Section 7 packet generated — PDF downloaded and attached. ' + finding, anyNLAA ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
@@ -6292,7 +6374,7 @@ async function generateExplosAttachment(authId) {
     pkP(P, 'Source: ERIS regulatory database report (AST listings, 1-mile radius); HUD ASD Electronic Assessment Tool equations (24 CFR 51.203, Appendix I).' + (mapDocs.length ? ' Attached: ' + mapDocs.map(d => d.name).join('; ') + ' (following pages).' : ''), { italic: true, size: 9 });
     for (const d of mapDocs) await pkEmbedDoc(P, d, 'Tank distance figure (' + d.name + ')');
     const doc = pkFinish(P); const slug = figSlug(proj); const name = slug + '_AST_ASD_Calculations.pdf';
-    pkAttachPdf(authId, doc, name, concl); doc.save(name);
+    pkAttachPdf(authId, doc, name, concl); if (!window._azrBatch) doc.save(name);
     figFillSourceRef(authId, 'ERIS AST DBR (1 mi) + HUD ASD equations — AST / ASD calculation attachment', rows.length ? rows.map(r => 'Map key ' + r.mapKey + ': ' + fmt(r.dist) + ' ft vs ASD ' + fmt(r.asd || hudAsdPeople(r.gal)) + ' ft').join('; ') : (status === 'none' ? 'No ASTs within 1 mile' : remaining + ' sites, all >2,000 ft'));
     say('✓ AST / ASD calculation attachment generated — PDF downloaded and attached to Supporting Documents.', 'var(--green,#2f855a)');
   } catch (e) { console.warn('[AST attachment]', e); say('✗ AST attachment failed: ' + e.message, 'var(--red,#c00)'); }
@@ -6442,7 +6524,7 @@ async function generateHistoricConsultation(authId) {
     pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_Section106_Packet.pdf';
-    pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency); doc.save(name);
+    pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency); if (!window._azrBatch) doc.save(name);
     figFillSourceRef(authId, 'Section 106 submittal packet (' + recip.agency + ')', 'Submitted ' + new Date().toLocaleDateString());
     say('✓ Section 106 packet generated — PDF downloaded and attached. Submit via ' + (recip.portal ? 'the state SHPO portal' : 'email to the SHPO') + '; mark Awaiting Response until concurrence arrives.', 'var(--azri-navy)');
   } catch (e) { console.warn('[106 packet]', e); say('✗ Section 106 packet failed: ' + e.message, 'var(--red,#c00)'); }
@@ -6469,7 +6551,7 @@ async function generateCZMConsultation(authId) {
     pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_CZM_Consistency_Packet.pdf';
-    pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); doc.save(name);
+    pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); if (!window._azrBatch) doc.save(name);
     figFillSourceRef(authId, 'CZMA federal consistency packet (' + recip.agency + ')', (C.g('czm_type') || 'Consistency determination') + ' submitted ' + new Date().toLocaleDateString());
     say('✓ CZM consistency packet generated — PDF downloaded and attached. Mark Awaiting Response until the program responds (Write Up 4/5 or the DE submission write-ups).', 'var(--azri-navy)');
     renderCZMGuide();
@@ -6609,9 +6691,9 @@ async function fillDCMPForm(authId) {
     set('Printed Name', C.reviewer + ', ' + title + ' - ' + AZRI_FIRM.name); set('Date', new Date().toLocaleDateString('en-US'));
     try { form.updateFieldAppearances(await pdf.embedFont(PDFLib.StandardFonts.Helvetica)); } catch (e) {}
     const out = await pdf.save(); const slug = figSlug(proj); const name = slug + '_DCMP_Fed_Con_Form.pdf';
-    const blob = new Blob([out], { type: 'application/pdf' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    const blob = new Blob([out], { type: 'application/pdf' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; if (!window._azrBatch) a.click();
     const dataUrl = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-    if (typeof supportingDocs !== 'undefined') { if (!supportingDocs[authId]) supportingDocs[authId] = []; supportingDocs[authId] = supportingDocs[authId].filter(d => !(d.auto && d.name === name)); supportingDocs[authId].push({ name, size: out.length, type: 'application/pdf', uploadedAt: new Date().toISOString(), data: dataUrl, auto: true, caption: 'DCMP Fed Con Form v2.0 - ' + type }); if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId); }
+    if (typeof supportingDocs !== 'undefined') { supDocPutAuto(authId, { name, size: out.length, type: 'application/pdf', uploadedAt: new Date().toISOString(), data: dataUrl, auto: true, caption: 'DCMP Fed Con Form v2.0 - ' + type }); if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId); }
     say('✓ DCMP Fed Con Form filled — downloaded and attached. Review Policies 5.1–5.25, sign Section VII, then email it with the packet PDF to DNREC_FederalConsistency@delaware.gov.', 'var(--azri-navy)');
     renderCZMGuide();
   } catch (e) { console.warn('[DCMP form]', e); say('✗ DCMP form fill failed: ' + e.message, 'var(--red,#c00)'); }
@@ -13267,7 +13349,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v154 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v155 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v154: Client Report rebuilt in the Limited ESA / HUD Noise format (pdfmake + pdf-lib: green-bordered cover, TOC, AZ-RI header/footer, numbered sections, compliance summary with appendix letters) and one appendix per Law & Authority carrying its Supporting Documents; drag-and-drop document strips on every card plus a Client Report Appendices panel (include / order / remove).');
   console.log('  v153: Historic Preservation — removed the Section 106 packet inputs panel and the 106 Letter / Cover Email buttons; the Section 106 packet now looks up the Tribes for the project county in HUD TDAT (when there is ground disturbance) and lists them with their TDAT contacts.');
   console.log('  v152: ESA Section 7 Packet button removed from Endangered Species (AZ-RI prepares it); every authority card gets a ▾/▸ collapse toggle (plus Collapse all / Expand all on the group headers), remembered per browser, always expanded when printing.');
