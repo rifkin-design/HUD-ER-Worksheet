@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v155</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v156</div>
   </div>
 </header>
 
@@ -6071,18 +6071,19 @@ async function packetCorePages(P, C, figures, opts) {
   pkH1(P, (o.sectionPrefix || '') + 'Project Description');
   pkP(P, packetDescriptionText(C));
   pkKV(P, [
-    ['Project name', C.meta.projectName], ['HUD program / funding', [C.proj.hudProgram, C.meta.grant].filter(Boolean).join(' - ')],
+    ['Project name', C.meta.projectName], ['HUD program / funding', [C.proj.programName || C.proj.fundingProgram || C.proj.hudProgram, C.meta.grant].filter(Boolean).join(' - ')],
     ['Responsible Entity', [C.proj.responsibleEntity, [C.proj.reAddress, C.proj.reCity, C.proj.reState, C.proj.reZip].filter(Boolean).join(', ')].filter(Boolean).join(' - ')],
     ['Applicant / developer', g('packet_applicant')], ['Level of environmental review', C.level], ['Activities', (C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ')],
     ['Construction schedule', [g('packet_startDate') ? 'start ' + g('packet_startDate') : '', g('packet_durationMonths') ? g('packet_durationMonths') + ' months' : ''].filter(Boolean).join(', ')]
   ]);
   pkH1(P, (o.sectionPrefix || '') + 'Site Information');
-  pkP(P, existingConditionsText(C));
+  { const ex = existingConditionsText(C); if (ex && !/^\[Describe/.test(ex)) pkP(P, ex); }   // (v156) no placeholder text in agency packets
   pkKV(P, [
     ['Site address', C.meta.location], ['Coordinates (lat, long)', C.center ? C.center[1].toFixed(6) + ', ' + C.center[0].toFixed(6) : ''],
     ['Parcel / account ID(s)', C.summary.acctids || ''], ['Parcel area (GIS)', C.summary.acres && C.summary.acres !== '(unknown)' ? C.summary.acres + ' acres' : ''],
     ['Jurisdiction', [C.proj.siteCity, C.proj.siteState].filter(Boolean).join(', ')], ['Current use', g('packet_existingUse')], ['Year built', g('packet_yearBuilt')]
   ]);
+  if (typeof o.afterSite === 'function') await o.afterSite(P);   // (v156) authority-specific section (e.g. HUD TDAT Tribes for Section 106)
   // Figure 1 — the uploaded Phase I / limited ESA site location figure (PDF pages rendered via pdf.js, images direct);
   // falls back to the generated location map when nothing has been uploaded
   const fig1 = (typeof supportingDocs !== 'undefined' && supportingDocs.packet_fig1) || [];
@@ -6104,12 +6105,8 @@ async function packetCorePages(P, C, figures, opts) {
       } catch (e) {}
     }
   }
-  pkH1(P, (o.sectionPrefix || '') + 'Contacts');
-  pkKV(P, [
-    ['Environmental consultant', 'AZ-RI Consultants - ' + C.reviewer + (g('packet_preparerTitle') ? ', ' + g('packet_preparerTitle') : '') + (g('packet_preparerPhone') ? ' - ' + g('packet_preparerPhone') : '') + (g('packet_preparerEmail') ? ' - ' + g('packet_preparerEmail') : '')],
-    ['Responsible Entity / Certifying Officer', [C.proj.responsibleEntity, C.proj.certifyingOfficer].filter(Boolean).join(' - ')],
-    ['Applicant / developer contact', g('packet_applicant')]
-  ]);
+  // (v156) Contacts block removed — RE and applicant are already in the Project Description table, and "prepared by" / contact
+  // details belong in the cover letter / email, not the agency packet.
 }
 // Standard figures for the packet: location (split pane, streets), aerial (imagery, parcel-tight), topo (USGS, ~1 mi)
 async function packetFigures(C, say) {
@@ -6489,40 +6486,26 @@ async function generateHistoricConsultation(authId) {
     const age = (typeof rq === 'function') ? rq('historic', 'age') : ''; const ground = (typeof rq === 'function') ? rq('historic', 'ground') : '';
     const recip = (typeof LETTER_TEMPLATES !== 'undefined' && LETTER_TEMPLATES.historic) ? LETTER_TEMPLATES.historic.recipient(C.stateAbbr) : { title: '[SHPO]', agency: 'SHPO', portal: '' };
     const figures = await packetFigures(C, say);
-    const nr = window._lastNRHPFigure || null;
-    const nrDocs = ((typeof supportingDocs !== 'undefined' && supportingDocs[authId]) || []).filter(d => /NR_Map/i.test(d.name));
-    const nrCap = (nrDocs[0] && nrDocs[0].caption) || '';
     let tdat = null;
     if (ground === 'yes') { say('Looking up Tribes in HUD TDAT…'); try { tdat = await tdatLookup(C.center); window._lastTDAT = tdat; } catch (e) { console.warn('[TDAT]', e); } }
     say('Writing the Section 106 packet…');
-    const P = await pkNewDoc('NHPA Section 106 - Project Submittal', C.meta);
-    // (v145) Kept simple: no recipient block, intro, APE figure, request or signature — the cover email / state portal carry
-    // those. This PDF is the undertaking, the site, the identification results (NR Map + state inventory) and the finding.
-    pkH1(P, 'Undertaking'); pkP(P, packetDescriptionText(C));
-    pkP(P, ground === 'yes' ? 'The undertaking involves ground disturbance' + (C.g('packet_disturbedAcres') ? ' of approximately ' + C.g('packet_disturbedAcres') + ' acres' : '') + (C.g('packet_excavDepthFt') ? ' to a depth of about ' + C.g('packet_excavDepthFt') + ' ft' : '') + '.' : 'The undertaking involves no ground disturbance beyond utility tie-ins.');
-    pkH1(P, 'Identification of Historic Properties');
-    pkKV(P, [
-      ['Structures on the property', C.g('packet_yearBuilt') ? 'Existing structure(s) built circa ' + C.g('packet_yearBuilt') + (age === 'yes' ? ' (50+ years old)' : age === 'no' ? ' (under 50 years old)' : '') : (age === 'no' ? 'No structures 50 years old or older (or vacant site)' : '[year built]')],
-      ['National Register (NPS NR Map)', nr ? nr.findings : (nrCap || 'National Register map attached')],
-      ['Tribes with an interest in the county (HUD TDAT)', ground !== 'yes' ? 'Not applicable - no ground disturbance' : (tdat ? (tdat.tribes.length ? tdat.tribes.map(t => t.name).join('; ') + ' (' + tdat.county + ', HUD TDAT ' + tdat.date + ')' : 'None listed for ' + tdat.county + ' (HUD TDAT ' + tdat.date + ')') : 'HUD TDAT lookup unavailable - run TDAT at egis.hud.gov/tdat for the project county')]
-    ]);
-    if (ground === 'yes' && tdat && tdat.tribes.length) {
-      pkH1(P, 'Tribal Consultation - HUD Tribal Directory Assessment Tool (TDAT)');
-      pkP(P, 'The undertaking involves ground disturbance. The following federally recognized Tribes have identified ' + tdat.county + ' as an area of interest in HUD\'s Tribal Directory Assessment Tool (TDAT, accessed ' + tdat.date + ') and are being notified:');
+    // (v156) Basics only — same project-information pages as the CZM packet, plus the HUD TDAT Tribe list when the undertaking
+    // involves ground disturbance. The request, APE, finding and signature go in AZ-RI's cover letter.
+    const P = await pkNewDoc('NHPA Section 106 - Project Information', C.meta);
+    const tdatSection = async P => {
+      if (ground !== 'yes') return;
+      pkH1(P, 'Tribes with an Interest in the Project County - HUD TDAT');
+      if (!tdat) { pkP(P, 'HUD Tribal Directory Assessment Tool (TDAT) lookup unavailable - run TDAT at egis.hud.gov/tdat for the project county.', { italic: true }); return; }
+      if (!tdat.tribes.length) { pkP(P, 'No federally recognized Tribes are listed for ' + tdat.county + ' in HUD\'s Tribal Directory Assessment Tool (TDAT, accessed ' + tdat.date + ').'); return; }
+      pkP(P, 'Federally recognized Tribes listing ' + tdat.county + ' as an area of interest in HUD\'s Tribal Directory Assessment Tool (TDAT, accessed ' + tdat.date + '):');
       tdat.tribes.forEach(t => {
         pkH2(P, t.name);
         const cs = t.contacts.slice(0, 3);
         if (!cs.length) pkP(P, 'No contact listed in TDAT.', { italic: true });
         cs.forEach(c => pkP(P, [c.CONTACT_NAME, c.TITLE].filter(Boolean).join(', ') + (/^y|1|true/i.test(String(c.THPO)) ? ' (THPO)' : '') + (c.MAILING_INFO ? ' - ' + String(c.MAILING_INFO).replace(/\s*\n\s*/g, ', ') : '') + (c.WORK_PHONE ? ' - ' + c.WORK_PHONE : '') + (c.EMAIL ? ' - ' + c.EMAIL : ''), { indent: 10, after: 3 }));
       });
-    }
-    pkH1(P, 'Finding');
-    pkP(P, ('In AZ-RI Consultants\' opinion, based on the identification efforts described above, the undertaking will result in ' + (age === 'yes' ? '"no adverse effect" on historic properties (36 CFR 800.5(b))' : '"no historic properties affected" (36 CFR 800.4(d)(1))') + '.'));
-    pkP(P, 'Attachments: National Register map; project information, Figure 1 (site location) and plan sheets (following pages).', { italic: true, size: 9 });
-    if (nr && nr.cv) pkImagePage(P, pkCanvasToJpeg(nr.cv), nr.cv.width, nr.cv.height, 'Figure: National Register of Historic Places map (NPS NRHP spatial data).');
-    else for (const d of nrDocs) await pkEmbedDoc(P, d, 'National Register map (' + d.name + ')');
-    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
-    await packetCorePages(P, C, figures);
+    };
+    await packetCorePages(P, C, figures, { afterSite: tdatSection });
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_Section106_Packet.pdf';
     pkAttachPdf(authId, doc, name, 'Section 106 submittal to ' + recip.agency); if (!window._azrBatch) doc.save(name);
     figFillSourceRef(authId, 'Section 106 submittal packet (' + recip.agency + ')', 'Submitted ' + new Date().toLocaleDateString());
@@ -6540,15 +6523,9 @@ async function generateCZMConsultation(authId) {
     const scope = (typeof rq === 'function') ? rq('czm', 'scope') : '';
     const figures = await packetFigures(C, say);
     say('Writing the CZM consistency packet…');
-    const P = await pkNewDoc('CZMA Federal Consistency Determination', C.meta);
-    // (v140) Kept simple: recipient block, "on behalf of" intro, determination statement, submittal line and signature were
-    // removed — the cover email (and the DE DCMP form / MD request form) carry those. This PDF is the project narrative + attachments.
-    pkH1(P, 'Project Description'); pkP(P, packetDescriptionText(C));
-    pkH1(P, 'Coastal Effects and Consistency with Enforceable Policies');
-    pkP(P, czmEffectsText(C));
-    if (C.g('czm_policies')) { pkH2(P, 'Enforceable policies reviewed'); pkBullets(P, C.g('czm_policies').split(/\n/).filter(Boolean)); }
-    pkP(P, 'Attachments: project information, Figure 1 (site location) and plan sheets (following pages)' + (supportingDocs && supportingDocs.flood_ins && supportingDocs.flood_ins.length ? '; FIRM figure' : '') + '.', { italic: true, size: 9 });
-    pkFooter(P); P.doc.addPage(); pkHeader(P, false); pkP(P, 'ATTACHMENT - PROJECT INFORMATION, FIGURE 1 AND PLANS', { bold: true, size: 12, after: 10 });
+    // (v156) Basics only — project information, Figure 1 and plans. The consistency determination / request goes in AZ-RI's
+    // cover letter (and the DE DCMP Fed Con Form); no effects narrative or attachment list here.
+    const P = await pkNewDoc('CZMA Federal Consistency - Project Information', C.meta);
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_CZM_Consistency_Packet.pdf';
     pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); if (!window._azrBatch) doc.save(name);
@@ -13349,7 +13326,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v155 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v156 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v154: Client Report rebuilt in the Limited ESA / HUD Noise format (pdfmake + pdf-lib: green-bordered cover, TOC, AZ-RI header/footer, numbered sections, compliance summary with appendix letters) and one appendix per Law & Authority carrying its Supporting Documents; drag-and-drop document strips on every card plus a Client Report Appendices panel (include / order / remove).');
   console.log('  v153: Historic Preservation — removed the Section 106 packet inputs panel and the 106 Letter / Cover Email buttons; the Section 106 packet now looks up the Tribes for the project county in HUD TDAT (when there is ground disturbance) and lists them with their TDAT contacts.');
   console.log('  v152: ESA Section 7 Packet button removed from Endangered Species (AZ-RI prepares it); every authority card gets a ▾/▸ collapse toggle (plus Collapse all / Expand all on the group headers), remembered per browser, always expanded when printing.');
