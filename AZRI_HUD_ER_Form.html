@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v157</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v158</div>
   </div>
 </header>
 
@@ -1442,6 +1442,23 @@
   <h2><span>Client Report — Appendices by Law &amp; Authority</span></h2>
   <div class="card-body">
     <div style="font-size:12.5px;color:#2d3748;line-height:1.5;margin-bottom:10px;">Each Law &amp; Authority with supporting documents gets its own appendix (green divider page, then its documents) in <b>📄 Client Report (PDF)</b>, lettered in authority order. Generated figures and packets land here automatically; <b>drag PDFs or images onto a row</b> (or onto the 📎 strip on that authority's card) to add more. Untick a document to leave it out of the report; ▲ ▼ set the order. Only PDF, JPG and PNG files can be appended.</div>
+    <!-- (v158) Report cover: who the report is prepared for + cover photo (same as the Limited ESA / Noise reports) -->
+    <div style="border:1px solid #cbd5e0;border-radius:6px;padding:10px 12px;margin-bottom:10px;background:#f8fafc;">
+      <div style="font-weight:700;font-size:12.5px;color:#0f2a44;margin-bottom:6px;">Report cover</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;font-size:12px;">
+        <label>Prepared For<br><select data-field="cr_preparedFor" onchange="crRenderCover()" style="width:100%;padding:4px;"><option value="">Responsible Entity (1125)</option><option value="applicant">Applicant / grant recipient (1125)</option><option value="other">Other — enter the name below</option></select></label>
+        <label>Name <span style="color:#718096;">(blank = name from 1125)</span><br><input type="text" data-field="cr_pfName" oninput="crRenderCover()" style="width:100%;padding:4px;"></label>
+        <label>Street address <span style="color:#718096;">(blank = RE address when the RE is chosen)</span><br><input type="text" data-field="cr_pfAddress" oninput="crRenderCover()" placeholder="2311 S Dupont Hwy" style="width:100%;padding:4px;"></label>
+        <label>City, State ZIP<br><input type="text" data-field="cr_pfCity" oninput="crRenderCover()" placeholder="Dover, DE 19901" style="width:100%;padding:4px;"></label>
+      </div>
+      <div id="crPfPreview" style="font-size:11.5px;color:#4a5568;margin-top:6px;"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;">
+        <b>Cover photo</b>
+        <button type="button" onclick="crPickCover()" style="background:#fff;border:1px solid #0f2a44;color:#0f2a44;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">⬆ Add / replace photo</button>
+        <span id="crCoverBox" style="display:inline-flex;align-items:center;gap:8px;"></span>
+        <span style="color:#718096;font-size:11px;">Prints near the bottom of the cover with a black border (JPG / PNG). Also sent to the Noise Worksheet.</span>
+      </div>
+    </div>
     <label style="font-size:12px;display:inline-flex;gap:6px;align-items:center;margin-bottom:8px;"><input type="checkbox" data-field="cr_includeEmpty" onchange="crRefreshAppendices()"> Give every authority an appendix (authorities with no documents get a "no supporting documentation required" page)</label>
     <div id="crApxList"></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
@@ -3132,6 +3149,7 @@ function renderSupportingDocs(authId) {
 }
 
 function renderAllSupportingDocs() {
+  if (typeof crRenderCover === 'function') setTimeout(crRenderCover, 0);   // (v158) cover photo / Prepared For preview after a review loads
   AUTHORITIES.forEach(a => renderSupportingDocs(a.id));
   ['packet_fig1', 'packet_plans', 'packet_photos', 'air_greenbook', 'esa_ipac'].forEach(renderSupportingDocs);
   if (typeof renderCZMGuide === 'function') try { renderCZMGuide(); } catch (e) {}
@@ -6724,18 +6742,21 @@ function noiseHandoffData() {
   const desc = acts.includes('newconst') ? 'new construction of ' + (units > 1 ? units + ' residential units' : units === 1 ? 'a single-family home' : 'residential housing')
              : acts.includes('rehab') ? 'rehabilitation of ' + (units > 1 ? units + ' residential units' : 'an existing residential property') : '';
   const where = [v('siteAddress'), v('siteCity'), county, v('siteState')].filter(Boolean).join(', ');
+  const pf = (typeof crPreparedFor === 'function') ? crPreparedFor() : { name: v('applicant'), l1: '', l2: '' };   // (v158) report goes to the same party as the HUD ER
+  const cov = (typeof crCoverDoc === 'function') ? crCoverDoc() : null;
   const siteDesc = 'The Subject Site ' + (feats.length > 1 ? 'consists of ' + feats.length + ' parcels totaling' : 'is a parcel of') + ' approximately ' + (acres ? (acres < 1 ? acres.toFixed(3) : acres.toFixed(2)) : '[acreage]') + ' acres'
     + (pins.length ? ' (' + (county ? county + ' ' : '') + 'tax parcel' + (pins.length > 1 ? 's ' : ' ') + pins.join(', ') + ')' : '') + ' located at ' + (where || '[address]') + '.';
   return {
-    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v157',
+    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v158',
     proj: {
       PROJECT_NAME: v('projectName'), ADDRESS: v('siteAddress'),
       CITY_STATE_ZIP: [v('siteCity'), [st, v('siteZip')].filter(Boolean).join(' ')].filter(Boolean).join(', '),
       STATE: ['MD', 'DE', 'NC', 'VA', 'PA', 'DC', 'NJ', 'NY'].includes(st) ? st : (st ? 'OTHER' : ''),
-      COUNTY: county, CLIENT: v('applicant'), PREPARER: v('hudPreparer') || fv('reviewer'),
+      COUNTY: county, CLIENT: pf.name.replace(/^\[.*\]$/, '') || v('applicant'), CLIENT_ADDRESS: pf.l1, CLIENT_CITY: pf.l2, PREPARER: v('hudPreparer') || fv('reviewer'),
       PROJECT_TYPE: type, PROJECT_DESC: desc, NAL_BASIS: 'boundary', SITE_DESC: siteDesc
     },
-    boundary: polys.length ? { polys, infos, name: v('siteAddress') || 'Subject Property' } : null
+    boundary: polys.length ? { polys, infos, name: v('siteAddress') || 'Subject Property' } : null,
+    cover: cov ? { name: cov.name, type: cov.type, data: cov.data } : null
   };
 }
 function sendToNoiseWorksheet() {
@@ -6746,7 +6767,8 @@ function sendToNoiseWorksheet() {
   if (!h.boundary) { if (!confirm('No parcel is selected in 1125, so no site boundary will be sent — the Noise Worksheet will need a KML or a parcel click. Continue?')) return; }
   const sameOrigin = /(^|\.)rifkin-design\.github\.io$/i.test(location.hostname);
   if (sameOrigin) {
-    try { localStorage.setItem(NOISE_HANDOFF_KEY, JSON.stringify(h)); } catch (e) { alert('Could not pass the data to the Noise Worksheet (' + e.message + ').'); return; }
+    try { localStorage.setItem(NOISE_HANDOFF_KEY, JSON.stringify(h)); }
+    catch (e) { try { h.cover = null; localStorage.setItem(NOISE_HANDOFF_KEY, JSON.stringify(h)); say('Cover photo too large to pass along — add it in the Noise Worksheet.', '#b7791f'); } catch (e2) { alert('Could not pass the data to the Noise Worksheet (' + e2.message + ').'); return; } }
     window.open(NOISE_WS_URL + '?from=hud-er', '_blank');
     say('➜ Opened the Noise Assessment Worksheet with this project\'s details and boundary. Add the client address, AZ-RI project no. and report date there.');
   } else {
@@ -10056,6 +10078,42 @@ var CR_LOGO_BIG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABdwAAAJeCAYAAAC
 var CR_GREEN = "#658d1b";
 var CR_W = 612, CR_H = 792, CR_M = 54;
 var _crCoverFramed = null;
+// (v158) Cover photo (stored as supportingDocs.cr_cover — not an authority, so never an appendix) and "Prepared For" resolution
+function crCoverDoc() { return ((typeof supportingDocs !== 'undefined' && supportingDocs.cr_cover) || []).find(d => /^image\//i.test(d.type || '')) || null; }
+function crCoverData() { const d = crCoverDoc(); if (!d) return null; return (_crCoverFramed && _crCoverFramed.src === d.data) ? _crCoverFramed.data : d.data; }
+function crPrepareCover() {   // 6 px black frame baked in (htmlToPdfmake can't border an image), capped at 1400 px — same as the Limited ESA
+  const d = crCoverDoc(); if (!d) return Promise.resolve(); if (_crCoverFramed && _crCoverFramed.src === d.data) return Promise.resolve();
+  return new Promise(res => { const im = new Image(); im.onload = () => { const sc = Math.min(1, 1400 / im.width); const w = Math.round(im.width * sc), h = Math.round(im.height * sc), b = 6;
+    const c = document.createElement('canvas'); c.width = w + 2 * b; c.height = h + 2 * b; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, b, b, w, h);
+    _crCoverFramed = { src: d.data, data: c.toDataURL('image/jpeg', 0.9), w: c.width, h: c.height }; res(); }; im.onerror = () => res(); im.src = d.data; });
+}
+function crPickCover() {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/jpeg,image/png';
+  inp.onchange = () => { const f = inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => {
+    const im = new Image(); im.onload = () => {   // downsize to ≤1600 px so the saved review JSON stays small
+      const sc = Math.min(1, 1600 / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); const data = c.toDataURL('image/jpeg', 0.88);
+      supportingDocs.cr_cover = [{ name: f.name.replace(/\.[^.]+$/, '') + '.jpg', size: Math.round(data.length * 0.75), type: 'image/jpeg', uploadedAt: new Date().toISOString(), data }];
+      _crCoverFramed = null; crRenderCover(); if (typeof triggerAutosave === 'function') triggerAutosave(); };
+    im.src = r.result; }; r.readAsDataURL(f); };
+  inp.click();
+}
+function crRemoveCover() { delete supportingDocs.cr_cover; _crCoverFramed = null; crRenderCover(); if (typeof triggerAutosave === 'function') triggerAutosave(); }
+function crPreparedFor(f) {
+  f = f || crFields(); const mode = (f.cr_preparedFor || '').trim();
+  const reAddr = [f.reAddress, [f.reCity, [f.reState, f.reZip].filter(Boolean).join(' ')].filter(Boolean).join(', ')];
+  let name, l1 = (f.cr_pfAddress || '').trim(), l2 = (f.cr_pfCity || '').trim(), other = '';
+  if (mode === 'applicant') { name = (f.cr_pfName || '').trim() || f.applicant || '[Applicant]'; if (f.responsibleEntity) other = 'Responsible Entity: ' + f.responsibleEntity; }
+  else if (mode === 'other') { name = (f.cr_pfName || '').trim() || '[Prepared For]'; }
+  else { name = (f.cr_pfName || '').trim() || f.responsibleEntity || '[Responsible Entity]'; if (!l1 && !l2) { l1 = reAddr[0] || ''; l2 = reAddr[1] || ''; } if (f.applicant) other = 'Grant Recipient: ' + f.applicant; }
+  return { mode: mode || 're', name, l1, l2, other };
+}
+function crRenderCover() {
+  const pv = document.getElementById('crPfPreview');
+  if (pv) { const p = crPreparedFor(); pv.innerHTML = 'Cover will read: <b>Prepared For</b> — ' + crEsc([p.name, p.l1, p.l2].filter(Boolean).join(', ')) + (p.other ? ' · <i>' + crEsc(p.other) + '</i>' : ''); }
+  const box = document.getElementById('crCoverBox'); if (!box) return; const d = crCoverDoc();
+  box.innerHTML = d ? '<img src="' + d.data + '" style="height:46px;border:2px solid #000;"><span style="color:#2d3748;">' + crEsc(d.name) + '</span><button type="button" onclick="crRemoveCover()" title="Remove cover photo" style="border:none;background:none;color:#c00;cursor:pointer;font-size:14px;">×</button>' : '<span style="color:#a0aec0;">none</span>';
+}
 // Extra supporting-document buckets that belong to an authority's appendix
 var CR_EXTRA_DOCS = { air: ['air_greenbook'], esa: ['esa_ipac'] };
 var CR_STATUS = { compliant: 'Compliant', followup: 'Follow-Up Required', awaiting: 'Awaiting Response', na: 'Not Applicable', exempt: 'Exempt', unset: 'Not Yet Assessed' };
@@ -10109,15 +10167,16 @@ function crBuildHtml() {
   let h = '';
   // Cover (the green border is drawn by the page-1 background)
   h += "<div class='cover-final'>" +
-    "<p style='text-align:center;margin:0'><img src='" + CR_LOGO_BIG + "' data-pdfmake='{\"width\":250,\"alignment\":\"center\"}'></p>" +
+    "<p style='text-align:center;margin:0'><img src='" + CR_LOGO_BIG + "' data-pdfmake='{\"width\":" + (crCoverData() ? 210 : 250) + ",\"alignment\":\"center\"}'></p>" +
     "<p style='text-align:center;margin:10px 0 2px'>919 W. 34th Street | #4706 | Baltimore, MD 21211<br>www.az-ri.com</p>" +
     "<p style='text-align:center;margin:2px 0 14px;color:" + CR_GREEN + "'>_____________________________________________________</p>" +
     "<p style='text-align:center;margin:0 0 4px'><b><span style='font-size:18pt'>HUD Environmental Review</span></b></p>" +
     "<p style='text-align:center;margin:0 0 10px'>24 CFR Part 58" + (levelLabel ? ' &middot; ' + esc(levelLabel) : '') + "</p>" +
     "<p style='text-align:center;font-size:12pt;margin-top:16px'>" + (f.projectName ? esc(f.projectName) + '<br>' : '') + esc(siteFull) + "</p>" +
     (grants.length ? "<p style='text-align:center;font-size:12pt'><b>" + (grants.length > 1 ? 'Grant Nos. ' : 'Grant No. ') + esc(grants.join(', ')) + "</b></p>" : (f.herosNumber ? "<p style='text-align:center;font-size:12pt'><b>HEROS No. " + esc(f.herosNumber) + "</b></p>" : '')) +
-    "<p style='text-align:center;margin-top:16px'><b><span style='color:" + CR_GREEN + ";font-size:14pt'>Prepared For</span></b><br><span style='font-size:12pt'>" + esc(f.responsibleEntity || '[Responsible Entity]') + (f.reAddress ? '<br>' + esc([f.reAddress, f.reCity, [f.reState, f.reZip].filter(Boolean).join(' ')].filter(Boolean).join(', ')) : '') + (f.applicant ? '<br><br>Grant Recipient: ' + esc(f.applicant) : '') + "</span></p>" +
+    (function () { const pf = crPreparedFor(f); return "<p style='text-align:center;margin-top:16px'><b><span style='color:" + CR_GREEN + ";font-size:14pt'>Prepared For</span></b><br><span style='font-size:12pt'>" + esc(pf.name) + (pf.l1 ? '<br>' + esc(pf.l1) : '') + (pf.l2 ? '<br>' + esc(pf.l2) : '') + (pf.other ? '<br><br>' + esc(pf.other) : '') + "</span></p>"; })() +
     "<p style='text-align:center'><b><span style='color:" + CR_GREEN + ";font-size:14pt'>Date of Report</span></b><br><span style='font-size:12pt'>" + esc(repDate) + "</span></p>" +
+    (crCoverData() ? "<img src='" + crCoverData() + "'>" : '') +   // (v158) positioned bottom-centre by crFixTree
     "</div>";
   // TOC
   h += "<div class='pagebreak'></div><p class='pdf-toc'>TABLE OF CONTENTS</p>";
@@ -10189,7 +10248,7 @@ async function buildClientReportPdf() {
   const say = (m, c) => { if (st) { st.textContent = m; st.style.color = c || '#2d3748'; } console.log('[Client Report]', m); };
   if (!crLibsReady()) { const m = 'PDF libraries not loaded — open the worksheet from GitHub Pages (or keep pdfmake.min.js, html-to-pdfmake.min.js, pdf-lib.min.js and azri_fonts.js beside the HTML file).'; say(m, '#c00'); alert(m); return; }
   try {
-    say('Rendering the report body…'); crFontsInit();
+    say('Rendering the report body…'); crFontsInit(); await crPrepareCover();
     const plan = crAppendixPlan();
     const bodyBytes = await crPdfmakeBytes(crDocDef(crPrepHtml(crBuildHtml())));
     const pdf = await PDFLib.PDFDocument.load(bodyBytes);
@@ -13395,7 +13454,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v157 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v158 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v154: Client Report rebuilt in the Limited ESA / HUD Noise format (pdfmake + pdf-lib: green-bordered cover, TOC, AZ-RI header/footer, numbered sections, compliance summary with appendix letters) and one appendix per Law & Authority carrying its Supporting Documents; drag-and-drop document strips on every card plus a Client Report Appendices panel (include / order / remove).');
   console.log('  v153: Historic Preservation — removed the Section 106 packet inputs panel and the 106 Letter / Cover Email buttons; the Section 106 packet now looks up the Tribes for the project county in HUD TDAT (when there is ground disturbance) and lists them with their TDAT contacts.');
   console.log('  v152: ESA Section 7 Packet button removed from Endangered Species (AZ-RI prepares it); every authority card gets a ▾/▸ collapse toggle (plus Collapse all / Expand all on the group headers), remembered per browser, always expanded when printing.');
