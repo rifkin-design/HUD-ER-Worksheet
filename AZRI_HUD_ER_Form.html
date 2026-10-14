@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v156</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v157</div>
   </div>
 </header>
 
@@ -6690,6 +6690,73 @@ async function pkPdfText(dataUrl, maxPages) {
   for (let p = 1; p <= Math.min(pdf.numPages, maxPages || 12); p++) { const page = await pdf.getPage(p); const tc = await page.getTextContent(); out += '\n' + tc.items.map(it => it.str).join(' '); }
   return out.replace(/\s+/g, ' ');
 }
+// ===== (v157) HAND-OFF TO THE NOISE ASSESSMENT WORKSHEET =====
+// The HUD ER screening finds noise generators; the full assessment is done in the Noise Assessment Worksheet
+// (rifkin-design.github.io/hud-noise-worksheet/). Both pages are served from the same GitHub Pages origin, so the
+// project details + parcel boundary are passed through localStorage and the Noise Worksheet picks them up on open.
+// Opened from disk (or another host) the hand-off is downloaded as a JSON file instead → load it with 📂 Load in the Noise Worksheet.
+const NOISE_WS_URL = 'https://rifkin-design.github.io/hud-noise-worksheet/';
+const NOISE_HANDOFF_KEY = 'azri_handoff_hud_er_to_noise';
+function noiseHandoffData() {
+  const proj = (typeof getProjectFields === 'function') ? getProjectFields() : {};
+  const v = k => String(proj[k] || '').trim();
+  const fv = k => String(((document.querySelector('[data-field="' + k + '"]') || {}).value) || '').trim();
+  const ABBR = Object.assign({ 'North Carolina': 'NC' }, (typeof STATE_ABBR !== 'undefined') ? STATE_ABBR : {});
+  const st = ABBR[v('siteState')] || (v('siteState').length === 2 ? v('siteState').toUpperCase() : '');
+  const feats = (typeof parcelFeatures !== 'undefined' && parcelFeatures) || [];
+  const polys = [], infos = []; let acres = 0; const pins = []; let county = '';
+  feats.forEach(f => {
+    const g = f.geometry || {}; const pr = f.properties || {};
+    const rings = g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(c => c[0]) : [];
+    rings.forEach(r => {
+      const ll = r.map(c => [c[1], c[0]]);
+      if (ll.length > 1 && ll[0][0] === ll[ll.length - 1][0] && ll[0][1] === ll[ll.length - 1][1]) ll.pop();
+      if (ll.length > 2) { polys.push(ll); infos.push([pr.apn || pr.PIN || pr.ACCTID || '', pr.ACRES ? (+pr.ACRES).toFixed(3) + ' ac' : ''].filter(Boolean).join(' · ')); }
+    });
+    if (+pr.ACRES) acres += +pr.ACRES;
+    const pin = pr.apn || pr.PIN || pr.ACCTID; if (pin) pins.push(pin);
+    if (!county && pr.COUNTY) county = String(pr.COUNTY).replace(/\s+county$/i, '') + ' County';
+  });
+  if (!county && v('siteCounty')) county = v('siteCounty').replace(/\s+county$/i, '') + ' County';
+  const acts = ((typeof activityFlags === 'function') ? activityFlags() : { acts: [] }).acts || [];
+  const units = +(fv('azr_lu_units') || fv('air_units') || 0);
+  const type = acts.includes('newconst') ? 'newres' : acts.includes('rehab') ? 'rehab' : 'newres';
+  const desc = acts.includes('newconst') ? 'new construction of ' + (units > 1 ? units + ' residential units' : units === 1 ? 'a single-family home' : 'residential housing')
+             : acts.includes('rehab') ? 'rehabilitation of ' + (units > 1 ? units + ' residential units' : 'an existing residential property') : '';
+  const where = [v('siteAddress'), v('siteCity'), county, v('siteState')].filter(Boolean).join(', ');
+  const siteDesc = 'The Subject Site ' + (feats.length > 1 ? 'consists of ' + feats.length + ' parcels totaling' : 'is a parcel of') + ' approximately ' + (acres ? (acres < 1 ? acres.toFixed(3) : acres.toFixed(2)) : '[acreage]') + ' acres'
+    + (pins.length ? ' (' + (county ? county + ' ' : '') + 'tax parcel' + (pins.length > 1 ? 's ' : ' ') + pins.join(', ') + ')' : '') + ' located at ' + (where || '[address]') + '.';
+  return {
+    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v157',
+    proj: {
+      PROJECT_NAME: v('projectName'), ADDRESS: v('siteAddress'),
+      CITY_STATE_ZIP: [v('siteCity'), [st, v('siteZip')].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+      STATE: ['MD', 'DE', 'NC', 'VA', 'PA', 'DC', 'NJ', 'NY'].includes(st) ? st : (st ? 'OTHER' : ''),
+      COUNTY: county, CLIENT: v('applicant'), PREPARER: v('hudPreparer') || fv('reviewer'),
+      PROJECT_TYPE: type, PROJECT_DESC: desc, NAL_BASIS: 'boundary', SITE_DESC: siteDesc
+    },
+    boundary: polys.length ? { polys, infos, name: v('siteAddress') || 'Subject Property' } : null
+  };
+}
+function sendToNoiseWorksheet() {
+  const h = noiseHandoffData();
+  const st = document.getElementById('autoStatus_noise');
+  const say = (t, c) => { if (st) { st.textContent = t; st.style.color = c || 'var(--azri-navy)'; } };
+  if (!h.proj.PROJECT_NAME && !h.proj.ADDRESS) { alert('Fill in the Project Name and Site Address in 1125 first.'); return; }
+  if (!h.boundary) { if (!confirm('No parcel is selected in 1125, so no site boundary will be sent — the Noise Worksheet will need a KML or a parcel click. Continue?')) return; }
+  const sameOrigin = /(^|\.)rifkin-design\.github\.io$/i.test(location.hostname);
+  if (sameOrigin) {
+    try { localStorage.setItem(NOISE_HANDOFF_KEY, JSON.stringify(h)); } catch (e) { alert('Could not pass the data to the Noise Worksheet (' + e.message + ').'); return; }
+    window.open(NOISE_WS_URL + '?from=hud-er', '_blank');
+    say('➜ Opened the Noise Assessment Worksheet with this project\'s details and boundary. Add the client address, AZ-RI project no. and report date there.');
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(h, null, 2)], { type: 'application/json' }));
+    a.download = 'Noise_handoff_' + ((h.proj.PROJECT_NAME || h.proj.ADDRESS).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40)) + '.json'; a.click();
+    say('⬇ Hand-off file downloaded (this page is not running from rifkin-design.github.io). In the Noise Worksheet click 📂 Load and pick that file.');
+  }
+}
+
 // ===== MAP GENERATOR REGISTRY (per authority) =====
 const MAP_GENERATORS = {
   airport: { fn: 'generateAirportFigure', label: '🗺 Airport Hazards Figure (FAA runway ends)' },
@@ -8713,6 +8780,8 @@ AUTHORITIES.forEach(a => {
     const label = (typeof mg === 'string') ? '🗺 Generate Map PDF' : mg.label;
     mapBtnHtml = '<button class="no-print" onclick="' + fn + '(\'' + a.id + '\')" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">' + label + '</button>';
   }
+  // (v157) Noise → hand the project, client and site boundary to the Noise Assessment Worksheet
+  if (a.id === 'noise') mapBtnHtml += ' <button class="no-print" onclick="sendToNoiseWorksheet()" title="Opens the Noise Assessment Worksheet with this review\'s project name, address, county, client, preparer, project type and parcel boundary filled in, then runs its noise screening." style="background:var(--azri-navy,#0f2a44);border:1px solid var(--azri-navy,#0f2a44);color:#fff;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">➜ Full Noise Assessment (open Noise Worksheet)</button>';
   // Precompute the always-visible SOP panel (string concat — no nested template literal in the IIFE)
   let sopHtml = '';
   if (AUTHORITY_SOP[a.id]) {
@@ -13326,7 +13395,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v156 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v157 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v154: Client Report rebuilt in the Limited ESA / HUD Noise format (pdfmake + pdf-lib: green-bordered cover, TOC, AZ-RI header/footer, numbered sections, compliance summary with appendix letters) and one appendix per Law & Authority carrying its Supporting Documents; drag-and-drop document strips on every card plus a Client Report Appendices panel (include / order / remove).');
   console.log('  v153: Historic Preservation — removed the Section 106 packet inputs panel and the 106 Letter / Cover Email buttons; the Section 106 packet now looks up the Tribes for the project county in HUD TDAT (when there is ground disturbance) and lists them with their TDAT contacts.');
   console.log('  v152: ESA Section 7 Packet button removed from Endangered Species (AZ-RI prepares it); every authority card gets a ▾/▸ collapse toggle (plus Collapse all / Expand all on the group headers), remembered per browser, always expanded when printing.');
