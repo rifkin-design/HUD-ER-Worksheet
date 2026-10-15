@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v159</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v160</div>
   </div>
 </header>
 
@@ -6464,8 +6464,15 @@ async function generateNRHPFigure(authId) {
     const fig = await figSplitPane({ site, center, detailHalfM: figParcelHalfM(site, center, 2.5, 400, 2000), vicHalfFt: VIC_FT, basemap: 'streets', title: 'National Register of Historic Places Map', meta, subtitle: 'NHPA Section 106 · NPS National Register of Historic Places listed properties and districts within approx. 1/2 mile of the Subject Property', detailCaption: 'Subject Property and listed resources', vicCaption: 'Listed properties and districts', legend, noteLines, drawDetail: drawNR, drawVicinity: drawNR, sources: ['National Park Service, National Register of Historic Places spatial data (NRHP points and polygons)'] });
     // Findings
     const fmtRes = r => (r.a.RESNAME || 'NRHP resource') + (r.a.NRIS_Refnum ? ' (NRIS ' + r.a.NRIS_Refnum + ')' : '') + (r.kind === 'district' ? ', district / boundary' : '') + (r.a.CertDate ? ', listed ' + fmtUtcDate(r.a.CertDate) : '') + (r.a.Is_NHL && /yes|true|1/i.test(String(r.a.Is_NHL)) ? ', NHL' : '');
-    const findings = onSite.length ? 'The Subject Property is within or overlaps a National Register-listed property / district: ' + onSite.map(fmtRes).join('; ') + '.' : 'The Subject Property is not listed on the National Register and is not within a listed historic district.';
-    const nearby = within.length ? ' Listed resources within 1/2 mile: ' + within.slice(0, 8).map(r => fmtRes(r) + ' — ' + figFmtFt(r.distFt)).join('; ') + (within.length > 8 ? '; +' + (within.length - 8) + ' more' : '') + '.' : ' No other National Register-listed properties or districts within 1/2 mile.';
+    // (v160) Letter / report wording: no listing dates; text covers only the Subject Property and resources within 1,000 ft
+    // (everything within 1/2 mile still shows on the map).
+    const nris = r => (r.a.RESNAME || 'NRHP resource') + (r.a.NRIS_Refnum ? ' (NRIS ' + r.a.NRIS_Refnum + ')' : '');
+    const osD = onSite.filter(r => r.kind === 'district'), osP = onSite.filter(r => r.kind !== 'district');
+    const close = within.filter(r => r.distFt <= NR_TEXT_FT);
+    const findings = (osD.length || osP.length)
+      ? [osD.length ? 'The Subject Property is within or overlaps the National Register-listed district(s): ' + osD.map(nris).join('; ') + '.' : '', osP.length ? 'National Register-listed property(ies) on the Subject Property: ' + osP.map(nris).join('; ') + '.' : ''].filter(Boolean).join(' ')
+      : 'The Subject Property is not listed on the National Register and is not within a listed historic district.';
+    const nearby = close.length ? ' Listed resources within or close to the APE: ' + close.map(r => nris(r) + ' - ' + figFmtFt(r.distFt)).join('; ') + '.' : ' No other National Register-listed properties or districts are within ' + NR_TEXT_FT.toLocaleString() + ' ft of the Subject Property.';
     const nrEl = document.querySelector('[data-field="hist_nrhp"]');
     if (nrEl && !nrEl.value.trim()) { nrEl.value = (onSite.length ? 'Listed: ' + onSite.map(r => r.a.RESNAME).join('; ') + '. ' : 'Not NRHP-listed; not in a listed district. ') + (within.length ? 'Nearby listed: ' + within.slice(0, 4).map(r => r.a.RESNAME + ' (' + figFmtFt(r.distFt) + ')').join('; ') + '. ' : '') + 'State inventory (eligible / surveyed) results: [add].'; nrEl.dispatchEvent(new Event('input', { bubbles: true })); }
     const slug = figSlug(proj);
@@ -6499,6 +6506,7 @@ async function tdatLookup(center) {
 // (v159) Section 106 request LETTER in AZ-RI's SHPO format (e.g. 295 Cedar Ave): request for review, consultation thus far,
 // National Register + state database results, scope, ground disturbance, signature, then the attachments. TDAT is no longer
 // in the letter — tribal consultation is government-to-government (RE / HUD), so it goes in the report body via 🪶 TDAT → notes.
+const NR_TEXT_FT = 1000;   // (v160) NR resources beyond this distance appear on the NR Map only, not in the text
 const HIST_STATE_DB = { MD: 'MHT Medusa', DE: 'Delaware CHRIS', DC: 'DC HistoryQuest', VA: 'VDHR V-CRIS', PA: 'PA-SHARE', WV: 'WV SHPO GIS' };
 function histSalutation(title) {
   const first = String(title || '').split('\n')[0].split(',')[0].trim();
@@ -6518,8 +6526,9 @@ async function generateHistoricConsultation(authId) {
     const docs = ((typeof supportingDocs !== 'undefined' && supportingDocs[authId]) || []);
     const nrDoc = docs.find(d => /_NR_Map\./i.test(d.name));
     const nrFind = (window._lastNRHPFigure && window._lastNRHPFigure.findings) || (nrDoc && nrDoc.caption) || '';
-    if (!nrFind && !confirm('No National Register Map yet (🗺 National Register Map). Generate the letter without NR results?')) return;
-    if (!stateDb && !confirm('State database results (' + dbName + ') are blank in "Section 106 letter details". Generate the letter anyway?')) return;
+    const ov = k => g('hist_ov_' + k);   // (v160) every letter section can be overridden in "Section 106 letter details"
+    if (!ov('nrhp') && !nrFind && !confirm('No National Register Map yet (🗺 National Register Map). Generate the letter without NR results?')) return;
+    if (!ov('nrhp') && !stateDb && !confirm('State database results (' + dbName + ') are blank in "Section 106 letter details". Generate the letter anyway?')) return;
     const figures = await packetFigures(C, say);
     say('Writing the Section 106 request letter…');
     const P = await pkNewDoc('Section 106 Review Request', C.meta);
@@ -6532,23 +6541,24 @@ async function generateHistoricConsultation(authId) {
     pkP(P, 'Dear ' + histSalutation(recip.title) + ',');
     // 1) Intro / request for review
     const client = (proj.applicant || proj.responsibleEntity || '[client]').trim();
-    pkP(P, AZRI_FIRM.name + ' has been retained by ' + client + ' to request that the ' + recip.agency + ' perform a review of the following project for possible effects on historic properties listed, or eligible for listing, on the National Register of Historic Places in accordance with Section 106 of the National Historic Preservation Act (36 CFR Part 800). This Section 106 review is being conducted as part of a required HUD Environmental Review (24 CFR Part ' + (/part\s*50\b/i.test(C.level) ? '50' : '58') + ').');
-    label('Project Name', C.meta.projectName || proj.projectName);
-    label('Project Location', [C.meta.location, C.summary.acctids ? 'Parcel(s): ' + C.summary.acctids : '', C.center && !/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test((C.meta.location || '').trim()) ? 'Lat/Long: ' + C.center[1].toFixed(6) + ', ' + C.center[0].toFixed(6) : ''].filter(Boolean).join('. ') + '.');
+    pkP(P, ov('intro') || AZRI_FIRM.name + ' has been retained by ' + client + ' to request that the ' + recip.agency + ' perform a review of the following project for possible effects on historic properties listed, or eligible for listing, on the National Register of Historic Places in accordance with Section 106 of the National Historic Preservation Act (36 CFR Part 800). This Section 106 review is being conducted as part of a required HUD Environmental Review (24 CFR Part ' + (/part\s*50\b/i.test(C.level) ? '50' : '58') + ').');
+    label('Project Name', ov('name') || C.meta.projectName || proj.projectName);
+    label('Project Location', ov('location') || [C.meta.location, C.summary.acctids ? 'Parcel(s): ' + C.summary.acctids : '', C.center && !/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test((C.meta.location || '').trim()) ? 'Lat/Long: ' + C.center[1].toFixed(6) + ', ' + C.center[0].toFixed(6) : ''].filter(Boolean).join('. ') + '.');
+    label('Area of Potential Effect (APE)', ov('ape') || 'The APE is defined as the Subject Property and the immediate surrounding area in visual range.');
     const prog = [proj.programName || proj.fundingProgram || proj.hudProgram, C.meta.grant].filter(Boolean).join(' - ');
     label('Federal Agency and Nature of Federal Involvement', g('hist_fedInvolvement') || ('U.S. Department of Housing and Urban Development (HUD)' + (prog ? ', ' + prog : '') + '.' + (proj.responsibleEntity ? ' Responsible Entity under 24 CFR Part 58: ' + proj.responsibleEntity + '.' : '') + ' No other Federal involvement.'));
     // 2) Consultation thus far
     label('Historic Preservation Consultation Thus Far', g('hist_consultSoFar') || 'None.');
     // 3) NRHP + state database
     const yb = g('packet_yearBuilt');
-    label('National Register of Historic Places and State Database Results', [
+    label('National Register of Historic Places and State Database Results', ov('nrhp') || [
       'The National Register of Historic Places (NPS) and ' + dbName + ' were evaluated.',
       nrFind, stateDb, yb ? 'The existing structure(s) on the Subject Property were constructed circa ' + yb + '.' : ''
     ].filter(Boolean).join(' '));
-    label('Project Scope of Work Summary', packetDescriptionText(C));
+    label('Project Scope of Work Summary', ov('scope') || packetDescriptionText(C));
     const gdDet = [g('packet_disturbedAcres') ? 'approximately ' + g('packet_disturbedAcres') + ' acre(s)' : '', g('packet_excavDepthFt') ? 'excavation to about ' + g('packet_excavDepthFt') + ' ft' : ''].filter(Boolean).join('; ');
     const gd = ground === 'yes' ? 'Yes' + (gdDet ? ' - ' + gdDet : '') + '.' : ground === 'no' ? 'No - no ground disturbance beyond existing utility connections.' : '';
-    label('Ground Disturbance', gd);
+    label('Ground Disturbance', ov('ground') || gd);
     pkP(P, 'Please contact us with any questions or if additional information is needed. Thank you for your review.');
     pkP(P, 'Thank you,', { after: 0 }); pkP(P, AZRI_FIRM.name, { after: 0 });
     pkSignature(P, C.reviewer, g('packet_preparerTitle') || 'Environmental Professional', AZRI_FIRM.name + ' - ' + AZRI_FIRM.street + ', ' + AZRI_FIRM.city + ', ' + AZRI_FIRM.state + ' ' + AZRI_FIRM.zip);
@@ -6752,7 +6762,7 @@ function noiseHandoffData() {
   const siteDesc = 'The Subject Site ' + (feats.length > 1 ? 'consists of ' + feats.length + ' parcels totaling' : 'is a parcel of') + ' approximately ' + (acres ? (acres < 1 ? acres.toFixed(3) : acres.toFixed(2)) : '[acreage]') + ' acres'
     + (pins.length ? ' (' + (county ? county + ' ' : '') + 'tax parcel' + (pins.length > 1 ? 's ' : ' ') + pins.join(', ') + ')' : '') + ' located at ' + (where || '[address]') + '.';
   return {
-    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v159',
+    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v160',
     proj: {
       PROJECT_NAME: v('projectName'), ADDRESS: v('siteAddress'),
       CITY_STATE_ZIP: [v('siteCity'), [st, v('siteZip')].filter(Boolean).join(' ')].filter(Boolean).join(', '),
@@ -9022,12 +9032,19 @@ AUTHORITIES.forEach(a => {
       </div>
     </details>` : ''}
     ${a.id === 'historic' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
-      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 106 letter details <span style="font-weight:400;color:var(--gray);">(project, location, grant and scope come from 1125; NR results from the NR Map)</span></summary>
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 106 letter details &amp; overrides <span style="font-weight:400;color:var(--gray);">(leave a field blank to use the default shown)</span></summary>
       <div class="field-grid" style="margin-top:10px;">
-        <div class="full"><label>Historic preservation consultation thus far <span style="font-weight:400;color:var(--gray);">(blank = "None.")</span></label><input type="text" data-field="hist_consultSoFar" placeholder="None."></div>
+        <div class="full"><label>1. Intro / request for review <span style="font-weight:400;color:var(--gray);">(blank = standard request paragraph naming the client and SHPO)</span></label><textarea data-field="hist_ov_intro" style="min-height:44px;"></textarea></div>
+        <div class="full"><label>Project Name <span style="font-weight:400;color:var(--gray);">(blank = 1125 project name)</span></label><input type="text" data-field="hist_ov_name"></div>
+        <div class="full"><label>Project Location <span style="font-weight:400;color:var(--gray);">(blank = 1125 address + parcel(s))</span></label><input type="text" data-field="hist_ov_location"></div>
+        <div class="full"><label>Area of Potential Effect (APE) <span style="font-weight:400;color:var(--gray);">(blank = "The APE is defined as the Subject Property and the immediate surrounding area in visual range.")</span></label><textarea data-field="hist_ov_ape" style="min-height:44px;"></textarea></div>
+        <div class="full"><label>Federal Agency and Nature of Federal Involvement <span style="font-weight:400;color:var(--gray);">(blank = HUD + program / grant # from 1125, "No other Federal involvement.")</span></label><input type="text" data-field="hist_fedInvolvement"></div>
+        <div class="full"><label>2. Historic preservation consultation thus far <span style="font-weight:400;color:var(--gray);">(blank = "None.")</span></label><input type="text" data-field="hist_consultSoFar" placeholder="None."></div>
         <div><label>State database <span style="font-weight:400;color:var(--gray);">(default by state)</span></label><input type="text" data-field="hist_stateDbName" placeholder="e.g., Delaware CHRIS / MHT Medusa / V-CRIS"></div>
-        <div class="full"><label>State database results</label><textarea data-field="hist_stateDb" style="min-height:50px;" placeholder="e.g., No previously surveyed resources on the Subject Property. The site is within the Delaware Boundary Markers Historic District, but no markers are on or adjoining the property."></textarea></div>
-        <div class="full"><label>Federal involvement override <span style="font-weight:400;color:var(--gray);">(blank = HUD + program / grant # from 1125, "No other Federal involvement.")</span></label><input type="text" data-field="hist_fedInvolvement"></div>
+        <div class="full"><label>State database results <span style="font-weight:400;color:var(--gray);">(added after the NR Map results)</span></label><textarea data-field="hist_stateDb" style="min-height:44px;" placeholder="e.g., No previously surveyed resources on the Subject Property."></textarea></div>
+        <div class="full"><label>3. National Register of Historic Places and State Database Results — full override <span style="font-weight:400;color:var(--gray);">(blank = NR Map results (Subject Property + resources within 1,000 ft) + state database results above)</span></label><textarea data-field="hist_ov_nrhp" style="min-height:44px;"></textarea></div>
+        <div class="full"><label>Project Scope of Work Summary <span style="font-weight:400;color:var(--gray);">(blank = 1125 project description)</span></label><textarea data-field="hist_ov_scope" style="min-height:44px;"></textarea></div>
+        <div class="full"><label>Ground Disturbance <span style="font-weight:400;color:var(--gray);">(blank = Review Question answer + disturbed acres / excavation depth)</span></label><input type="text" data-field="hist_ov_ground"></div>
       </div>
       <div style="font-size:11px;color:var(--gray);margin-top:6px;">Upload the state database map (CHRIS / Medusa / V-CRIS screenshot) with ⬆ on this card — it is listed and attached after the NR Map.</div>
     </details>` : ''}
@@ -13470,7 +13487,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v159 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v160 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v160: Section 106 letter — override field for every section; new Area of Potential Effect (APE) section after Project Location (default: Subject Property + immediate surrounding area in visual range); NR results drop listing dates and list only districts / properties on the Subject Property plus resources within 1,000 ft ("Listed resources within or close to the APE: Name (NRIS #) - distance"). DE Fed Con Form template updated (Nathaniel, 10/15).');
   console.log('  v159: CZM — DE Fed Con Form auto-fill removed; ⬇ pre-filled template download (Delaware_Fed_Con_Form_v2_Template.pdf) + instructions in the DE submission guide. Explosives — project description dropped from the AST / ASD attachment. Historic — Section 106 packet rewritten as the AZ-RI SHPO request letter (request for review, consultation thus far, NRHP + state database results, scope, ground disturbance, attachments); TDAT removed from the letter; new 🪶 TDAT → notes writes the tribes paragraph into the Compliance Determinations notes (contact initiated by the RE or HUD).');
   console.log('  v154: Client Report rebuilt in the Limited ESA / HUD Noise format (pdfmake + pdf-lib: green-bordered cover, TOC, AZ-RI header/footer, numbered sections, compliance summary with appendix letters) and one appendix per Law & Authority carrying its Supporting Documents; drag-and-drop document strips on every card plus a Client Report Appendices panel (include / order / remove).');
   console.log('  v153: Historic Preservation — removed the Section 106 packet inputs panel and the 106 Letter / Cover Email buttons; the Section 106 packet now looks up the Tribes for the project county in HUD TDAT (when there is ground disturbance) and lists them with their TDAT contacts.');
