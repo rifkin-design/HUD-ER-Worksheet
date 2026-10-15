@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v160</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v161</div>
   </div>
 </header>
 
@@ -633,6 +633,7 @@
   <button onclick="window.print()">Generate PDF Summary</button>
   <button onclick="buildClientReportPdf()" title="Cover, table of contents, report sections and one appendix per Law &amp; Authority — same format as the Limited ESA and Noise reports" style="background:#0f2a44;color:#fff;font-weight:700;">📄 Client Report (PDF)</button>
   <button onclick="exportWord()">Export Word (HEROS ERR)</button>
+  <button class="secondary" onclick="azrPickFolder()" title="Choose this project's folder — every generated map, figure, packet, letter and the Client Report is saved there (overwriting the old version) instead of Downloads. Remembered per project in this browser.">📁 Save folder</button><span id="azrDirLabel" style="font-size:11px;color:#4a5568;align-self:center;"></span>
   <button class="secondary" onclick="saveJSON()">Save Review (JSON)</button>
   <button class="secondary" onclick="document.getElementById('loadFile').click()">Load Review</button>
   <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)">
@@ -3662,8 +3663,70 @@ async function regenerateAllAttachments() {
       '<br>Save the review JSON to keep the new versions.', failed.length ? '#b7791f' : 'var(--green,#2f855a)');
 }
 
+// ===== (v161) PROJECT SAVE FOLDER =====
+// Pick a folder once per project (📁 Save folder in the toolbar). Every document the worksheet generates — maps, figures,
+// packets, letters, the Client Report, Word exports — is then written straight into that folder (same file name each time,
+// so a refresh overwrites with the latest version for HEROS upload) instead of going to Downloads. Supporting Documents
+// auto-attach / refresh exactly as before. Chrome / Edge only (File System Access API); other browsers keep downloading.
+// The folder is remembered per project name in this browser (IndexedDB); Chrome asks once per visit to allow editing,
+// on the first click anywhere on the page (choose "Allow on every visit" to skip that).
+let AZR_DIR = null, AZR_DIR_OK = false, AZR_DIR_KEY = null;
+function azrDirDb() { return new Promise((res, rej) => { const r = indexedDB.open('azri_hud_er_dirs', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function azrDirIdb(op, k, v) { const db = await azrDirDb(); return new Promise((res, rej) => { const tx = db.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'); const st = tx.objectStore('kv'); const rq = op === 'get' ? st.get(k) : op === 'del' ? st.delete(k) : st.put(v, k); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); }); }
+function azrProjKey() { const p = (typeof getProjectFields === 'function') ? getProjectFields() : {}; return String(p.projectName || p.siteAddress || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+async function azrDirLoad() {
+  AZR_DIR = null; AZR_DIR_OK = false; const k = azrProjKey(); AZR_DIR_KEY = k;
+  if (k && window.indexedDB) { try { AZR_DIR = (await azrDirIdb('get', 'p:' + k)) || null; } catch (e) {} }
+  if (AZR_DIR) { try { AZR_DIR_OK = (await AZR_DIR.queryPermission({ mode: 'readwrite' })) === 'granted'; } catch (e) {} }
+  azrDirUi();
+}
+async function azrPickFolder() {
+  if (!window.showDirectoryPicker) { alert('Saving to a chosen folder needs Chrome or Edge. In this browser files go to Downloads.'); return; }
+  const k = azrProjKey(); if (!k) { alert('Enter the Project Name (1101) first — the folder is remembered per project.'); return; }
+  try {
+    const h = await window.showDirectoryPicker({ id: 'azri-hud-er', mode: 'readwrite', startIn: AZR_DIR || 'documents' });
+    AZR_DIR = h; AZR_DIR_KEY = k; AZR_DIR_OK = (await h.requestPermission({ mode: 'readwrite' })) === 'granted';
+    try { await azrDirIdb('put', 'p:' + k, h); } catch (e) { console.warn('[save folder] not remembered', e); }
+    azrDirUi();
+  } catch (e) { if (!e || e.name !== 'AbortError') console.warn('[save folder]', e); }
+}
+async function azrClearFolder() { const k = azrProjKey(); try { if (k) await azrDirIdb('del', 'p:' + k); } catch (e) {} AZR_DIR = null; AZR_DIR_OK = false; azrDirUi(); }
+async function azrDirReady(ask) {
+  if (azrProjKey() !== AZR_DIR_KEY) await azrDirLoad();   // project changed (typed or loaded from JSON)
+  if (!AZR_DIR) return false; if (AZR_DIR_OK) return true;
+  try { let p = await AZR_DIR.queryPermission({ mode: 'readwrite' }); if (p !== 'granted' && ask) p = await AZR_DIR.requestPermission({ mode: 'readwrite' }); AZR_DIR_OK = p === 'granted'; } catch (e) { AZR_DIR_OK = false; }
+  azrDirUi(); return AZR_DIR_OK;
+}
+// First click on the page re-grants access to a remembered folder (requestPermission needs a click)
+document.addEventListener('pointerdown', () => { if (AZR_DIR && !AZR_DIR_OK) azrDirReady(true); }, true);
+function azrDirUi() {
+  const el = document.getElementById('azrDirLabel'); if (!el) return;
+  if (!window.showDirectoryPicker) { el.textContent = 'saves to Downloads (Chrome / Edge needed for a folder)'; return; }
+  el.innerHTML = AZR_DIR ? ('→ <b>' + String(AZR_DIR.name).replace(/</g, '&lt;') + '</b>' + (AZR_DIR_OK ? '' : ' <span style="color:#b7791f;">(click anywhere to allow)</span>') + ' <a href="#" onclick="azrClearFolder();return false;" title="Stop saving this project to the folder" style="color:inherit;">✕</a>') : '→ Downloads';
+}
+// Write a file to the project folder (overwrites the same name); falls back to a normal download.
+// In "Regenerate all" (batch) mode nothing is downloaded, but files still go to the folder when one is set.
+async function azrSaveBlob(blob, name) {
+  if (await azrDirReady(false)) {
+    try { const fh = await AZR_DIR.getFileHandle(String(name).replace(/[\\/:*?"<>|]+/g, '_'), { create: true }); const w = await fh.createWritable(); await w.write(blob); await w.close(); azrSavedToast(name); return true; }
+    catch (e) { console.warn('[save folder] write failed — downloading instead', e); }
+  }
+  if (window._azrBatch) return false;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  return false;
+}
+function azrSaveDoc(doc, name) { return azrSaveBlob(doc.output('blob'), name); }   // jsPDF document
+function azrSavedToast(name) {
+  let t = document.getElementById('azrSavedToast');
+  if (!t) { t = document.createElement('div'); t.id = 'azrSavedToast'; t.className = 'no-print'; t.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:#0f2a44;color:#fff;padding:7px 12px;border-radius:5px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:420px;'; document.body.appendChild(t); }
+  t.textContent = '💾 Saved ' + name + ' → ' + (AZR_DIR ? AZR_DIR.name : 'folder'); t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+document.addEventListener('change', e => { const f = e.target && e.target.dataset && e.target.dataset.field; if (f === 'projectName' || f === 'siteAddress') azrDirLoad(); });
+setTimeout(azrDirLoad, 800);
+setInterval(() => { if (azrProjKey() !== AZR_DIR_KEY) azrDirLoad(); }, 3000);   // keeps the toolbar label in step after Load Review / Reset
+
 function figDownloadPdf(canvas, filename, footerLines) {
-  if (window._azrBatch) return;   // (v155) "Regenerate all" attaches only — no downloads
+  if (window._azrBatch && !AZR_DIR_OK) return;   // (v155) "Regenerate all" attaches only — no downloads (v161: still writes to the project folder when one is set)
   if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
@@ -3682,7 +3745,7 @@ function figDownloadPdf(canvas, filename, footerLines) {
   if (imgH > pageH - margin * 2 - footH) { imgH = pageH - margin * 2 - footH; imgW = imgH * aspect; }
   doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pageW - imgW) / 2, margin, imgW, imgH);
   if (footH) { doc.setTextColor(40, 40, 40); wrapped.forEach((t, i) => doc.text(t, margin, margin + imgH + 14 + i * lineH)); }
-  doc.save(filename);
+  azrSaveDoc(doc, filename);
 }
 
 // ===== AIRPORT HAZARDS FIGURE (24 CFR Part 51 Subpart D / §58.6(d)) =====
@@ -5958,7 +6021,7 @@ async function generateAirQualityAttachment(authId) {
       supDocPutAuto(authId, { name: fname, size: Math.round(dataUrl.length * 0.75), type: 'application/pdf', uploadedAt: new Date().toISOString(), data: dataUrl, auto: true, caption: opinion });
       if (typeof renderSupportingDocs === 'function') renderSupportingDocs(authId);
     }
-    if (!window._azrBatch) doc.save(fname);
+    azrSaveDoc(doc, fname);
     const summary = !applies ? 'Attainment for all current NAAQS — General Conformity does not apply → Write Up 3.' : (exceeds.length ? 'Emissions exceed de minimis for ' + exceeds.join(', ') + ' — conformity determination required.' : hits.map(h => h._layer.naaqs + ': ' + h.area_name + ' ' + h.current_status + (h.classification ? ' (' + h.classification + ')' : '')).join('; ') + ' — below de minimis → Write Up 4 + state addendum (' + (stateAbbr || 'state') + ').');
     figFillSourceRef(authId, 'EPA Green Book (Nonattainment Areas) — General Conformity Evaluation', !applies ? 'Attainment, all NAAQS' : hits.map(h => h._layer.naaqs + ' ' + h.current_status).join('; '));
     say('✓ Air Quality attachment generated — PDF downloaded and attached to Supporting Documents. ' + summary, status === 'compliant' ? 'var(--green,#2f855a)' : 'var(--red,#c00)');
@@ -6038,7 +6101,7 @@ function packetContext() {
   const acts = (typeof activityFlags === 'function') ? activityFlags() : { acts: [] };
   const summary = (typeof siteSummaryForLetter === 'function') ? siteSummaryForLetter() : {};
   const level = (proj.reviewLevel || '').trim();
-  const reviewer = (document.querySelector('input[data-field="reviewer"]') || {}).value || proj.hudPreparer || 'Scott Rifkin';
+  const reviewer = (document.querySelector('input[data-field="reviewer"]') || {}).value || 'Scott Rifkin';   // (v161) never the RE's HEROS preparer (hudPreparer)
   // Pull-through from the worksheet (1125 / 1101 / Air inputs / parcel record) with packet_* fields as overrides
   const v = k => (proj[k] || '').trim();
   const pulled = {
@@ -6246,7 +6309,7 @@ async function generateESAConsultation(authId) {
     for (const d of ((typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || [])) await pkEmbedDoc(P, d, 'IPaC Official Species List (' + d.name + ')');
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_ESA_Section7_Packet.pdf';
     const finding = anyNLAA ? 'NLAA determination for ' + det.filter(d => d.det !== 'No effect').map(d => d.name).join(', ') + ' — send the packet to ' + recip.agency + ' with the cover email → Write Up 3 (pending); switch to Write Up 3 (received) when the response arrives.' : 'No effect for all ' + det.length + ' IPaC species; no concurrence required → Write Up 2 (retain IPaC list + this documentation in the ERR).';
-    pkAttachPdf(authId, doc, name, finding); if (!window._azrBatch) doc.save(name);
+    pkAttachPdf(authId, doc, name, finding); azrSaveDoc(doc, name);
     figFillSourceRef(authId, 'USFWS IPaC official species list; Section 7 effect determination packet', det.map(d => d.name + ': ' + d.det).join('; '));
     const radio = document.querySelector('input[name="' + authId + '_status"][value="' + (anyNLAA ? 'awaiting' : 'compliant') + '"]'); if (radio && !document.querySelector('input[name="' + authId + '_status"]:checked')) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
     say('✓ ESA Section 7 packet generated — PDF downloaded and attached. ' + finding, anyNLAA ? 'var(--red,#c00)' : 'var(--green,#2f855a)');
@@ -6389,7 +6452,7 @@ async function generateExplosAttachment(authId) {
     pkP(P, 'Source: ERIS regulatory database report (AST listings, 1-mile radius); HUD ASD Electronic Assessment Tool equations (24 CFR 51.203, Appendix I).' + (mapDocs.length ? ' Attached: ' + mapDocs.map(d => d.name).join('; ') + ' (following pages).' : ''), { italic: true, size: 9 });
     for (const d of mapDocs) await pkEmbedDoc(P, d, 'Tank distance figure (' + d.name + ')');
     const doc = pkFinish(P); const slug = figSlug(proj); const name = slug + '_AST_ASD_Calculations.pdf';
-    pkAttachPdf(authId, doc, name, concl); if (!window._azrBatch) doc.save(name);
+    pkAttachPdf(authId, doc, name, concl); azrSaveDoc(doc, name);
     figFillSourceRef(authId, 'ERIS AST DBR (1 mi) + HUD ASD equations — AST / ASD calculation attachment', rows.length ? rows.map(r => 'Map key ' + r.mapKey + ': ' + fmt(r.dist) + ' ft vs ASD ' + fmt(r.asd || hudAsdPeople(r.gal)) + ' ft').join('; ') : (status === 'none' ? 'No ASTs within 1 mile' : remaining + ' sites, all >2,000 ft'));
     say('✓ AST / ASD calculation attachment generated — PDF downloaded and attached to Supporting Documents.', 'var(--green,#2f855a)');
   } catch (e) { console.warn('[AST attachment]', e); say('✗ AST attachment failed: ' + e.message, 'var(--red,#c00)'); }
@@ -6561,7 +6624,7 @@ async function generateHistoricConsultation(authId) {
     label('Ground Disturbance', ov('ground') || gd);
     pkP(P, 'Please contact us with any questions or if additional information is needed. Thank you for your review.');
     pkP(P, 'Thank you,', { after: 0 }); pkP(P, AZRI_FIRM.name, { after: 0 });
-    pkSignature(P, C.reviewer, g('packet_preparerTitle') || 'Environmental Professional', AZRI_FIRM.name + ' - ' + AZRI_FIRM.street + ', ' + AZRI_FIRM.city + ', ' + AZRI_FIRM.state + ' ' + AZRI_FIRM.zip);
+    pkSignature(P, g('hist_signer') || 'Nathaniel Alper', g('hist_signerTitle') || 'Environmental Scientist and Project Manager', AZRI_FIRM.name + ' - ' + AZRI_FIRM.street + ', ' + AZRI_FIRM.city + ', ' + AZRI_FIRM.state + ' ' + AZRI_FIRM.zip);
     // Attachments
     const extra = docs.filter(d => !d.auto && !/Section106/i.test(d.name));   // user uploads, e.g. CHRIS / Medusa map
     const nrImg = window._lastNRHPFigure && window._lastNRHPFigure.cv;
@@ -6574,7 +6637,7 @@ async function generateHistoricConsultation(authId) {
     for (const d of extra) await pkEmbedDoc(P, d, d.caption || d.name);
     await packetCorePages(P, C, figures, { attachmentsOnly: true });
     const doc = pkFinish(P); const slug = figSlug(proj); const name = slug + '_Section106_Packet.pdf';
-    pkAttachPdf(authId, doc, name, 'Section 106 review request to ' + recip.agency); if (!window._azrBatch) doc.save(name);
+    pkAttachPdf(authId, doc, name, 'Section 106 review request to ' + recip.agency); azrSaveDoc(doc, name);
     figFillSourceRef(authId, 'Section 106 review request (' + recip.agency + ')', 'Submitted ' + new Date().toLocaleDateString());
     say('✓ Section 106 request letter generated — PDF downloaded and attached. Review, sign, and submit ' + (recip.portal ? 'via the state SHPO portal' : 'by email to the SHPO') + '; mark Awaiting Response until concurrence arrives.' + (ground === 'yes' ? ' Ground disturbance: use 🪶 TDAT → notes for the tribal paragraph.' : ''), 'var(--azri-navy)');
   } catch (e) { console.warn('[106 letter]', e); say('✗ Section 106 letter failed: ' + e.message, 'var(--red,#c00)'); }
@@ -6617,7 +6680,7 @@ async function generateCZMConsultation(authId) {
     const P = await pkNewDoc('CZMA Federal Consistency - Project Information', C.meta);
     await packetCorePages(P, C, figures);
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_CZM_Consistency_Packet.pdf';
-    pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); if (!window._azrBatch) doc.save(name);
+    pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); azrSaveDoc(doc, name);
     figFillSourceRef(authId, 'CZMA federal consistency packet (' + recip.agency + ')', (C.g('czm_type') || 'Consistency determination') + ' submitted ' + new Date().toLocaleDateString());
     say('✓ CZM consistency packet generated — PDF downloaded and attached. Mark Awaiting Response until the program responds (Write Up 4/5 or the DE submission write-ups).', 'var(--azri-navy)');
     renderCZMGuide();
@@ -6642,7 +6705,7 @@ const CZM_GUIDE = {
         how: 'Email the completed DCMP Fed Con Form v2.0 and attachments to DNREC_FederalConsistency@delaware.gov. Concurrence is presumed if DCMP does not respond within 60 days (15 CFR Part 930, Subpart C).', url: 'https://dnrec.delaware.gov/coastal-programs/coastal-management/federal-consistency/',
         contact: 'DCMP Federal Consistency Coordinator — DNREC_FederalConsistency@delaware.gov — 302-739-9283 — 100 W. Water St., Suite 7B, Dover, DE 19904',
         send: ['DCMP Fed Con Form v2.0 — Sections I–VII (contact, category, description, general analysis of coastal effects, Policies 5.1–5.25, JPP/RAS, signed determination) — start from the pre-filled template below: fill out blank sections and double check all existing ones, then sign, upload and attach to the packet', 'Figure 1 (site location) and plan sheets (embedded in the packet PDF)', 'Project narrative — the packet PDF from this card'],
-        writeup: 'Write Up "DE — Consistency Determination" (or the Negative Determination variant); mark Awaiting until DCMP responds or 60 days pass.' },
+        writeup: 'Write Up "DE — Consistency Determination" (or the Negative Determination variant); mark Awaiting until DCMP responds or 60 days pass. CDBG / other federal financial assistance (Subpart F): DCMP lists no reviewable funding sources → Write Up "DE — Subpart F … not reviewable by DCMP" (no submission).' },
   VA: { program: 'Virginia Coastal Zone Management Program — DEQ Office of Environmental Impact Review (OEIR) administers federal consistency', zone: 'Tidewater Virginia (the 29 counties / 17 cities east of the fall line, incl. NoVA east of the fall line).',
         how: 'Submit the federal consistency determination to DEQ OEIR (eir@deq.virginia.gov) with the enforceable-policy analysis; DEQ coordinates the state-agency review.', url: 'https://www.deq.virginia.gov/permits/environmental-impact-review/federal-consistency',
         contact: 'DEQ Office of Environmental Impact Review — eir@deq.virginia.gov — 804-698-4000 (confirm the current federal consistency coordinator)',
@@ -6704,7 +6767,7 @@ function downloadDEFedConTemplate(ev) {
   const slug = (typeof figSlug === 'function' && (proj.projectName || '').trim()) ? figSlug(proj) + '_' : '';
   const name = slug + 'DCMP_Fed_Con_Form_v2.pdf';
   fetch(DE_FEDCON_TEMPLATE).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then(b => {
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    azrSaveBlob(b, name);
   }).catch(() => { window.open(DE_FEDCON_TEMPLATE, '_blank'); });
   return false;
 }
@@ -6762,12 +6825,12 @@ function noiseHandoffData() {
   const siteDesc = 'The Subject Site ' + (feats.length > 1 ? 'consists of ' + feats.length + ' parcels totaling' : 'is a parcel of') + ' approximately ' + (acres ? (acres < 1 ? acres.toFixed(3) : acres.toFixed(2)) : '[acreage]') + ' acres'
     + (pins.length ? ' (' + (county ? county + ' ' : '') + 'tax parcel' + (pins.length > 1 ? 's ' : ' ') + pins.join(', ') + ')' : '') + ' located at ' + (where || '[address]') + '.';
   return {
-    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v160',
+    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v161',
     proj: {
       PROJECT_NAME: v('projectName'), ADDRESS: v('siteAddress'),
       CITY_STATE_ZIP: [v('siteCity'), [st, v('siteZip')].filter(Boolean).join(' ')].filter(Boolean).join(', '),
       STATE: ['MD', 'DE', 'NC', 'VA', 'PA', 'DC', 'NJ', 'NY'].includes(st) ? st : (st ? 'OTHER' : ''),
-      COUNTY: county, CLIENT: pf.name.replace(/^\[.*\]$/, '') || v('applicant'), CLIENT_ADDRESS: pf.l1, CLIENT_CITY: pf.l2, PREPARER: v('hudPreparer') || fv('reviewer'),
+      COUNTY: county, CLIENT: pf.name.replace(/^\[.*\]$/, '') || v('applicant'), CLIENT_ADDRESS: pf.l1, CLIENT_CITY: pf.l2, PREPARER: '',   // (v161) the RE's HEROS preparer is not the noise report preparer
       PROJECT_TYPE: type, PROJECT_DESC: desc, NAL_BASIS: 'boundary', SITE_DESC: siteDesc
     },
     boundary: polys.length ? { polys, infos, name: v('siteAddress') || 'Subject Property' } : null,
@@ -7160,7 +7223,7 @@ async function generateAirportMapForType(kind) {
   doc.setTextColor(100, 100, 100);
   doc.text('Source: USA Airports (Esri Living Atlas / FAA-derived). Generated by AZ-RI HUD ER Worksheet · ' + new Date().toLocaleString(), 36, pageH - 24);
 
-  doc.save(filename);
+  azrSaveDoc(doc, filename);
 
   // Cleanup
   tempLayers.forEach(l => drawnItems.removeLayer(l));
@@ -7298,7 +7361,7 @@ async function generateCBRSMap() {
   doc.text('Source: USFWS Coastal Barrier Resources System feature service (https://fwsprimary.wim.usgs.gov/CBRSMapper-v2/).', 36, pageH - 28);
   doc.text('Note: Also obtain the FWS CBRS Validation Tool certified PDF for the official ERR record. | AZ-RI HUD ER Worksheet · ' + new Date().toLocaleString(), 36, pageH - 16);
 
-  doc.save('CBRS.pdf');
+  azrSaveDoc(doc, 'CBRS.pdf');
   tempLayers.forEach(l => drawnItems.removeLayer(l));
   setStatus(`✓ Saved: CBRS.pdf`, 'var(--green)');
 }
@@ -7492,8 +7555,7 @@ function generateLetter(letterId) {
   const projName = (proj.projectName || 'Untitled').replace(/[^a-z0-9]/gi, '_');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `AZRI_Letter_${letterId}_${projName}.doc`;
-  a.click();
+  URL.revokeObjectURL(a.href); azrSaveBlob(blob, `AZRI_Letter_${letterId}_${projName}.doc`);
 }
 
 // ===== SECTION 106 COVER EMAILS (v92) — DC HPO and VA DHR submittal standards =====
@@ -7612,6 +7674,7 @@ const BOILERPLATE = {
     { label: 'Write Up 5 (FHA) — Response received with conditions + responses', text: "According to the state's Coastal Zone Management Program (CZMP), the project is located in a Coastal Zone Program Area. [If applicable: the project is also located in the state's designated critical/sensitive coastal area (e.g., Maryland's Critical Area).]A Coastal Consistency Review Request Form was submitted to the state CZMP [and the Critical Area Commission] on xx.\nA determination from state CZMP was received on xx stating that the project is consistent with the enforceable coastal policies of the state CZMP assuming several conditions are compliant. The Sponsor has provided detailed responses to each of the conditions (see CZM Conditions Responses attached).\n\nConditions that are compliant are listed here [Examples]:\n\n* Compliance with the applicable state forest conservation requirements.\n* Compliance with the State Historic Preservation Office (SHPO).\n\nConditions with plans in place for mitigation are discussed here [Example]:\n\n* Erosion and Sediment Control Plan - The project will have an approved erosion and sediment control plan compliant with applicable state and county code. A preliminary plan is complete." },
     { label: 'Write Up 5 (FHA) — Response NOT yet received', text: "Required follow up (Mitigation): A Determination from the state CZMP has not been received as of the date of this submission. The official determination and any consistency condition responses, if applicable, will be forwarded to HUD and/or the RE upon receipt. CZM responses may take up to 60 days. It is our expectation that this project will be consistent with the enforceable coastal policies of the state CZMP." },
     { label: 'DE — Consistency Determination submitted (compliant)', text: "According to the Delaware Coastal Management Program (DCMP), the project is located within Delaware's coastal zone. AZ-RI completed a DCMP Federal Consistency Form analyzing the project against the DCMP's enforceable policies (Policies 5.1–5.25) and, on behalf of HUD, submitted a Federal Agency Consistency Determination to DCMP (DNREC Federal Consistency) on [DATE], finding the project consistent to the maximum extent practicable with the enforceable policies of the Delaware Coastal Management Program. Pursuant to 15 C.F.R. Part 930, DCMP's concurrence is presumed if a response is not received within 60 days. Any conditions received will be forwarded to the client, HUD, and/or the RE upon receipt. The project is in compliance with the Coastal Zone Management Act (16 U.S.C. 1456; 15 CFR Part 930; 24 CFR §58.5(c))." },
+    { label: 'DE — Subpart F federal financial assistance (CDBG) — not reviewable by DCMP (compliant)', text: "Projects funded through Federal Financial Assistance, such as CDBG, which fall under 15 C.F.R. Part 930, Subpart F of the Coastal Zone Management Act are only required to be reviewed by the state's Coastal Zone Management Program if the CZMP lists the funding source as a reviewable funding source under their jurisdiction. According to guidance received from Delaware Coastal Programs, the Delaware Coastal Management Program (DCMP) does not currently list any funding sources as reviewable under its jurisdiction for Subpart F. Therefore projects falling under Subpart F are not required to be reviewed by the DCMP. Because this project is funded by a CDBG grant, received and then administered by [ADMINISTERING BODY], it falls under Subpart F and therefore is not reviewable by the DCMP under the Coastal Zone Management Act. The project is in compliance with the Coastal Zone Management Act (16 U.S.C. 1456; 15 CFR Part 930; 24 CFR §58.5(c))." },
     { label: 'DE — Negative Determination submitted (compliant)', text: "According to the Delaware Coastal Management Program (DCMP), the project is located within Delaware's coastal zone. AZ-RI completed a DCMP Federal Consistency Form and, on behalf of HUD, submitted a Federal Agency Negative Determination to DCMP (DNREC Federal Consistency) on [DATE], finding that the project will not have any reasonably foreseeable effects on Delaware's coastal uses or resources and is therefore consistent with the enforceable policies of the Delaware Coastal Management Program. Pursuant to 15 C.F.R. Part 930, DCMP's concurrence is presumed if a response is not received within 60 days. The project is in compliance with the Coastal Zone Management Act (16 U.S.C. 1456; 15 CFR Part 930; 24 CFR §58.5(c))." }
   ],
   contam: [
@@ -9035,6 +9098,8 @@ AUTHORITIES.forEach(a => {
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 106 letter details &amp; overrides <span style="font-weight:400;color:var(--gray);">(leave a field blank to use the default shown)</span></summary>
       <div class="field-grid" style="margin-top:10px;">
         <div class="full"><label>1. Intro / request for review <span style="font-weight:400;color:var(--gray);">(blank = standard request paragraph naming the client and SHPO)</span></label><textarea data-field="hist_ov_intro" style="min-height:44px;"></textarea></div>
+        <div><label>Signed by <span style="font-weight:400;color:var(--gray);">(blank = Nathaniel Alper)</span></label><input type="text" data-field="hist_signer" placeholder="Nathaniel Alper"></div>
+        <div><label>Signer title <span style="font-weight:400;color:var(--gray);">(blank = Environmental Scientist and Project Manager)</span></label><input type="text" data-field="hist_signerTitle" placeholder="Environmental Scientist and Project Manager"></div>
         <div class="full"><label>Project Name <span style="font-weight:400;color:var(--gray);">(blank = 1125 project name)</span></label><input type="text" data-field="hist_ov_name"></div>
         <div class="full"><label>Project Location <span style="font-weight:400;color:var(--gray);">(blank = 1125 address + parcel(s))</span></label><input type="text" data-field="hist_ov_location"></div>
         <div class="full"><label>Area of Potential Effect (APE) <span style="font-weight:400;color:var(--gray);">(blank = "The APE is defined as the Subject Property and the immediate surrounding area in visual range.")</span></label><textarea data-field="hist_ov_ape" style="min-height:44px;"></textarea></div>
@@ -10280,6 +10345,13 @@ async function buildClientReportPdf() {
   const st = document.getElementById('crStatus');
   const say = (m, c) => { if (st) { st.textContent = m; st.style.color = c || '#2d3748'; } console.log('[Client Report]', m); };
   if (!crLibsReady()) { const m = 'PDF libraries not loaded — open the worksheet from GitHub Pages (or keep pdfmake.min.js, html-to-pdfmake.min.js, pdf-lib.min.js and azri_fonts.js beside the HTML file).'; say(m, '#c00'); alert(m); return; }
+  // (v161) Save As dialog first (needs the button click) unless the project has a save folder
+  let crSaveH = null;
+  if (!(await azrDirReady(true)) && window.showSaveFilePicker) {
+    const f0 = crFields(); const nm = (((f0.projectName || f0.siteAddress || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')) || 'Project') + '_HUD_ER_Report.pdf';
+    try { crSaveH = await window.showSaveFilePicker({ suggestedName: nm, types: [{ description: 'PDF report', accept: { 'application/pdf': ['.pdf'] } }] }); }
+    catch (e) { if (e && e.name === 'AbortError') { say('Cancelled.'); return; } crSaveH = null; }
+  }
   try {
     say('Rendering the report body…'); crFontsInit(); await crPrepareCover();
     const plan = crAppendixPlan();
@@ -10303,7 +10375,9 @@ async function buildClientReportPdf() {
     pdf.setTitle((f.projectName || f.siteAddress || '') + ' - HUD Environmental Review'); pdf.setAuthor('AZ-RI Consultants');
     const out = await pdf.save(); const blob = new Blob([out], { type: 'application/pdf' });
     const name = (((f.projectName || f.siteAddress || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')) || 'Project') + '_HUD_ER_Report.pdf';
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    // (v161) project folder if set; otherwise the Save As handle picked when the button was clicked; otherwise Downloads
+    if (!(await azrDirReady(false)) && crSaveH && crSaveH !== 'cancel') { try { const w = await crSaveH.createWritable(); await w.write(blob); await w.close(); } catch (e) { console.warn('[Client Report] save dialog write failed', e); await azrSaveBlob(blob, name); } }
+    else await azrSaveBlob(blob, name);
     say('✓ ' + name + ' — ' + bodyPages + ' report page(s) + ' + extra + ' figure / appendix page(s) (' + plan.length + ' appendices).' + (skipped.length ? ' ⚠ Could not embed: ' + skipped.join(', ') + ' (only PDF, JPG and PNG files can be appended).' : ''), skipped.length ? '#b7791f' : '#2f855a');
     return { bodyPages, extra, bytes: out, plan: plan.map(p => p.letter + ' ' + crAuthName(p.a) + ' (' + p.docs.length + ')') };
   } catch (e) { console.error(e); say('✗ Client Report failed: ' + (e.message || e), '#c00'); throw e; }
@@ -10481,7 +10555,7 @@ async function saveJSON() {
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: suggestedName,
+        suggestedName: suggestedName, ...(AZR_DIR ? { startIn: AZR_DIR } : {}),   // (v161) opens in the project folder
         types: [{ description: 'JSON Review File', accept: { 'application/json': ['.json'] } }]
       });
       const writable = await handle.createWritable();
@@ -10862,8 +10936,7 @@ function exportWord() {
   const projName = (f.projectName || 'Untitled').replace(/[^a-z0-9]/gi,'_');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `AZRI_HUD_ERR_${projName}.doc`;
-  a.click();
+  URL.revokeObjectURL(a.href); azrSaveBlob(blob, `AZRI_HUD_ERR_${projName}.doc`);
 }
 
 // ===== BRANDED CLIENT REPORT (executive summary, print-to-PDF) =====
@@ -13130,8 +13203,7 @@ function downloadParcelKML() {
   const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = (projName.replace(/[^a-z0-9]/gi, '_') || 'Parcels') + '_parcels.kml';
-  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(a.href); azrSaveBlob(blob, (projName.replace(/[^a-z0-9]/gi, '_') || 'Parcels') + '_parcels.kml');
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
@@ -13487,7 +13559,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v160 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v161 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v161: 📁 Save folder (per project) — every generated map / figure / packet / letter / Word export / Client Report is written into the chosen folder, overwriting the previous version (Supporting Documents still auto-attach and refresh); Client Report gets a Save As dialog when no folder is set; Section 106 letter signed by Nathaniel Alper (override fields), never the RE HEROS preparer; HUD ER → Noise hand-off no longer sends the preparer; CZM write-up for DE Subpart F (CDBG) — not reviewable by DCMP.');
   console.log('  v160: Section 106 letter — override field for every section; new Area of Potential Effect (APE) section after Project Location (default: Subject Property + immediate surrounding area in visual range); NR results drop listing dates and list only districts / properties on the Subject Property plus resources within 1,000 ft ("Listed resources within or close to the APE: Name (NRIS #) - distance"). DE Fed Con Form template updated (Nathaniel, 10/15).');
   console.log('  v159: CZM — DE Fed Con Form auto-fill removed; ⬇ pre-filled template download (Delaware_Fed_Con_Form_v2_Template.pdf) + instructions in the DE submission guide. Explosives — project description dropped from the AST / ASD attachment. Historic — Section 106 packet rewritten as the AZ-RI SHPO request letter (request for review, consultation thus far, NRHP + state database results, scope, ground disturbance, attachments); TDAT removed from the letter; new 🪶 TDAT → notes writes the tribes paragraph into the Compliance Determinations notes (contact initiated by the RE or HUD).');
   console.log('  v154: Client Report rebuilt in the Limited ESA / HUD Noise format (pdfmake + pdf-lib: green-bordered cover, TOC, AZ-RI header/footer, numbered sections, compliance summary with appendix letters) and one appendix per Law & Authority carrying its Supporting Documents; drag-and-drop document strips on every card plus a Client Report Appendices panel (include / order / remove).');
