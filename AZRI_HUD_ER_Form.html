@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v162</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v163</div>
   </div>
 </header>
 
@@ -3147,6 +3147,7 @@ function removeSupportingDoc(authId, idx) {
 }
 
 function renderSupportingDocs(authId) {
+  if (typeof czmRenderAttachList === 'function' && typeof CZM_ATTACH_AUTHS !== 'undefined' && CZM_ATTACH_AUTHS.includes(authId)) setTimeout(czmRenderAttachList, 0);   // (v163)
   // (v154) rows carry include-in-report / order / remove controls; the Appendices panel and card strips refresh too
   const container = document.getElementById(`docs_${authId}`);
   if (container) { const rows = (typeof crDocRowsHtml === 'function') ? crDocRowsHtml(authId, true) : ''; container.innerHTML = rows || '<em style="font-size:11px;color:var(--gray);">No supporting documents attached yet.</em>'; }
@@ -6670,6 +6671,20 @@ async function tdatToNotes(authId) {
 }
 
 // ---------- 4) CZM federal consistency ----------
+// (v163) Figures from other authority cards that can ride along in the CZM packet
+var CZM_ATTACH_AUTHS = ['wetlands', 'flood_mgt', 'flood_ins', 'cbra', 'esa', 'wsr', 'historic', 'farm', 'aquifer'];
+function czmAttachDocs(id) { return (((typeof supportingDocs !== 'undefined' && supportingDocs[id]) || [])).filter(d => /^image\//i.test(d.type || '') || /pdf$/i.test(d.type || '')).filter(d => !/Packet|Section106|Fed_?Con|_Request\.pdf/i.test(d.name || '')); }
+function czmRenderAttachList() {
+  const miss = [];
+  CZM_ATTACH_AUTHS.forEach(id => {
+    const st = document.getElementById('czmIncSt_' + id); if (!st) return;
+    const n = czmAttachDocs(id).length; const on = !!(document.querySelector('[data-field="czm_inc_' + id + '"]') || {}).checked;
+    st.textContent = n ? '✓ ' + n + ' file' + (n > 1 ? 's' : '') : (on ? '⚠ none yet' : 'none yet'); st.style.color = n ? '#2f855a' : (on ? '#b7791f' : '#a0aec0');
+    if (on && !n) miss.push((AUTHORITIES.find(x => x.id === id) || {}).name || id);
+  });
+  const w = document.getElementById('czmIncWarn'); if (w) w.textContent = miss.length ? '⚠ No figure generated yet for: ' + miss.join(', ') + ' — use the 🗺 figure button on that card (or ⬆ upload one) before building the CZM packet.' : '';
+  return miss;
+}
 async function generateCZMConsultation(authId) {
   authId = authId || 'czm'; const say = packetSay('autoStatus_' + authId);
   const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before generating the CZM packet.'); return; }
@@ -6681,8 +6696,13 @@ async function generateCZMConsultation(authId) {
     say('Writing the CZM consistency packet…');
     // (v156) Basics only — project information, Figure 1 and plans. The consistency determination / request goes in AZ-RI's
     // cover letter (and the DE DCMP Fed Con Form); no effects narrative or attachment list here.
+    const inc = CZM_ATTACH_AUTHS.filter(id => !!(document.querySelector('[data-field="czm_inc_' + id + '"]') || {}).checked);
+    const miss = czmRenderAttachList();
+    if (miss.length && !confirm('No figure has been generated yet for: ' + miss.join(', ') + '.\n\nBuild the CZM packet without them? (Cancel, generate the figures on those cards, then build again.)')) { say('Cancelled — generate the missing figures first.', '#b7791f'); return; }
     const P = await pkNewDoc('CZMA Federal Consistency - Project Information', C.meta);
     await packetCorePages(P, C, figures);
+    // (v163) figures from the other authority cards ticked in "CZM consistency packet inputs"
+    for (const id of inc) { const nm = (AUTHORITIES.find(x => x.id === id) || {}).name || id; for (const d of czmAttachDocs(id)) await pkEmbedDoc(P, d, nm + ' - ' + (d.caption && d.caption.length < 160 ? d.caption : d.name)); }
     const doc = pkFinish(P); const slug = figSlug(C.proj); const name = slug + '_CZM_Consistency_Packet.pdf';
     pkAttachPdf(authId, doc, name, 'CZMA federal consistency ' + (C.g('czm_type') || 'determination') + ' to ' + recip.agency); azrSaveDoc(doc, name);
     figFillSourceRef(authId, 'CZMA federal consistency packet (' + recip.agency + ')', (C.g('czm_type') || 'Consistency determination') + ' submitted ' + new Date().toLocaleDateString());
@@ -6757,6 +6777,7 @@ function renderCZMGuide() {
       + '<div style="margin-top:6px;"><b>Write-up:</b> ' + esc(cfg.writeup) + '</div>';
   }
   el.innerHTML = h;
+  if (typeof czmRenderAttachList === 'function') czmRenderAttachList();
   const deBtn = document.getElementById('czmDeFormBtn'); if (deBtn) deBtn.style.display = (st === 'DE' && cfg && !cfg.none && scope !== 'outside' && scope !== 'noczm') ? '' : 'none';
 }
 // Delaware DCMP Fed Con Form v2.0 — fill the AcroForm fields from the worksheet
@@ -6829,7 +6850,7 @@ function noiseHandoffData() {
   const siteDesc = 'The Subject Site ' + (feats.length > 1 ? 'consists of ' + feats.length + ' parcels totaling' : 'is a parcel of') + ' approximately ' + (acres ? (acres < 1 ? acres.toFixed(3) : acres.toFixed(2)) : '[acreage]') + ' acres'
     + (pins.length ? ' (' + (county ? county + ' ' : '') + 'tax parcel' + (pins.length > 1 ? 's ' : ' ') + pins.join(', ') + ')' : '') + ' located at ' + (where || '[address]') + '.';
   return {
-    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v162',
+    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v163',
     proj: {
       PROJECT_NAME: v('projectName'), ADDRESS: v('siteAddress'),
       CITY_STATE_ZIP: [v('siteCity'), [st, v('siteZip')].filter(Boolean).join(' ')].filter(Boolean).join(', '),
@@ -9125,6 +9146,11 @@ AUTHORITIES.forEach(a => {
         <div><label>Consistency category <span style="font-weight:400;color:var(--gray);">(DE form, Section II)</span></label><select data-field="czm_category"><option value="">Federal activity — RE acting for HUD (Subpart C, default)</option><option>Federal financial assistance (Subpart F)</option></select></div>
         <div class="full"><label>Coastal effects narrative override (optional)</label><textarea data-field="czm_effects" style="min-height:50px;"></textarea></div>
         <div class="full"><label>Enforceable policies reviewed <span style="font-weight:400;color:var(--gray);">(one per line)</span></label><textarea data-field="czm_policies" style="min-height:50px;"></textarea></div>
+        <div class="full"><label>Add figures from other sections to the packet <span style="font-weight:400;color:var(--gray);">(the CZMP usually wants the wetland / floodplain maps when the site is near them; ⚠ = not generated yet on that card)</span></label>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:3px 14px;font-size:12px;margin-top:4px;">
+            ${CZM_ATTACH_AUTHS.map(id => `<label style="font-weight:400;display:flex;gap:6px;align-items:center;"><input type="checkbox" data-field="czm_inc_${id}" onchange="czmRenderAttachList()"> ${(AUTHORITIES.find(x => x.id === id) || {}).name || id} <span id="czmIncSt_${id}" style="font-size:11px;color:var(--gray);"></span></label>`).join('')}
+          </div>
+          <div id="czmIncWarn" style="font-size:11px;color:#b7791f;margin-top:4px;"></div></div>
       </div>
     </details>
     <details class="no-print" open style="margin:0 22px 12px;border:1px solid #2c7a7b;border-radius:6px;background:#eef6f6;padding:8px 14px;">
@@ -10282,8 +10308,9 @@ function crBuildHtml() {
     "</div>";
   // TOC
   h += "<div class='pagebreak'></div><p class='pdf-toc'>TABLE OF CONTENTS</p>";
-  if ((supportingDocs.packet_fig1 || []).length) h += "<p><b><span style='color:" + CR_GREEN + "'>List of Figures</span></b></p><p>Figure 1 Site Location</p>";
-  if (plan.length) h += "<p><b><span style='color:" + CR_GREEN + "'>List of Appendices</span></b></p>" + plan.map(p => '<p>' + esc('Appendix ' + p.letter + ' ' + crAuthName(p.a)) + '</p>').join('');
+  // (v163) entries are links — buildClientReportPdf turns the azri.link URLs into jumps to the divider pages
+  if ((supportingDocs.packet_fig1 || []).length) h += "<p><b><span style='color:" + CR_GREEN + "'>List of Figures</span></b></p><p><a href='https://azri.link/fig1' style='color:#000;text-decoration:none'>Figure 1 Site Location</a></p>";
+  if (plan.length) h += "<p><b><span style='color:" + CR_GREEN + "'>List of Appendices</span></b></p>" + plan.map(p => "<p><a href='https://azri.link/app-" + p.letter + "' style='color:#000;text-decoration:none'>" + esc('Appendix ' + p.letter + ' ' + crAuthName(p.a)) + '</a></p>').join('');
   // 1.0
   h += "<div class='pagebreak'></div><h2>1.0 Project Information</h2>" + table([
     row('Project Name', f.projectName), row('Site Address', siteFull), row('APN / Parcel', f.apn), row('Latitude / Longitude', f.latlong),
@@ -10307,7 +10334,7 @@ function crBuildHtml() {
   const auths = crReportAuthorities();
   h += "<div class='pagebreak'></div><h2>2.0 Compliance Summary</h2><p>The following table summarizes the determination for each related federal law and authority (24 CFR 58.5 and 58.6). Supporting documentation for each is provided in the appendix listed.</p>" +
     "<table class='grid'><tr><th>Law / Authority</th><th>Citation</th><th>Determination</th><th>Appendix</th></tr>" +
-    auths.map(a => { const p = plan.find(x => x.a.id === a.id); return '<tr><td>' + esc(crAuthName(a)) + '</td><td>' + esc(crCite(a)) + '</td><td>' + esc(CR_STATUS[crStatus(a)]) + '</td><td>' + (p ? p.letter : '—') + '</td></tr>'; }).join('') + '</table>';
+    auths.map(a => { const p = plan.find(x => x.a.id === a.id); return '<tr><td>' + esc(crAuthName(a)) + '</td><td>' + esc(crCite(a)) + '</td><td>' + esc(CR_STATUS[crStatus(a)]) + '</td><td>' + (p ? "<a href='https://azri.link/app-" + p.letter + "'>" + p.letter + '</a>' : '—') + '</td></tr>'; }).join('') + '</table>';
   // 3.0 Determinations
   h += "<div class='pagebreak'></div><h2>3.0 Compliance Determinations</h2>";
   auths.forEach((a, i) => {
@@ -10316,7 +10343,7 @@ function crBuildHtml() {
     h += '<h3>3.' + (i + 1) + ' ' + esc(crAuthName(a)) + '</h3>' +
       "<p><i>" + esc(crCite(a)) + ' &middot; Determination: ' + esc(CR_STATUS[crStatus(a)]) + '</i></p>' +
       (crText(notes) || '<p>[Compliance determination to be completed]</p>') +
-      (p ? '<p><i>Supporting documentation: Appendix ' + p.letter + '.</i></p>' : '');
+      (p ? "<p><i>Supporting documentation: <a href='https://azri.link/app-" + p.letter + "'>Appendix " + p.letter + '</a>.</i></p>' : '');
   });
   // 4.0 EA factors
   let sec = 4;
@@ -10365,9 +10392,11 @@ async function buildClientReportPdf() {
     const bodyPages = pdf.getPageCount(); let extra = 0; const skipped = [];
     const add = async d => { try { return await crAppendDoc(pdf, d); } catch (e) { console.warn('[Client Report] could not append', d.name, e); skipped.push(d.name); return 0; } };
     const fig1 = (supportingDocs.packet_fig1 || []).filter(d => !d.excludeFromReport);
-    if (fig1.length) { await crDividerPage(pdf, fonts.b, 'Figure 1', 'Site Location'); extra++; for (const d of fig1) extra += await add(d); }
+    const jump = {};   // (v163) link key -> page index of its divider page
+    if (fig1.length) { jump.fig1 = pdf.getPageCount(); await crDividerPage(pdf, fonts.b, 'Figure 1', 'Site Location'); extra++; for (const d of fig1) extra += await add(d); }
     for (const p of plan) {
       say('Appending Appendix ' + p.letter + ' — ' + crAuthName(p.a) + '…');
+      jump['app-' + p.letter] = pdf.getPageCount();
       await crDividerPage(pdf, fonts.b, 'Appendix ' + p.letter, crAuthName(p.a)); extra++;
       if (!p.docs.length) {
         const nb = await crPdfmakeBytes(crDocDef(crPrepHtml('<h2>Appendix ' + p.letter + ' — ' + crEsc(crAuthName(p.a)) + '</h2><p>No supporting documentation is required for this authority; see Section 3.0.</p>'), { noCover: true, pageOffset: bodyPages + extra }));
@@ -10375,6 +10404,7 @@ async function buildClientReportPdf() {
       }
       for (const x of p.docs) extra += await add(x.d);
     }
+    crLinkJumps(pdf, bodyPages, jump);
     const f = crFields();
     pdf.setTitle((f.projectName || f.siteAddress || '') + ' - HUD Environmental Review'); pdf.setAuthor('AZ-RI Consultants');
     const out = await pdf.save(); const blob = new Blob([out], { type: 'application/pdf' });
@@ -10445,6 +10475,7 @@ function crFixTree(node, maxW){
   if(Array.isArray(node)){ node.forEach(n=>crFixTree(n,maxW)); return; }
   if(!node || typeof node!=="object") return;
   if(node.tocPlaceholder) return;
+  if(node.link && /azri\.link/.test(node.link) && /^(#000|#000000|black)$/i.test(String(node.color||''))){ const un=x=>{ if(!x||typeof x!=="object") return; if(Array.isArray(x)){ x.forEach(un); return; } delete x.decoration; if(Array.isArray(x.text)) x.text.forEach(un); }; un(node); }   // (v163) TOC figure / appendix links look like the rest of the TOC
   if(node.nodeName==="H2"||node.nodeName==="H3"){ node.tocItem=true; if(node.nodeName==="H3") node.tocMargin=[14,0,0,0]; }
   if(node.table){
     const n=Math.max.apply(null,node.table.body.map(r=>r.length)); const keep=typeof node.layout==="string";
@@ -10483,6 +10514,24 @@ function crDocDef(html, opts){
 function crFontsInit(){ pdfMake.vfs=AZRI_VFS; pdfMake.fonts={Arimo:{normal:"Arimo-Regular.ttf",bold:"Arimo-Bold.ttf",italics:"Arimo-Italic.ttf",bolditalics:"Arimo-BoldItalic.ttf"}, Sym:{normal:"Sym.ttf",bold:"Sym.ttf",italics:"Sym.ttf",bolditalics:"Sym.ttf"}}; }
 function crPdfmakeBytes(dd){ return new Promise((res,rej)=>{ try{ pdfMake.createPdf(dd).getBuffer(b=>res(b)); }catch(e){ rej(e); } }); }
 function crDataUrlToBytes(d){ const b=atob(d.split(",",2)[1]); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+// (v163) Turn the body's https://azri.link/<key> URI links (TOC figures / appendices, Compliance Summary letters,
+// "Supporting documentation: Appendix X") into in-document jumps to the divider pages added by pdf-lib.
+function crLinkJumps(pdf, bodyPages, jump){
+  const N=PDFLib.PDFName; let n=0;
+  pdf.getPages().slice(0, bodyPages).forEach(pg=>{
+    const annots=pg.node.Annots(); if(!annots) return;
+    for(let i=0;i<annots.size();i++){
+      try{
+        const a=annots.lookup(i); if(!a || !a.lookup) continue; const act=a.lookup(N.of('A')); if(!act || !act.lookup) continue;
+        const uri=act.lookup(N.of('URI')); if(!uri) continue; const u=uri.decodeText? uri.decodeText() : String(uri);
+        const m=u.match(/^https?:\/\/azri\.link\/(.+)$/); if(!m) continue; const k=m[1]; const target=jump[k];
+        if(target==null){ a.delete(N.of('A')); continue; }   // nothing to jump to — leave plain text
+        a.delete(N.of('A')); a.set(N.of('Dest'), pdf.context.obj([pdf.getPage(target).ref, N.of('Fit')])); n++;
+      }catch(e){ console.warn('[Client Report] link', e); }
+    }
+  });
+  return n;
+}
 async function crDividerPage(pdf, font, title, sub){ const page=pdf.addPage([CR_W,CR_H]); const w=font.widthOfTextAtSize(title,24); page.drawText(title,{x:(CR_W-w)/2,y:CR_H/2+10,size:24,font:font,color:PDFLib.rgb(0.396,0.553,0.106)}); if(sub){ const w2=font.widthOfTextAtSize(sub,13); page.drawText(sub,{x:(CR_W-w2)/2,y:CR_H/2-16,size:13,font:font,color:PDFLib.rgb(0.3,0.3,0.3)}); } }
 async function crAppendDoc(pdf, d){
   const bytes=crDataUrlToBytes(d.data);
@@ -13563,7 +13612,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v162 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v163 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v163: CZM packet inputs — tick other sections (Wetlands, Floodplain, Flood Insurance, CBRS, ESA, WSR, Historic, Farmland, SSA) to add their figures to the CZM packet, with a warning when a ticked section has no figure yet; Client Report — List of Figures / Appendices entries, Compliance Summary appendix letters and every "Supporting documentation: Appendix X" now jump to that appendix.');
   console.log('  v162: Grant Recipient address fields (1101) — used for the Client Report cover and sent to the Noise worksheet as the client address when Prepared For = Applicant (RE address when Prepared For = RE).');
   console.log('  v161: 📁 Save folder (per project) — every generated map / figure / packet / letter / Word export / Client Report is written into the chosen folder, overwriting the previous version (Supporting Documents still auto-attach and refresh); Client Report gets a Save As dialog when no folder is set; Section 106 letter signed by Nathaniel Alper (override fields), never the RE HEROS preparer; HUD ER → Noise hand-off no longer sends the preparer; CZM write-up for DE Subpart F (CDBG) — not reviewable by DCMP.');
   console.log('  v160: Section 106 letter — override field for every section; new Area of Potential Effect (APE) section after Project Location (default: Subject Property + immediate surrounding area in visual range); NR results drop listing dates and list only districts / properties on the Subject Property plus resources within 1,000 ft ("Listed resources within or close to the APE: Name (NRIS #) - distance"). DE Fed Con Form template updated (Nathaniel, 10/15).');
