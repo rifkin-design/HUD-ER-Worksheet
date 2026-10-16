@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v161</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v162</div>
   </div>
 </header>
 
@@ -869,6 +869,10 @@
       <div class="field-grid" id="grantRecipientFields" style="margin-top:10px;">
         <div><label>Name of Organization</label><input type="text" data-field="applicant" placeholder="e.g., Hope House of Cumberland Valley"></div>
         <div><label>Name of Point of Contact</label><input type="text" data-field="applicantPOC"></div>
+        <div class="full"><label>Address</label><input type="text" data-field="applicantAddress" placeholder="Street address"></div>
+        <div><label>City</label><input type="text" data-field="applicantCity"></div>
+        <div><label>State</label><input type="text" data-field="applicantState"></div>
+        <div><label>ZIP</label><input type="text" data-field="applicantZip"></div>
       </div>
     </div>
 
@@ -6825,7 +6829,7 @@ function noiseHandoffData() {
   const siteDesc = 'The Subject Site ' + (feats.length > 1 ? 'consists of ' + feats.length + ' parcels totaling' : 'is a parcel of') + ' approximately ' + (acres ? (acres < 1 ? acres.toFixed(3) : acres.toFixed(2)) : '[acreage]') + ' acres'
     + (pins.length ? ' (' + (county ? county + ' ' : '') + 'tax parcel' + (pins.length > 1 ? 's ' : ' ') + pins.join(', ') + ')' : '') + ' located at ' + (where || '[address]') + '.';
   return {
-    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v161',
+    app: 'azri-hud-er-to-noise', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v162',
     proj: {
       PROJECT_NAME: v('projectName'), ADDRESS: v('siteAddress'),
       CITY_STATE_ZIP: [v('siteCity'), [st, v('siteZip')].filter(Boolean).join(' ')].filter(Boolean).join(', '),
@@ -10201,7 +10205,7 @@ function crPreparedFor(f) {
   f = f || crFields(); const mode = (f.cr_preparedFor || '').trim();
   const reAddr = [f.reAddress, [f.reCity, [f.reState, f.reZip].filter(Boolean).join(' ')].filter(Boolean).join(', ')];
   let name, l1 = (f.cr_pfAddress || '').trim(), l2 = (f.cr_pfCity || '').trim(), other = '';
-  if (mode === 'applicant') { name = (f.cr_pfName || '').trim() || f.applicant || '[Applicant]'; if (f.responsibleEntity) other = 'Responsible Entity: ' + f.responsibleEntity; }
+  if (mode === 'applicant') { name = (f.cr_pfName || '').trim() || f.applicant || '[Applicant]'; if (!l1 && !l2) { l1 = (f.applicantAddress || '').trim(); l2 = [f.applicantCity, [f.applicantState, f.applicantZip].filter(Boolean).join(' ')].filter(Boolean).join(', '); } if (f.responsibleEntity) other = 'Responsible Entity: ' + f.responsibleEntity; }   // (v162) grant recipient address
   else if (mode === 'other') { name = (f.cr_pfName || '').trim() || '[Prepared For]'; }
   else { name = (f.cr_pfName || '').trim() || f.responsibleEntity || '[Responsible Entity]'; if (!l1 && !l2) { l1 = reAddr[0] || ''; l2 = reAddr[1] || ''; } if (f.applicant) other = 'Grant Recipient: ' + f.applicant; }
   return { mode: mode || 're', name, l1, l2, other };
@@ -13559,7 +13563,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v161 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v162 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v162: Grant Recipient address fields (1101) — used for the Client Report cover and sent to the Noise worksheet as the client address when Prepared For = Applicant (RE address when Prepared For = RE).');
   console.log('  v161: 📁 Save folder (per project) — every generated map / figure / packet / letter / Word export / Client Report is written into the chosen folder, overwriting the previous version (Supporting Documents still auto-attach and refresh); Client Report gets a Save As dialog when no folder is set; Section 106 letter signed by Nathaniel Alper (override fields), never the RE HEROS preparer; HUD ER → Noise hand-off no longer sends the preparer; CZM write-up for DE Subpart F (CDBG) — not reviewable by DCMP.');
   console.log('  v160: Section 106 letter — override field for every section; new Area of Potential Effect (APE) section after Project Location (default: Subject Property + immediate surrounding area in visual range); NR results drop listing dates and list only districts / properties on the Subject Property plus resources within 1,000 ft ("Listed resources within or close to the APE: Name (NRIS #) - distance"). DE Fed Con Form template updated (Nathaniel, 10/15).');
   console.log('  v159: CZM — DE Fed Con Form auto-fill removed; ⬇ pre-filled template download (Delaware_Fed_Con_Form_v2_Template.pdf) + instructions in the DE submission guide. Explosives — project description dropped from the AST / ASD attachment. Historic — Section 106 packet rewritten as the AZ-RI SHPO request letter (request for review, consultation thus far, NRHP + state database results, scope, ground disturbance, attachments); TDAT removed from the letter; new 🪶 TDAT → notes writes the tribes paragraph into the Compliance Determinations notes (contact initiated by the RE or HUD).');
