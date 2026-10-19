@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v164</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v165</div>
   </div>
 </header>
 
@@ -10509,13 +10509,14 @@ function crBuildHtml() {
   const ACT = { acq: 'Acquisition (incl. refinance) of real property', lease: 'Leasing', maint: 'Maintenance', rehab: 'Repair / improvement / rehabilitation', newconst: 'New construction / reconstruction', demo: 'Demolition', dispo: 'Disposition', infra: 'Infrastructure', other: 'Other' };
   const USE = { vacant: 'Vacant land', public: 'Public facility', nonres: 'Nonresidential building(s)', res: 'Residential building(s)' };
   const list = (js, m) => { try { const a = JSON.parse(js || '[]'); return Array.isArray(a) ? a.map(v => m[v] || v).join(', ') : ''; } catch (e) { return ''; } };
-  h += '<h3>1.1 Project Description</h3>' + (crText(f.projectDescription) || '<p>[Project description]</p>') +
+  let sub1 = 0; const s1 = t => '<h3>1.' + (++sub1) + ' ' + t + '</h3>';   // (v165) 1.x numbered in sequence — optional subsections no longer leave gaps (1.1 → 1.4)
+  h += s1('Project Description') + (crText(f.projectDescription) || '<p>[Project description]</p>') +
     table([row('Project Activities', list(f.herosActivities, ACT)), row('Planned Use After Completion', list(f.plannedUse, USE)), row('Change in Land Use?', f.landUseChange), row('Year Built (existing structures)', f.yearBuilt)]);
-  if ((f.purposeAndNeed || '').trim()) h += '<h3>1.2 Statement of Purpose and Need</h3>' + crText(f.purposeAndNeed);
-  if ((f.existingConditions || '').trim()) h += '<h3>1.3 Existing Conditions</h3>' + crText(f.existingConditions);
+  if ((f.purposeAndNeed || '').trim()) h += s1('Statement of Purpose and Need') + crText(f.purposeAndNeed);
+  if ((f.existingConditions || '').trim()) h += s1('Existing Conditions') + crText(f.existingConditions);
   // Level of review citations
   const cites = []; document.querySelectorAll('input[name="exempt_cite"]:checked, input[name="censt_cite"]:checked, input[name="cest_cite"]:checked').forEach(cb => { const l = cb.closest('label'); if (l) cites.push(l.textContent.replace(/\s+/g, ' ').trim()); });
-  h += '<h3>1.4 Level of Review</h3><p>' + esc(levelLabel || '[Level of review]') + '</p>' + (cites.length ? '<ul>' + cites.map(c => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '');
+  h += s1('Level of Review') + '<p>' + esc(levelLabel || '[Level of review]') + '</p>' + (cites.length ? '<ul>' + cites.map(c => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '');
   // 2.0 Compliance summary
   const auths = crReportAuthorities();
   h += "<div class='pagebreak'></div><h2>2.0 Compliance Summary</h2><p>The following table summarizes the determination for each related federal law and authority (24 CFR 58.5 and 58.6). Supporting documentation for each is provided in the appendix listed.</p>" +
@@ -13798,7 +13799,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v164 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v165 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v165: Client Report — Section 1 subsections numbered in sequence (1.1 Project Description, then Purpose and Need / Existing Conditions when filled, then Level of Review), so the TOC and report no longer jump from 1.1 to 1.4.');
   console.log('  v164: Airport Hazards figure — frame sized (latitude-corrected) so the full 15,000 ft ring shows clear of the header and legend; heliports / helipads no longer drawn. Historic — dedicated state database screenshot upload in the Section 106 letter details (listed + attached after the NR Map). Farmland figure — soil units inside a Census Urban Area are left colorless (outline + symbol · class label). Endangered Species — Section 7 species table (status / critical habitat / D-Key) + USFWS Section 7 request letter (concurrence, or formal consultation when a listed species is LAA) with packet, IPaC list and D-Key letters attached.');
   console.log('  v163: CZM packet inputs — tick other sections (Wetlands, Floodplain, Flood Insurance, CBRS, ESA, WSR, Historic, Farmland, SSA) to add their figures to the CZM packet, with a warning when a ticked section has no figure yet; Client Report — List of Figures / Appendices entries, Compliance Summary appendix letters and every "Supporting documentation: Appendix X" now jump to that appendix.');
   console.log('  v162: Grant Recipient address fields (1101) — used for the Client Report cover and sent to the Noise worksheet as the client address when Prepared For = Applicant (RE address when Prepared For = RE).');
