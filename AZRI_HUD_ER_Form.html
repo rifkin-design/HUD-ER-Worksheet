@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v166</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v167</div>
   </div>
 </header>
 
@@ -2208,8 +2208,8 @@ const AUTO_DETERMINERS = {
       zoneFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 28, lng, lat, 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID,STUDY_TYP');
     } catch (e) { console.warn('[flood_mgt] zone query failed:', e); }
     try {
-      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP');
-      if (panelFeatures.length) panelInfo = panelFeatures[0].attributes;
+      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP,PNP_REASON');
+      panelInfo = pickFirmPanel(panelFeatures);   // (v167) skip "Not Printed" placeholder panels (9999 dates)
     } catch (e) { console.warn('[flood_mgt] panel query failed:', e); }
 
     let firmPanel = '', firmRev = '';
@@ -2273,8 +2273,8 @@ const AUTO_DETERMINERS = {
       zoneFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 28, lng, lat, 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID,STUDY_TYP');
     } catch (e) { console.warn('[flood_ins] zone query failed:', e); }
     try {
-      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP');
-      if (panelFeatures.length) panelInfo = panelFeatures[0].attributes;
+      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP,PNP_REASON');
+      panelInfo = pickFirmPanel(panelFeatures);   // (v167) skip "Not Printed" placeholder panels (9999 dates)
     } catch (e) { console.warn('[flood_ins] panel query failed:', e); }
 
     // Build FIRM Panel reference in the SOP's format: "1100010039C (9/27/2010)"
@@ -4981,6 +4981,18 @@ function nfhlZoneLabel(a) {
   if (z === 'X') return 'Zone X — Area of Minimal Flood Hazard';
   return null;
 }
+// (v167) FEMA's FIRM Panels layer often returns 2+ panels for one point near a county line — e.g. Carroll Co.
+// 24013C0350D "Countywide, Not Printed" (PNP_REASON "Area outside county boundary", EFF_DATE 12/31/9999) over the real
+// Baltimore Co. panel 2400100215G. Pick the printed panel with a real effective date; latest effective date wins.
+function pickFirmPanel(features) {
+  const rows = (features || []).map(f => f.attributes || f).filter(Boolean);
+  if (!rows.length) return null;
+  const yr = a => { const t = parseInt(a.EFF_DATE); return isNaN(t) ? 0 : new Date(t).getUTCFullYear(); };
+  const placeholder = a => /not printed/i.test(a.PANEL_TYP || '') || !!a.PNP_REASON || yr(a) >= 9000 || yr(a) === 0;
+  const good = rows.filter(a => !placeholder(a));
+  const pool = good.length ? good : rows.filter(a => yr(a) < 9000).length ? rows.filter(a => yr(a) < 9000) : rows;
+  return pool.slice().sort((a, b) => (parseInt(b.EFF_DATE) || 0) - (parseInt(a.EFF_DATE) || 0))[0];
+}
 async function nfhlQuery(layer, geometry, geometryType, extra) {
   const params = new URLSearchParams(Object.assign({ f: 'json', geometry: JSON.stringify(geometry), geometryType, inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: '*', returnGeometry: 'false', outSR: '4326' }, extra || {}));
   const j = await (await fetch(NFHL_SERVICE + '/' + layer + '/query?' + params)).json();
@@ -5006,11 +5018,11 @@ async function generateFloodFigure(authId) {
     const ptGeom = { x: center[0], y: center[1], spatialReference: { wkid: 4326 } };
     const [siteZones, panels, lomrs, lomas] = await Promise.all([
       nfhlQuery(NFHL_LAYER.zones, siteGeom, siteType, { outFields: 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,STATIC_BFE,DFIRM_ID' }),
-      nfhlQuery(NFHL_LAYER.panels, ptGeom, 'esriGeometryPoint', { outFields: 'FIRM_PAN,EFF_DATE,PANEL_TYP,DFIRM_ID' }).catch(() => []),
+      nfhlQuery(NFHL_LAYER.panels, ptGeom, 'esriGeometryPoint', { outFields: 'FIRM_PAN,EFF_DATE,PANEL_TYP,DFIRM_ID,PNP_REASON' }).catch(() => []),
       nfhlQuery(NFHL_LAYER.lomr, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS' }).catch(() => []),
       nfhlQuery(NFHL_LAYER.loma, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS,DETERMINATION' }).catch(() => [])
     ]);
-    const panel = panels[0] ? panels[0].attributes : null;
+    const panel = pickFirmPanel(panels);   // (v167) the effective printed panel, not a neighbouring county's "Not Printed" placeholder
     const effDate = panel && panel.EFF_DATE ? fmtUtcDate(panel.EFF_DATE) : '';
     const firmRef = panel ? (panel.FIRM_PAN || panel.DFIRM_ID || '') + (effDate ? ' (effective ' + effDate + ')' : '') : '';
     const zoneTxt = a => (a.FLD_ZONE || '?') + (a.ZONE_SUBTY ? ' — ' + String(a.ZONE_SUBTY).toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) : '');
@@ -9348,6 +9360,10 @@ AUTHORITIES.forEach(a => {
       </div>
       <div id="czmGuide" style="font-size:12px;line-height:1.5;color:#2d3748;"></div>
     </details>` : ''}
+    ${(a.id === 'contam' || a.id === 'noise') ? `<div class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;font-size:12px;">
+      <label style="font-weight:600;color:var(--azri-navy);display:block;margin-bottom:4px;">Report provided separately <span style="font-weight:400;color:var(--gray);">(name of the ${a.id === 'contam' ? 'Phase I / Limited ESA' : 'Noise Assessment'} report — the Client Report appendix for this section gets a page reading "Report provided separately as [name]")</span></label>
+      <input type="text" data-field="${a.id}_sepReport" oninput="if(typeof crRefreshAppendices==='function')crRefreshAppendices()" placeholder="${a.id === 'contam' ? 'e.g., Phase I Environmental Site Assessment, 230 West Division Street, Dover, DE (AZ-RI Consultants, October 2026)' : 'e.g., HUD Noise Assessment, 230 West Division Street, Dover, DE (AZ-RI Consultants, October 2026)'}" style="width:100%;box-sizing:border-box;">
+    </div>` : ''}
     <div class="authority-fields">
       <!-- Source / Date Consulted hidden (preserved for save/load + ERR exports back-compat) -->
       <input type="hidden" data-field="${a.id}_source">
@@ -10453,9 +10469,10 @@ function crAppendixPlan() {
   const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; let n = 0; const plan = [];
   crReportAuthorities().forEach(a => {
     const docs = crIncludedDocs(a.id);
-    if (!docs.length && !all) return;
+    const sep = ((document.querySelector('[data-field="' + a.id + '_sepReport"]') || {}).value || '').trim();   // (v167) "Report provided separately as …"
+    if (!docs.length && !sep && !all) return;
     const letter = n < 26 ? L[n] : 'A' + L[n - 26]; n++;
-    plan.push({ letter, a, docs });
+    plan.push({ letter, a, docs, sep });
   });
   return plan;
 }
@@ -10585,7 +10602,10 @@ async function buildClientReportPdf() {
       say('Appending Appendix ' + p.letter + ' — ' + crAuthName(p.a) + '…');
       jump['app-' + p.letter] = pdf.getPageCount();
       await crDividerPage(pdf, fonts.b, 'Appendix ' + p.letter, crAuthName(p.a)); extra++;
-      if (!p.docs.length) {
+      if (p.sep) {   // (v167) separately-provided report (Phase I ESA / Noise Assessment)
+        const nb = await crPdfmakeBytes(crDocDef(crPrepHtml('<h2>Appendix ' + p.letter + ' — ' + crEsc(crAuthName(p.a)) + '</h2><p>Report provided separately as <i>' + crEsc(p.sep) + '</i>.</p>'), { noCover: true, pageOffset: bodyPages + extra }));
+        const nd = await PDFLib.PDFDocument.load(nb); const pg = await pdf.copyPages(nd, nd.getPageIndices()); pg.forEach(x => pdf.addPage(x)); extra += pg.length;
+      } else if (!p.docs.length) {
         const nb = await crPdfmakeBytes(crDocDef(crPrepHtml('<h2>Appendix ' + p.letter + ' — ' + crEsc(crAuthName(p.a)) + '</h2><p>No supporting documentation is required for this authority; see Section 3.0.</p>'), { noCover: true, pageOffset: bodyPages + extra }));
         const nd = await PDFLib.PDFDocument.load(nb); const pg = await pdf.copyPages(nd, nd.getPageIndices()); pg.forEach(x => pdf.addPage(x)); extra += pg.length;
       }
@@ -10645,6 +10665,7 @@ function crRenderAppendixPanel() {
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="min-width:92px;color:' + (p ? CR_GREEN : '#a0aec0') + ';">' + (p ? 'Appendix ' + p.letter : '—') + '</b>' +
       '<b style="flex:1;color:#0f2a44;">' + crEsc(crAuthName(a)) + ' <span style="font-weight:400;color:#718096;font-size:11px;">' + crEsc(crCite(a)) + ' · ' + crEsc(CR_STATUS[crStatus(a)]) + '</span></b>' +
       '<span style="font-size:11px;color:#718096;">drag files here or</span><button type="button" onclick="uploadSupportingDoc(\'' + a.id + '\')" style="background:#fff;border:1px solid #0f2a44;color:#0f2a44;padding:2px 9px;border-radius:3px;font-size:11px;cursor:pointer;font-weight:600;">⬆ Add</button></div>' +
+      (p && p.sep ? '<div style="margin-top:4px;font-size:11.5px;color:#2d3748;">📘 Page: "Report provided separately as <i>' + crEsc(p.sep) + '</i>"</div>' : '') +
       (rows ? '<div style="margin-top:4px;">' + rows + '</div>' : '') + '</div>';
   }).join('');
 }
@@ -13799,7 +13820,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v166 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v167 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v167: FIRM panel — skip FEMA "Countywide, Not Printed" placeholder panels (9999 effective date, e.g. a neighbouring county\'s panel near a county line) and use the effective printed panel (Flood Insurance / Floodplain auto-checks + FIRM Map). Contamination and Noise — "Report provided separately" name field; the Client Report appendix for that section gets a page "Report provided separately as [name]".');
   console.log('  v166: Farmland Map key — Census Urban Area listed right after the Subject Property, above the soil classes. Letters / packets — text that flows onto a new page keeps the body font size (the page header was leaving it at 8.5 pt, e.g. the Section 7 closing paragraph).');
   console.log('  v165: Client Report — Section 1 subsections numbered in sequence (1.1 Project Description, then Purpose and Need / Existing Conditions when filled, then Level of Review), so the TOC and report no longer jump from 1.1 to 1.4.');
   console.log('  v164: Airport Hazards figure — frame sized (latitude-corrected) so the full 15,000 ft ring shows clear of the header and legend; heliports / helipads no longer drawn. Historic — dedicated state database screenshot upload in the Section 106 letter details (listed + attached after the NR Map). Farmland figure — soil units inside a Census Urban Area are left colorless (outline + symbol · class label). Endangered Species — Section 7 species table (status / critical habitat / D-Key) + USFWS Section 7 request letter (concurrence, or formal consultation when a listed species is LAA) with packet, IPaC list and D-Key letters attached.');
