@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v163</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v164</div>
   </div>
 </header>
 
@@ -3157,7 +3157,7 @@ function renderSupportingDocs(authId) {
 function renderAllSupportingDocs() {
   if (typeof crRenderCover === 'function') setTimeout(crRenderCover, 0);   // (v158) cover photo / Prepared For preview after a review loads
   AUTHORITIES.forEach(a => renderSupportingDocs(a.id));
-  ['packet_fig1', 'packet_plans', 'packet_photos', 'air_greenbook', 'esa_ipac'].forEach(renderSupportingDocs);
+  ['packet_fig1', 'packet_plans', 'packet_photos', 'air_greenbook', 'esa_ipac', 'esa_dkeys', 'hist_stateDbShot'].forEach(renderSupportingDocs);
   if (typeof renderCZMGuide === 'function') try { renderCZMGuide(); } catch (e) {}
   const ipc = document.getElementById('esaIpacCount'); if (ipc) { const d = (supportingDocs.esa_ipac || []); ipc.textContent = d.length ? d.map(x => x.name).join(', ') : 'none'; }
   if (typeof esaRenderTable === 'function') esaRenderTable();
@@ -3601,6 +3601,7 @@ const REGEN_KINDS = [
   { suffix: '_CZM_Consistency_Packet.pdf',         auth: 'czm',       label: 'CZM Consistency Packet',         run: () => generateCZMConsultation('czm') },
   { suffix: '_Radon_County_Map.jpg',               auth: 'contam',    label: 'Radon County Map',               run: () => generateRadonFigure() },
   { suffix: '_ESA_Section7_Packet.pdf',            auth: 'esa',       label: 'ESA Section 7 Packet',           run: () => generateESAConsultation('esa') },
+  { suffix: '_ESA_Section7_Request.pdf',           auth: 'esa',       label: 'Section 7 Request Letter',       run: () => generateESASection7Letter('esa') },
   { suffix: '_AST_ASD_Calculations.pdf',           auth: 'explos',    label: 'AST / ASD attachment',           run: () => generateExplosAttachment('explos') },
   { suffix: '_Farmland_Map.jpg',                   auth: 'farm',      label: 'Farmland Map',                   run: () => generateFarmlandFigure('farm') },
   { suffix: '_Floodplain_Management_Map.jpg',      auth: 'flood_mgt', label: 'Floodplain Management Map',      run: () => generateFloodFigure('flood_mgt') },
@@ -3763,6 +3764,8 @@ const AIRPORT_CIVIL_FT = 2500, AIRPORT_MIL_FT = 15000;
 // (v134) Show heliports / private strips on the figure as gray reference markers (no distance, not screened)?
 // Set false to leave them off entirely — they are never "civil airports" under 24 CFR 51.301(c) either way.
 const AIRPORT_SHOW_OTHER = true;
+// (v164) Heliports / helipads are never drawn on the figure (not even as reference markers).
+const airportIsHeliport = a => (a.TYPE_CODE || '').toUpperCase() === 'HP';
 
 function figSiteContext() {
   // Prefer selected parcels; fall back to the 1125 Lat/Long field so a figure can be made pre-parcel.
@@ -3806,7 +3809,7 @@ async function generateAirportFigure(authId) {
   try {
     say('Querying FAA airports and runways…');
     // 15,000 ft ≈ 2.84 mi; pull everything within the map extent (3.6 mi) so context airports show too
-    const SEARCH_MI = 3.6;
+    const SEARCH_MI = 5.5;   // (v164) frame now shows the full 15,000 ft ring, so pull context facilities a little further out
     const [airports, runways] = await Promise.all([
       faaQuery(FAA_AIRPORTS_URL, center, SEARCH_MI, 'GLOBAL_ID,IDENT,NAME,TYPE_CODE,MIL_CODE,PRIVATEUSE,OPERSTATUS,SERVCITY,STATE', true),
       faaQuery(FAA_RUNWAYS_URL, center, SEARCH_MI, 'AIRPORT_ID,DESIGNATOR,LENGTH,WIDTH', true).catch(() => [])
@@ -3846,8 +3849,18 @@ async function generateAirportFigure(authId) {
     // Single frame (v127 — the split pane was confusing here): the whole 15,000 ft military screen with the
     // 2,500 ft civil screen inside it, every FAA landing facility and runway in range, labelled with the distance
     // to the nearest runway end.
-    const halfM = AIRPORT_MIL_FT / FT_PER_M * 1.22;
-    const base = await figBuildBase(center, halfM, { basemap: 'streets' });
+    // (v164) Size the frame so the WHOLE 15,000 ft ring is visible: clear of the header band, the ring label, the legend
+    // box (bottom-left) and the sources band. Web-Mercator metres are stretched by 1/cos(lat), so ground feet are
+    // converted with that factor (the old 1.22 x radius ignored it, which clipped the ring top and bottom at mid-latitudes).
+    const FIG_W = 1500, FIG_H = 1050;
+    const legendRows = 6 + (AIRPORT_SHOW_OTHER && other.some(r => !airportIsHeliport(r.a)) ? 1 : 0);
+    const legLabelMax = (() => { try { const m = document.createElement('canvas').getContext('2d'); m.font = '13px Arial'; return Math.max(...['Subject Property — ' + figSiteLabel(proj, center), legendRows > 6 ? 'Private-use strip / other landing facility — not a civil airport (reference only)' : '', 'Military airfield screen — 15,000 ft'].map(t => m.measureText(t).width)); } catch (e) { return 520; } })();
+    const legW = legLabelMax + 54 + 16, legTop = FIG_H - 80 - (legendRows * 24 + 16);
+    const cx0 = FIG_W / 2, cy0 = FIG_H / 2;
+    const rFit = Math.min(cy0 - FIG_HB - 30, cy0 - FIG_FB - 12, Math.hypot(Math.max(0, cx0 - legW), Math.max(0, legTop - cy0)) - 14);
+    const ringPx = Math.max(250, rFit);
+    const halfM = (AIRPORT_MIL_FT / FT_PER_M) / Math.cos(center[1] * Math.PI / 180) * (cy0 / ringPx);
+    const base = await figBuildBase(center, halfM, { basemap: 'streets', W: FIG_W, H: FIG_H });
     const { ctx, toPx, W, H } = base;
     if (!base.tilesOk) throw new Error('basemap tiles could not be loaded');
     const c = toPx(center);
@@ -3873,7 +3886,7 @@ async function generateAirportFigure(authId) {
       if (p[0] < 0 || p[0] > W || p[1] < 100 || p[1] > H) return;   // off the map — the edge pointer handles the nearest ones
       if (r.kind === 'other') {
         // Heliport / private strip etc. — not a civil airport under 24 CFR 51.301(c): small gray dot, name + type, no distance
-        if (!AIRPORT_SHOW_OTHER) return;
+        if (!AIRPORT_SHOW_OTHER || airportIsHeliport(r.a)) return;   // (v164) helipads never on the figure
         ctx.fillStyle = '#6b7280'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(p[0], p[1], 5, 0, 7); ctx.fill(); ctx.stroke();
         const txt = (r.a.NAME || r.a.IDENT) + (r.a.IDENT ? ' (' + r.a.IDENT + ')' : '') + ' — ' + airportTypeLabel(r.a).toLowerCase() + (r.a.PRIVATEUSE == 1 ? ', private use' : '') + ' (reference only)';
@@ -3919,8 +3932,8 @@ async function generateAirportFigure(authId) {
       { label: 'Military airfield', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 6, y + h / 2); ctx.lineTo(x + 22, y + h / 2); ctx.moveTo(x + 14, y); ctx.lineTo(x + 14, y + h); ctx.stroke(); } },
       { label: 'Runway (FAA)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(55,65,81,0.85)'; ctx.fillRect(x, y + 3, w, h - 6); } }
     ];
-    if (AIRPORT_SHOW_OTHER && other.some(r => { const p = toPx(r.pt); return p[0] >= 0 && p[0] <= W && p[1] >= 100 && p[1] <= H; })) {
-      legend.push({ label: 'Heliport / private strip — not a civil airport (reference only)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = '#6b7280'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 14, y + h / 2, 5, 0, 7); ctx.fill(); ctx.stroke(); } });
+    if (AIRPORT_SHOW_OTHER && other.some(r => { if (airportIsHeliport(r.a)) return false; const p = toPx(r.pt); return p[0] >= 0 && p[0] <= W && p[1] >= 100 && p[1] <= H; })) {
+      legend.push({ label: 'Private-use strip / other landing facility — not a civil airport (reference only)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = '#6b7280'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 14, y + h / 2, 5, 0, 7); ctx.fill(); ctx.stroke(); } });
     }
     await figFurnish(base, {
       title: 'Airport Hazards Map',
@@ -5044,8 +5057,8 @@ async function generateFloodFigure(authId) {
           return best;
         };
         const [sfhaPolys, x500Polys, bfeLines] = await Promise.all([
-          nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "SFHA_TF='T'", outFields: 'FLD_ZONE,ZONE_SUBTY,STATIC_BFE', returnGeometry: 'true', maxAllowableOffset: '0.00002' }).catch(() => []),
-          nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "ZONE_SUBTY LIKE '0.2 PCT%'", outFields: 'FLD_ZONE,ZONE_SUBTY', returnGeometry: 'true', maxAllowableOffset: '0.00002' }).catch(() => []),
+          nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "SFHA_TF='T'", outFields: 'FLD_ZONE,ZONE_SUBTY,STATIC_BFE', returnGeometry: 'true', maxAllowableOffset: '0.0001' }).catch(() => []),
+          nfhlQuery(NFHL_LAYER.zones, env, 'esriGeometryEnvelope', { where: "ZONE_SUBTY LIKE '0.2 PCT%'", outFields: 'FLD_ZONE,ZONE_SUBTY', returnGeometry: 'true', maxAllowableOffset: '0.0001' }).catch(() => []),
           nfhlQuery(NFHL_LAYER.bfe, env, 'esriGeometryEnvelope', { outFields: 'ELEV,LEN_UNIT,V_DATUM', returnGeometry: 'true' }).catch(() => [])
         ]);
         prox.sfha = inSFHA ? { distFt: 0 } : nearest(sfhaPolys);
@@ -5235,21 +5248,39 @@ async function generateFarmlandFigure(authId) {
       sdaQuery(`SELECT DISTINCT m.mukey, m.musym, m.muname, m.farmlndcl, ROUND(SUM(p.mupolygongeo.STIntersection(geometry::STGeomFromText('${siteWkt}',4326)).STArea()) / NULLIF(geometry::STGeomFromText('${siteWkt}',4326).STArea(),0) * 100, 1) AS pct FROM mupolygon p INNER JOIN mapunit m ON m.mukey=p.mukey WHERE p.mupolygongeo.STIntersects(geometry::STGeomFromText('${siteWkt}',4326)) = 1 GROUP BY m.mukey, m.musym, m.muname, m.farmlndcl`)
     ]);
     const inUrban = Array.isArray(urban) && urban.length > 0; const urbanName = inUrban ? urban[0].NAME : '';
-    // Draw soil map units colored by farmland class
-    const seen = {};
+    // (v164) Census Urban Area polygons in the frame — soil units are left colorless (outline + label only) wherever they
+    // fall inside an Urban Area, so the urban shading stays readable and the urban-area exemption is obvious on the map.
+    let urbanRings = [];
+    try {
+      const uj = await (await fetch(`${TIGER_URBAN}/${TIGER_URBAN_LAYER}/query?` + new URLSearchParams({ f: 'json', geometry: JSON.stringify({ xmin: ll[0], ymin: ll[1], xmax: ur[0], ymax: ur[1], spatialReference: { wkid: 4326 } }), geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: 'NAME', returnGeometry: 'true', outSR: '4326', maxAllowableOffset: '0.0001' }))).json();
+      (uj.features || []).forEach(f => ((f.geometry && f.geometry.rings) || []).forEach(r => urbanRings.push(r)));
+    } catch (e) { console.warn('[Farmland figure] urban area geometry', e); }
+    const urbanPath = c2 => { c2.beginPath(); urbanRings.forEach(ring => ring.forEach((q, i) => { const p = toPx(q); i ? c2.lineTo(p[0], p[1]) : c2.moveTo(p[0], p[1]); })); };
+    const inUrbanPx = pt => { if (!urbanRings.length) return false; const c2 = base.ctx; urbanPath(c2); return c2.isPointInPath(pt[0], pt[1], 'evenodd'); };
+    const FARM_SHORT = { prime: 'Prime', prime_if: 'Prime if…', unique: 'Unique', statewide: 'Statewide', local: 'Local', not: 'Not prime', unk: 'Not rated' };
+    // Soil fills + class outlines on an offscreen layer, Urban Areas punched out, then composited onto the basemap
+    const seen = {}; let anyUrbanSoil = false;
+    const lay = document.createElement('canvas'); lay.width = W; lay.height = H; const lc = lay.getContext('2d');
+    const labels = [];
     soilsFrame.forEach(row => {
-      const st = farmlandStyle(row.farmlndcl); seen[st.key] = st;
+      const st = farmlandStyle(row.farmlndcl);
       wktRings(row.wkt).forEach(ring => {
-        ctx.beginPath(); ring.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath();
-        ctx.fillStyle = st.fill; ctx.fill(); ctx.strokeStyle = st.stroke; ctx.lineWidth = 1.5; ctx.stroke();
-        // map-unit symbol at ring centroid
+        lc.beginPath(); ring.forEach((q, i) => { const p = toPx(q); i ? lc.lineTo(p[0], p[1]) : lc.moveTo(p[0], p[1]); }); lc.closePath();
+        lc.fillStyle = st.fill; lc.fill(); lc.strokeStyle = st.stroke; lc.lineWidth = 1.5; lc.stroke();
         let cx = 0, cy = 0; ring.forEach(q => { cx += q[0]; cy += q[1]; }); const cp = toPx([cx / ring.length, cy / ring.length]);
-        if (cp[0] > 10 && cp[0] < W - 10 && cp[1] > 110 && cp[1] < H - 10) { ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; const w = ctx.measureText(row.musym).width; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(cp[0] - w / 2 - 3, cp[1] - 10, w + 6, 14); ctx.fillStyle = '#1f2937'; ctx.fillText(row.musym, cp[0], cp[1] + 1); }
+        const urb = inUrbanPx(cp); if (urb) anyUrbanSoil = true; else seen[st.key] = st;
+        labels.push({ cp, txt: urb ? row.musym + ' · ' + (FARM_SHORT[st.key] || 'Not rated') : row.musym });
       });
     });
+    if (urbanRings.length) { lc.save(); lc.globalCompositeOperation = 'destination-out'; urbanPath(lc); lc.fillStyle = '#000'; lc.fill('evenodd'); lc.restore(); }
+    ctx.drawImage(lay, 0, 0);
+    // Colorless soil-unit boundaries everywhere (so units inside the Urban Area are still delineated)
+    soilsFrame.forEach(row => wktRings(row.wkt).forEach(ring => { ctx.beginPath(); ring.forEach((q, i) => { const p = toPx(q); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.closePath(); ctx.strokeStyle = 'rgba(71,85,105,0.85)'; ctx.lineWidth = 1; ctx.stroke(); }));
     // Urban Area boundary (Census symbology via export) — only when the site is near/inside one
     let urbanOverlay = false;
     try { await figOverlayExport(base, TIGER_URBAN, String(TIGER_URBAN_LAYER), 0.18); urbanOverlay = true; } catch (e) {}
+    // Map-unit labels (symbol; inside an Urban Area the farmland class is added since the unit is not shaded)
+    labels.forEach(({ cp, txt }) => { if (cp[0] > 10 && cp[0] < W - 10 && cp[1] > 110 && cp[1] < H - 10) { ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; const w = ctx.measureText(txt).width; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(cp[0] - w / 2 - 3, cp[1] - 10, w + 6, 14); ctx.fillStyle = '#1f2937'; ctx.fillText(txt, cp[0], cp[1] + 1); } });
     figDrawSite(base, site, center);
     const c = toPx(center);
     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
@@ -5262,6 +5293,7 @@ async function generateFarmlandFigure(authId) {
     const legend = [{ label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
     FARMLAND_STYLE.forEach(st => { if (seen[st.key]) legend.push({ label: st.label + ' (NRCS)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = st.fill; ctx.fillRect(x, y, w, h); ctx.strokeStyle = st.stroke; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); } }); });
     if (seen.unk) legend.push({ label: 'Farmland class not rated (NRCS)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); } });
+    if (anyUrbanSoil) legend.push({ label: 'Soil map unit inside a Census Urban Area — not shaded; labeled symbol · farmland class', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(0,170,200,0.3)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = 'rgba(71,85,105,0.85)'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h); } });
     legend.push({ label: 'Soil map unit boundary with map-unit symbol', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); ctx.font = 'bold 9px Arial'; ctx.fillStyle = '#1f2937'; ctx.textAlign = 'center'; ctx.fillText('HkB', x + w / 2, y + h / 2 + 3); } });
     if (urbanOverlay) legend.push({ label: 'Census Urban Area (2020) — shaded', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(0,170,200,0.3)'; ctx.fillRect(x, y, w, h); } });
     await figFurnish(base, {
@@ -6262,17 +6294,128 @@ function esaParseIpac() {
   esaSaveRows(rows); const ch = document.querySelector('[data-field="esa_critHab"]'); if (ch && !ch.value && r.critHab) ch.value = Array.isArray(r.critHab) ? r.critHab.join('; ') : 'None designated in the project area';
   esaRenderTable();
 }
-function esaRenderTable() {
-  const host = document.getElementById('esaSpeciesTable'); if (!host) return; const rows = esaRows();
-  if (!rows.length) { host.innerHTML = '<em style="font-size:11px;color:var(--gray);">No species yet — run 🤖 Review IPaC with Claude and import the result (or + Add species manually).</em>'; return; }
-  const opt = (v, cur) => `<option value="${v}"${cur === v ? ' selected' : ''}>`;
-  host.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="background:#e2e8f0;"><th style="text-align:left;padding:4px;">Species</th><th style="text-align:left;padding:4px;">Status</th><th style="text-align:left;padding:4px;">Suitable habitat on / adjacent to site?</th><th style="text-align:left;padding:4px;">Rationale (optional)</th><th></th></tr></thead><tbody>'
-    + rows.map((s, i) => `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:4px;"><input type="text" value="${s.name.replace(/"/g, '&quot;')}" onchange="esaEdit(${i},'name',this.value)" style="width:100%;font-size:11.5px;"><input type="text" value="${(s.sci || '').replace(/"/g, '&quot;')}" placeholder="Scientific name" onchange="esaEdit(${i},'sci',this.value)" style="width:100%;font-size:10.5px;font-style:italic;margin-top:2px;"></td><td style="padding:4px;"><input type="text" value="${s.status}" onchange="esaEdit(${i},'status',this.value)" style="width:110px;font-size:11.5px;"></td><td style="padding:4px;"><select onchange="esaEdit(${i},'habitat',this.value)" style="font-size:11.5px;">${opt('', s.habitat)}— select —</option>${opt('none', s.habitat)}No — no suitable habitat (developed / maintained site)</option>${opt('possible', s.habitat)}Possible — habitat nearby or marginal; avoidance measures apply</option>${opt('present', s.habitat)}Yes — suitable habitat within the limits of disturbance</option></select></td><td style="padding:4px;"><input type="text" value="${(s.rationale || '').replace(/"/g, '&quot;')}" onchange="esaEdit(${i},'rationale',this.value)" style="width:100%;font-size:11px;" placeholder="e.g., no forest on site; nearest stream 900 ft"></td><td style="padding:4px;"><button type="button" onclick="esaRemove(${i})" style="border:none;background:none;color:#c00;cursor:pointer;">×</button></td></tr>`).join('')
-    + '</tbody></table><button type="button" onclick="esaAddRow()" style="margin-top:6px;font-size:11px;background:#e2e8f0;border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;">+ Add species manually</button>';
+// (v164) Section 7 species table — Species name | Scientific name | ESA Listing Status | Critical habitat present | D-Key Determination
+const ESA_STATUS_OPTS = ['Endangered', 'Threatened', 'Proposed Endangered', 'Proposed Threatened'];
+const ESA_DKEY_OPTS = [['None', 'None'], ['No Effect', 'No Effect'], ['NLAA', 'May Affect - Not Likely to Adversely Affect (NLAA)'], ['LAA', 'May Affect - Likely to Adversely Affect (LAA)']];
+function esaNormDkey(v) { const t = String(v || '').toLowerCase(); if (/\blaa\b|likely to adversely/.test(t) && !/not likely/.test(t)) return 'LAA'; if (/nlaa|not likely/.test(t)) return 'NLAA'; if (/no effect/.test(t)) return 'No Effect'; return 'None'; }
+function esaNormStatus(v) { const t = String(v || '').trim(); const m = ESA_STATUS_OPTS.find(o => o.toLowerCase() === t.toLowerCase()); return m || t || 'Threatened'; }
+function esaListed(st) { return /^(endangered|threatened)$/i.test(String(st || '').trim()); }
+function esaRowFix(r) { return Object.assign({ name: '', sci: '', status: 'Threatened', critHab: 'No', dkey: 'None' }, r, { status: esaNormStatus(r.status), critHab: /^y/i.test(String(r.critHab || '')) ? 'Yes' : 'No', dkey: esaNormDkey(r.dkey) }); }
+function esaLetterMode(rows) {
+  const ov = ((document.querySelector('[data-field="esa_letterType"]') || {}).value || '');
+  const laaListed = rows.filter(r => esaListed(r.status) && r.dkey === 'LAA');
+  const auto = laaListed.length ? 'consultation' : 'concurrence';
+  return { mode: ov || auto, auto, laaListed };
 }
-function esaEdit(i, k, v) { const rows = esaRows(); if (rows[i]) { rows[i][k] = v; esaSaveRows(rows); } }
+function esaRenderMode() {
+  const el = document.getElementById('esaLetterMode'); if (!el) return; const rows = esaRows().map(esaRowFix);
+  if (!rows.length) { el.innerHTML = ''; return; }
+  const m = esaLetterMode(rows);
+  el.innerHTML = 'Letter will request <b>' + (m.mode === 'consultation' ? 'formal consultation' : 'concurrence') + '</b>' + (m.mode !== m.auto ? ' <span style="color:#b7791f;">(set manually — the table alone gives ' + m.auto + ')</span>' : m.laaListed.length ? ' — LAA for listed species: ' + m.laaListed.map(r => crEsc(r.name)).join(', ') : ' — no listed species with an LAA determination') + '.';
+}
+function esaRenderTable() {
+  const host = document.getElementById('esaSpeciesTable'); if (!host) return; const rows = esaRows().map(esaRowFix);
+  const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const sel = (i, k, opts, cur) => '<select onchange="esaEdit(' + i + ',\'' + k + '\',this.value)" style="width:100%;font-size:11.5px;">' + opts.map(o => { const [v, t] = Array.isArray(o) ? o : [o, o]; return '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '</select>';
+  const th = t => '<th style="text-align:left;padding:4px;font-weight:600;">' + t + '</th>';
+  host.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="background:#e2e8f0;">' + th('Species name') + th('Scientific name') + th('ESA Listing Status') + th('Critical habitat present') + th('D-Key Determination') + '<th></th></tr></thead><tbody>'
+    + (rows.length ? rows.map((r, i) => {
+      const stOpts = ESA_STATUS_OPTS.includes(r.status) ? ESA_STATUS_OPTS : ESA_STATUS_OPTS.concat([r.status]);
+      return '<tr style="border-bottom:1px solid #e5e7eb;">'
+        + '<td style="padding:3px;"><input type="text" value="' + esc(r.name) + '" onchange="esaEdit(' + i + ',\'name\',this.value)" style="width:100%;font-size:11.5px;"></td>'
+        + '<td style="padding:3px;"><input type="text" value="' + esc(r.sci) + '" onchange="esaEdit(' + i + ',\'sci\',this.value)" style="width:100%;font-size:11.5px;font-style:italic;"></td>'
+        + '<td style="padding:3px;">' + sel(i, 'status', stOpts, r.status) + '</td>'
+        + '<td style="padding:3px;width:90px;">' + sel(i, 'critHab', ['No', 'Yes'], r.critHab) + '</td>'
+        + '<td style="padding:3px;">' + sel(i, 'dkey', ESA_DKEY_OPTS, r.dkey) + '</td>'
+        + '<td style="padding:3px;width:22px;"><button type="button" onclick="esaRemove(' + i + ')" title="Remove row" style="border:none;background:none;color:#c00;cursor:pointer;font-size:14px;">×</button></td></tr>';
+    }).join('') : '<tr><td colspan="6" style="padding:6px;color:var(--gray);font-style:italic;">No species yet — + Add row, or fill it from 🤖 Review IPaC with Claude (attach the species list and D-Key letters).</td></tr>')
+    + '</tbody></table><button type="button" onclick="esaAddRow()" style="margin-top:6px;font-size:11px;background:#e2e8f0;border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;">+ Add row</button>';
+  esaRenderMode();
+}
+function esaEdit(i, k, v) { const rows = esaRows(); if (rows[i]) { rows[i][k] = v; esaSaveRows(rows); } esaRenderMode(); }
 function esaRemove(i) { const rows = esaRows(); rows.splice(i, 1); esaSaveRows(rows); esaRenderTable(); }
-function esaAddRow() { const rows = esaRows(); rows.push({ name: '', sci: '', status: 'Threatened', habitat: '', rationale: '' }); esaSaveRows(rows); esaRenderTable(); }
+function esaAddRow() { const rows = esaRows(); rows.push({ name: '', sci: '', status: 'Endangered', critHab: 'No', dkey: 'None' }); esaSaveRows(rows); esaRenderTable(); }
+// Field office default from the state recipient block when the IPaC office fields are blank
+function esaFieldOfficeDefault(stateAbbr) {
+  const recip = (typeof LETTER_TEMPLATES !== 'undefined' && LETTER_TEMPLATES.esa) ? LETTER_TEMPLATES.esa.recipient(stateAbbr) : null;
+  const lines = recip ? String(recip.title || '').split('\n') : [];
+  const i = lines.findIndex(l => /field office/i.test(l)); if (i < 0) return { name: '', street: '', csz: '' };
+  const name = lines[i].replace(/^.*?—\s*/, '').replace(/\s*\(.*\)\s*$/, '').trim();
+  const nx = lines.slice(i + 1).filter(l => !/@|\d{3}-\d{3}-\d{4}/.test(l));
+  const cszIdx = nx.findIndex(l => /,\s*[A-Z]{2}\b/.test(l));
+  return { name, street: cszIdx > 0 ? nx[cszIdx - 1].trim() : '', csz: cszIdx >= 0 ? nx[cszIdx].trim() : '' };
+}
+// (v164) Section 7 request LETTER to the USFWS field office (format follows the Section 106 request letter):
+// concurrence or formal consultation per the species table, then the project information packet, the IPaC species list
+// and the D-Key letters.
+async function generateESASection7Letter(authId) {
+  authId = authId || 'esa'; const say = packetSay('autoStatus_' + authId);
+  const C = packetContext(); if (!C.site) { alert('Select the parcel(s) on the map in 1125 before generating the Section 7 letter.'); return; }
+  if (!window.jspdf) { alert('PDF library not loaded yet — refresh and try again.'); return; }
+  const rows = esaRows().map(esaRowFix).filter(r => r.name.trim());
+  if (!rows.length) { alert('Add the species from the IPaC list to the Section 7 species table first.'); return; }
+  try {
+    const g = C.g, proj = C.proj, ov = k => g('esa_ov_' + k);
+    const m = esaLetterMode(rows); const consult = m.mode === 'consultation';
+    const fd = esaFieldOfficeDefault(C.stateAbbr);
+    const foName = g('esa_foName') || fd.name || 'U.S. Fish and Wildlife Service Field Office';
+    const foStreet = g('esa_foStreet') || fd.street, foCSZ = g('esa_foCSZ') || fd.csz;
+    const ipacDocs = (typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || [];
+    const dkeyDocs = (typeof supportingDocs !== 'undefined' && supportingDocs.esa_dkeys) || [];
+    if (!g('esa_foName') && !confirm('The USFWS field office is blank — the letter will be addressed to "' + foName + '". Continue?')) return;
+    if (!ipacDocs.length && !confirm('No IPaC Official Species List is uploaded (⬆ IPaC list (PDF)). Generate the letter anyway?')) return;
+    const figures = await packetFigures(C, say);
+    say('Writing the Section 7 request letter…');
+    const kind = consult ? 'Consultation' : 'Concurrence';
+    const P = await pkNewDoc('Section 7 ' + kind + ' Request', C.meta);
+    const projName = ov('name') || C.meta.projectName || proj.projectName || '[Project Title]';
+    const code = g('esa_ipacCode');
+    const re = (proj.responsibleEntity || '').trim() || '[Responsible Entity]';
+    pkP(P, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })); P.y += 4;
+    [foName, foStreet, foCSZ].filter(Boolean).forEach(l => pkP(P, l, { after: 0 })); P.y += 10;
+    pkP(P, ov('regarding') || ('Regarding: Request for Section 7 ' + kind + ' for ' + projName + (code ? ' (IPaC Project Code: ' + code + ')' : '')), { bold: true }); P.y += 2;
+    pkP(P, 'Dear ' + foName + ',');
+    pkP(P, ov('intro') || (AZRI_FIRM.name + ' is assisting ' + re + ', the non-federal representative of HUD, to help complete a HUD Environmental Review. As part of this HUD Environmental Review, we are requesting ' + (consult ? 'initiation of formal consultation' : 'concurrence') + ' from the U.S. Fish and Wildlife Service (USFWS) pursuant to Section 7 of the Endangered Species Act (ESA) of 1973, as amended (16 U.S.C. 1531 et seq.).'));
+    pkH2(P, 'Project Overview & Location');
+    const prog = [proj.programName || proj.fundingProgram || proj.hudProgram, C.meta.grant].filter(Boolean).join(' - ');
+    const loc = ov('location') || [C.meta.location, C.summary.acctids ? 'Parcel(s): ' + C.summary.acctids : '', C.center && !/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test((C.meta.location || '').trim()) ? 'Lat/Long: ' + C.center[1].toFixed(6) + ', ' + C.center[0].toFixed(6) : ''].filter(Boolean).join('. ');
+    const fund = ov('funding') || ('U.S. Department of Housing and Urban Development (HUD)' + (prog ? ', ' + prog : '') + '; Responsible Entity under 24 CFR Part 58: ' + re);
+    const desc = (ov('desc') || packetDescriptionText(C)).replace(/\.\s*$/, '');
+    pkBullets(P, ['Project Name: ' + projName, 'Location: ' + loc, 'Action Agency & Authority: ' + fund, 'Project Description: ' + desc + '.']);
+    pkH2(P, 'Species & Critical Habitat Review (IPaC Query)');
+    pkP(P, ov('ipac') || ('We reviewed the list of species and critical habitat that may be present within the action area using the USFWS Information for Planning and Consultation (IPaC) system' + (g('esa_ipacDate') ? ' on ' + g('esa_ipacDate') : '') + '. The official IPaC species list is enclosed.'));
+    pkH2(P, 'Effect Determinations');
+    pkP(P, ov('detIntro') || ('Based on our review of the action and its potential impacts, ' + AZRI_FIRM.name + ', acting on behalf of ' + re + ', Responsible Entity designated by HUD, has made the following determinations with the help of IPaC Determination Keys:'));
+    const nm = r => r.name.trim() + (r.sci ? ' (' + r.sci.trim() + ')' : '') + (r.critHab === 'Yes' ? ' and its designated critical habitat' : '');
+    const list = arr => arr.map(nm).join('; ');
+    const noEff = rows.filter(r => r.dkey === 'No Effect' || r.dkey === 'None'), nlaa = rows.filter(r => r.dkey === 'NLAA'), laa = rows.filter(r => r.dkey === 'LAA');
+    const laaProposedOnly = laa.length && !laa.some(r => esaListed(r.status));
+    const bullets = [];
+    if (ov('noeffect') || noEff.length) bullets.push(ov('noeffect') || ('No Effect: The proposed action will result in "no effect" to the following species and/or critical habitat: ' + list(noEff) + '.'));
+    if (ov('nlaa') || nlaa.length) bullets.push(ov('nlaa') || ('May Affect, Not Likely to Adversely Affect (NLAA): The proposed action "may affect, but is not likely to adversely affect" the following species and/or critical habitat: ' + list(nlaa) + '. We request your written concurrence with this determination.'));
+    if (ov('laa') || laa.length) bullets.push(ov('laa') || ('May Affect, Likely to Adversely Affect (LAA): The proposed action "may affect and is likely to adversely affect" the following species and/or critical habitat: ' + list(laa) + '. ' + (laaProposedOnly && !consult ? 'These species are proposed for listing; we request your concurrence with this determination and any conference recommendations.' : 'We request the initiation of formal consultation for these resources.')));
+    pkBullets(P, bullets);
+    pkP(P, ov('closing') || 'We look forward to your review and response. If you require any additional information or clarification regarding this project, please let me know.');
+    pkP(P, 'Thank you,', { after: 0 }); pkP(P, AZRI_FIRM.name, { after: 0 });
+    pkSignature(P, g('esa_signer') || 'Nathaniel Alper', g('esa_signerTitle') || 'Environmental Scientist and Project Manager', AZRI_FIRM.name + ' - ' + AZRI_FIRM.street + ', ' + AZRI_FIRM.city + ', ' + AZRI_FIRM.state + ' ' + AZRI_FIRM.zip);
+    const att = ['Project Information Packet (project description, site information, Figure 1' + (((typeof supportingDocs !== 'undefined' && supportingDocs.packet_plans) || []).length ? ', plans' : '') + (((typeof supportingDocs !== 'undefined' && supportingDocs.packet_photos) || []).length ? ', site photographs' : '') + ')',
+      ipacDocs.length ? 'USFWS IPaC Official Species List' + (code ? ' (Project Code ' + code + ')' : '') : '',
+      ...dkeyDocs.map(d => 'IPaC Determination Key result - ' + (d.caption || d.name.replace(/\.[a-z0-9]+$/i, '')))].filter(Boolean);
+    pkP(P, 'Attachments:', { bold: true, after: 2 }); pkBullets(P, att);
+    pkFooter(P); P.doc.addPage(); pkHeader(P, false);
+    pkP(P, 'ATTACHMENT - PROJECT INFORMATION', { bold: true, size: 12, after: 10 });
+    await packetCorePages(P, C, figures);
+    for (const d of ipacDocs) await pkEmbedDoc(P, d, 'IPaC Official Species List (' + d.name + ')');
+    for (const d of dkeyDocs) await pkEmbedDoc(P, d, 'IPaC Determination Key result (' + d.name + ')');
+    const doc = pkFinish(P); const slug = figSlug(proj); const name = slug + '_ESA_Section7_Request.pdf';
+    const finding = 'Section 7 ' + kind.toLowerCase() + ' request to ' + foName + ' — ' + rows.map(r => r.name + ': ' + r.dkey).join('; ');
+    pkAttachPdf(authId, doc, name, finding); azrSaveDoc(doc, name);
+    figFillSourceRef(authId, 'USFWS IPaC official species list + Determination Keys; Section 7 ' + kind.toLowerCase() + ' request (' + foName + ')', rows.map(r => r.name + ': ' + r.dkey).join('; '));
+    const radio = document.querySelector('input[name="' + authId + '_status"][value="awaiting"]'); if (radio && !document.querySelector('input[name="' + authId + '_status"]:checked')) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    say('✓ Section 7 ' + kind.toLowerCase() + ' request letter generated — PDF downloaded and attached. Review, sign, and send to ' + foName + '; mark Awaiting Response until the USFWS reply arrives.', 'var(--azri-navy)');
+    return { mode: m.mode, rows };
+  } catch (e) { console.warn('[Section 7 letter]', e); say('✗ Section 7 letter failed: ' + e.message, 'var(--red,#c00)'); }
+}
 function esaDetermination(rows, C) {
   return rows.map(s => {
     const grp = esaGroup(s); const hab = s.habitat || esaDefaultHabitat(s, C) || 'none';
@@ -6336,7 +6479,7 @@ function buildEsaClaudePrompt() {
   const acts = (C.acts.acts || []).map(a => ACTIVITY_WORDS[a] || a).join(', ');
   const rows = esaRows();
   const L = [];
-  L.push('You are helping with the Endangered Species Act Section 7 determination for a HUD Part 58 environmental review (24 CFR 58.5(e); 50 CFR Part 402). I have attached the USFWS IPaC Official Species List for the project area' + (((typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || []).length ? '' : ' (if it is not attached, tell me before doing anything else)') + '. Read it and make the determination for each species and for critical habitat.');
+  L.push('You are helping with the Endangered Species Act Section 7 determination for a HUD Part 58 environmental review (24 CFR 58.5(e); 50 CFR Part 402). I have attached the USFWS IPaC Official Species List for the project area' + (((typeof supportingDocs !== 'undefined' && supportingDocs.esa_ipac) || []).length ? '' : ' (if it is not attached, tell me before doing anything else)') + '. I may also have attached the IPaC Determination Key (D-Key) result letters — where a D-Key result is attached for a species, use that key\'s effect determination exactly as the key states it. Read them and make the determination for each species and for critical habitat.');
   L.push('');
   L.push('PROJECT');
   L.push('- Project: ' + (meta.projectName || '[project name]'));
@@ -6360,7 +6503,8 @@ function buildEsaClaudePrompt() {
   L.push('3. Report text — 2 to 4 client-facing sentences for the Compliance Determinations box, written for HUD, the Responsible Entity and the client: cite the IPaC list by project code and date, name the species, state the determination and the 50 CFR 402 basis. No internal notes, no reference to this chat.');
   L.push('4. Follow-ups — anything I still need (site visit to confirm trees/structures, a determination key, field office submission, time-of-year commitments to put in the plans).');
   L.push('5. IMPORT BLOCK — a fenced ```json block exactly in this shape so I can paste it into the worksheet:');
-  L.push('{"ipacCode":"<IPaC project code>","ipacDate":"<list date>","critHab":"<critical habitat finding>","species":[{"name":"<common name>","sci":"<scientific name>","status":"<Endangered|Threatened|Proposed Endangered|Proposed Threatened|Candidate|Experimental Population, Non-Essential>","habitat":"<none|possible|present>","rationale":"<1-2 sentence basis>"}]}');
+  L.push('{"ipacCode":"<IPaC project code>","ipacDate":"<list date>","critHab":"<critical habitat finding>","fieldOffice":{"name":"<USFWS field office named on the species list>","street":"<street address>","cityStateZip":"<city, ST zip>"},"species":[{"name":"<common name>","sci":"<scientific name>","status":"<Endangered|Threatened|Proposed Endangered|Proposed Threatened>","critHab":"<Yes|No — designated critical habitat in the project area>","dkey":"<None|No Effect|NLAA|LAA — the D-Key result, or None if no key was run>","habitat":"<none|possible|present>","rationale":"<1-2 sentence basis>"}]}');
+  L.push('Only include species listed or proposed under the ESA (Endangered, Threatened, Proposed Endangered, Proposed Threatened) in the species array — leave out candidates, experimental populations and at-risk species; mention any of those in the Follow-ups.');
   L.push('');
   L.push('Rules: use only the species on the attached list — do not add species from memory. If the attachment is a different project or the list has expired (older than 90 days from today), say so. If the site conditions above are blank or inconsistent with the IPaC project location, ask before determining.');
   return L.join('\n');
@@ -6378,12 +6522,15 @@ function importEsaClaudeResult() {
   let j; try { j = JSON.parse(txt); } catch (e) { say('✗ Could not read the JSON — paste the whole ```json block from Claude\'s reply.', '#c00'); return; }
   const sp = Array.isArray(j.species) ? j.species : []; if (!sp.length) { say('✗ No "species" array in the pasted block.', '#c00'); return; }
   const norm = h => /present/i.test(h) ? 'present' : /possible|vicinity/i.test(h) ? 'possible' : 'none';
-  esaSaveRows(sp.map(x => ({ name: String(x.name || '').trim(), sci: String(x.sci || '').trim(), status: String(x.status || 'Threatened').trim(), habitat: norm(String(x.habitat || '')), rationale: String(x.rationale || '').trim() })).filter(x => x.name));
+  esaSaveRows(sp.map(x => ({ name: String(x.name || '').trim(), sci: String(x.sci || '').trim(), status: esaNormStatus(x.status), critHab: /^y/i.test(String(x.critHab || '')) ? 'Yes' : 'No', dkey: esaNormDkey(x.dkey), habitat: norm(String(x.habitat || '')), rationale: String(x.rationale || '').trim() })).filter(x => x.name));
   const set = (k, v) => { const el = document.querySelector('[data-field="' + k + '"]'); if (el && v && !el.value.trim()) { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); } };
   set('esa_ipacCode', j.ipacCode); set('esa_ipacDate', j.ipacDate); set('esa_critHab', j.critHab);
+  const fo = j.fieldOffice || {}; set('esa_foName', fo.name); set('esa_foStreet', fo.street); set('esa_foCSZ', fo.cityStateZip || fo.csz);
   esaRenderTable();
   const any = sp.some(x => norm(String(x.habitat || '')) !== 'none');
-  say('✓ Imported ' + sp.length + ' species. ' + (any ? 'Suitable habitat flagged for ' + sp.filter(x => norm(String(x.habitat || '')) !== 'none').map(x => x.name).join(', ') + ' → consultation required: generate the ESA Section 7 Packet.' : 'No suitable habitat for any species → no effect; insert Write Up 2 and attach the IPaC list.'), any ? '#c00' : '#2f855a');
+  esaRenderTable();
+  const rowsNow = esaRows().map(esaRowFix); const mm = esaLetterMode(rowsNow);
+  say('✓ Imported ' + sp.length + ' species (' + rowsNow.map(r => r.name + ': ' + r.dkey).join('; ') + '). ' + (any || rowsNow.some(r => r.dkey === 'NLAA' || r.dkey === 'LAA') ? 'Review the table, then 📄 Generate Section 7 Request Letter (' + (mm.mode === 'consultation' ? 'formal consultation' : 'concurrence') + ').' : 'No suitable habitat / no effect for every species — insert Write Up 2 and attach the IPaC list, or generate the letter if the field office still needs it.'), any ? '#c00' : '#2f855a');
 }
 
 // ===== EXPLOSIVE & FLAMMABLE HAZARDS — AST / ASD CALCULATION ATTACHMENT (v144) =====
@@ -6631,14 +6778,16 @@ async function generateHistoricConsultation(authId) {
     pkP(P, 'Thank you,', { after: 0 }); pkP(P, AZRI_FIRM.name, { after: 0 });
     pkSignature(P, g('hist_signer') || 'Nathaniel Alper', g('hist_signerTitle') || 'Environmental Scientist and Project Manager', AZRI_FIRM.name + ' - ' + AZRI_FIRM.street + ', ' + AZRI_FIRM.city + ', ' + AZRI_FIRM.state + ' ' + AZRI_FIRM.zip);
     // Attachments
-    const extra = docs.filter(d => !d.auto && !/Section106/i.test(d.name));   // user uploads, e.g. CHRIS / Medusa map
+    const extra = docs.filter(d => !d.auto && !/Section106/i.test(d.name));   // other user uploads on the card
+    const dbShots = (typeof supportingDocs !== 'undefined' && supportingDocs.hist_stateDbShot) || [];   // (v164) dedicated state database screenshot slot
     const nrImg = window._lastNRHPFigure && window._lastNRHPFigure.cv;
     const fig1 = (typeof supportingDocs !== 'undefined' && supportingDocs.packet_fig1) || [];
-    const att = [nrImg || nrDoc ? 'National Register of Historic Places Area Map' : '', ...extra.map(d => d.caption || d.name.replace(/\.[a-z0-9]+$/i, '')), fig1.length || (figures && figures.location) ? 'Site Location / Boundary Diagram' : '',
+    const att = [nrImg || nrDoc ? 'National Register of Historic Places Area Map' : '', dbShots.length ? dbName + ' Screenshot' + (dbShots.length > 1 ? 's' : '') : '', ...extra.map(d => d.caption || d.name.replace(/\.[a-z0-9]+$/i, '')), fig1.length || (figures && figures.location) ? 'Site Location / Boundary Diagram' : '',
       ((typeof supportingDocs !== 'undefined' && supportingDocs.packet_plans) || []).length ? 'Plans' : '', ((typeof supportingDocs !== 'undefined' && supportingDocs.packet_photos) || []).length ? 'Site Photographs' : ''].filter(Boolean);
     if (att.length) { pkP(P, 'Attachments:', { bold: true, after: 2 }); pkBullets(P, att); }
     if (nrImg) pkImagePage(P, pkCanvasToJpeg(nrImg), nrImg.width, nrImg.height, 'National Register of Historic Places Area Map');
     else if (nrDoc) await pkEmbedDoc(P, nrDoc, 'National Register of Historic Places Area Map');
+    for (const d of dbShots) await pkEmbedDoc(P, d, dbName + ' Screenshot' + (d.caption ? ' - ' + d.caption : ''));
     for (const d of extra) await pkEmbedDoc(P, d, d.caption || d.name);
     await packetCorePages(P, C, figures, { attachmentsOnly: true });
     const doc = pkFinish(P); const slug = figSlug(proj); const name = slug + '_Section106_Packet.pdf';
@@ -9085,9 +9234,9 @@ AUTHORITIES.forEach(a => {
       <div style="padding:4px 16px 12px;font-size:12px;line-height:1.5;color:#2d3748;">
         <ol style="margin:0 0 10px 18px;padding:0;">
           <li><b>Run IPaC</b> (Step 2 in the SOP) and download the Official Species List PDF; upload it here with <b>⬆ IPaC list (PDF)</b>. Attached: <span id="esaIpacCount">none</span>.</li>
-          <li>Fill the <b>Section 7 packet inputs</b> below (existing site conditions, tree clearing, in-water work, disturbance) — they go into the prompt so the habitat calls are right.</li>
+          <li>Run the IPaC <b>Determination Keys</b> for the listed species and upload the result letters with <b>⬆ Upload D-Key letter(s)</b> in the Section 7 panel below (optional site facts there also go into the prompt).</li>
           <li><b>Open a new Claude chat</b>, drag in the IPaC PDF, then <b>📋 Copy prompt</b> and paste it as the message.</li>
-          <li><b>Paste Claude's json block</b> into the import box and click <b>📥 Import</b> — the species table, critical habitat and rationale fill in. No suitable habitat → Write Up 2; suitable habitat for any species → generate the <b>ESA Section 7 Packet</b> (facts + opinion only; the cover email handles the concurrence request).</li>
+          <li><b>Paste Claude's json block</b> into the import box and click <b>📥 Import</b> — the species table (status, critical habitat, D-Key determination) and the field office fill in. Then <b>📄 Generate Section 7 Request Letter</b>: concurrence by default, formal consultation when a listed species has an LAA determination.</li>
         </ol>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">
           <b style="flex:1;">Prompt for Claude</b>
@@ -9104,19 +9253,53 @@ AUTHORITIES.forEach(a => {
         <textarea id="esaClaudeImport" rows="5" spellcheck="false" placeholder='{"ipacCode":"…","ipacDate":"…","critHab":"…","species":[{"name":"…","sci":"…","status":"…","habitat":"none|possible|present","rationale":"…"}]}' style="width:100%;box-sizing:border-box;font:11.5px/1.45 Menlo,Consolas,monospace;color:#1a202c;background:#fff;border:1px solid #c4b5fd;border-radius:4px;padding:8px;"></textarea>
       </div>
     </details>` : ''}
-    ${a.id === 'esa' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
-      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 7 packet inputs — site conditions + species table <span style="font-weight:400;color:var(--gray);">(fill the site conditions before the Claude review; the species table fills from the import)</span></summary>
-      <div class="field-grid" style="margin-top:10px;">
-        <div class="full"><label>IPaC Official Species List attached <span style="font-weight:400;color:var(--gray);">(upload with the ⬆ IPaC list (PDF) button in the card header; embedded in the packet)</span></label><div id="docs_esa_ipac"></div></div>
-        <input type="hidden" data-field="esa_speciesJSON">
-        <div class="full" id="esaSpeciesTable"></div>
-        <div><label>IPaC project code</label><input type="text" data-field="esa_ipacCode" placeholder="e.g., 2026-0012345"></div>
-        <div><label>IPaC list date</label><input type="text" data-field="esa_ipacDate" placeholder="e.g., October 7, 2026"></div>
-        <div><label>In-water / stream work?</label><select data-field="esa_inWater"><option value="">— select —</option><option>No</option><option>Yes</option></select></div>
-        <div><label>Tree clearing (acres; 0 if none)</label><input type="text" data-field="esa_treeClearingAcres" placeholder="e.g., 0"></div>
-        <div><label>Ground disturbance (acres)</label><input type="text" data-field="esa_disturbedAcres" placeholder="e.g., 0.6"></div>
-        <div><label>Existing site conditions (one line)</label><input type="text" data-field="esa_existingUse" placeholder="e.g., vacant 2-story commercial building with paved lot; mowed lawn, no forest or wetlands"></div>
-        <div><label>Designated critical habitat in project area</label><input type="text" data-field="esa_critHab" placeholder="auto-filled from IPaC when found; e.g., None designated"></div>
+    ${a.id === 'esa' ? `<details class="no-print" open style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Section 7 species table &amp; USFWS request letter <span style="font-weight:400;color:var(--gray);">(one row per species on the IPaC list; the D-Key column drives the letter)</span></summary>
+      <input type="hidden" data-field="esa_speciesJSON">
+      <div id="esaSpeciesTable" style="margin-top:10px;"></div>
+      <div id="esaLetterMode" style="font-size:12px;margin:6px 0 10px;"></div>
+      <div class="field-grid">
+        <div class="full"><label>IPaC Official Species List <span style="font-weight:400;color:var(--gray);">(upload with ⬆ IPaC list (PDF) in the card header)</span></label><div id="docs_esa_ipac"></div></div>
+        <div class="full"><label>IPaC Determination Key (D-Key) results <span style="font-weight:400;color:var(--gray);">(the consistency / verification letters from each key — attached after the species list)</span></label>
+          <button type="button" onclick="uploadSupportingDoc('esa_dkeys')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;margin-top:2px;">⬆ Upload D-Key letter(s)</button>
+          <div id="docs_esa_dkeys" style="margin-top:6px;"></div></div>
+        <div><label>IPaC project code</label><input type="text" data-field="esa_ipacCode" placeholder="e.g., 2026-0012345" oninput="esaRenderMode()"></div>
+        <div><label>Date of IPaC query <span style="font-weight:400;color:var(--gray);">(species list date)</span></label><input type="text" data-field="esa_ipacDate" placeholder="e.g., October 7, 2026"></div>
+        <div><label>USFWS field office <span style="font-weight:400;color:var(--gray);">(as named on the IPaC species list)</span></label><input type="text" data-field="esa_foName" placeholder="e.g., Chesapeake Bay Ecological Services Field Office"></div>
+        <div><label>Field office street address</label><input type="text" data-field="esa_foStreet" placeholder="e.g., 177 Admiral Cochrane Drive"></div>
+        <div><label>Field office city, state, zip</label><input type="text" data-field="esa_foCSZ" placeholder="e.g., Annapolis, MD 21401"></div>
+        <div><label>Letter type <span style="font-weight:400;color:var(--gray);">(blank = automatic from the table)</span></label><select data-field="esa_letterType" onchange="esaRenderMode()"><option value="">Automatic</option><option value="concurrence">Concurrence</option><option value="consultation">Consultation</option></select></div>
+      </div>
+      <details style="margin-top:10px;"><summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Letter overrides <span style="font-weight:400;color:var(--gray);">(leave a field blank to use the default shown)</span></summary>
+        <div class="field-grid" style="margin-top:8px;">
+          <div class="full"><label>Regarding line <span style="font-weight:400;color:var(--gray);">(blank = "Request for Section 7 [Consultation / Concurrence] for [Project] (IPaC Project Code: [code])")</span></label><input type="text" data-field="esa_ov_regarding"></div>
+          <div class="full"><label>Intro paragraph <span style="font-weight:400;color:var(--gray);">(blank = AZ-RI assisting the Responsible Entity … requesting [concurrence / initiation of formal consultation] under Section 7)</span></label><textarea data-field="esa_ov_intro" style="min-height:44px;"></textarea></div>
+          <div class="full"><label>Project Name <span style="font-weight:400;color:var(--gray);">(blank = 1125 project name)</span></label><input type="text" data-field="esa_ov_name"></div>
+          <div class="full"><label>Location <span style="font-weight:400;color:var(--gray);">(blank = 1125 address + parcel(s))</span></label><input type="text" data-field="esa_ov_location"></div>
+          <div class="full"><label>Action Agency &amp; Authority <span style="font-weight:400;color:var(--gray);">(blank = HUD + program / grant # from 1125 + Responsible Entity)</span></label><input type="text" data-field="esa_ov_funding"></div>
+          <div class="full"><label>Project Description <span style="font-weight:400;color:var(--gray);">(blank = 1125 project description)</span></label><textarea data-field="esa_ov_desc" style="min-height:44px;"></textarea></div>
+          <div class="full"><label>Species &amp; Critical Habitat Review paragraph <span style="font-weight:400;color:var(--gray);">(blank = IPaC query on [date]; official species list enclosed)</span></label><textarea data-field="esa_ov_ipac" style="min-height:44px;"></textarea></div>
+          <div class="full"><label>Effect Determinations intro <span style="font-weight:400;color:var(--gray);">(blank = standard sentence naming the Responsible Entity and the IPaC Determination Keys)</span></label><textarea data-field="esa_ov_detIntro" style="min-height:44px;"></textarea></div>
+          <div class="full"><label>No Effect bullet <span style="font-weight:400;color:var(--gray);">(blank = species marked No Effect or None in the table; omitted when there are none)</span></label><textarea data-field="esa_ov_noeffect" style="min-height:36px;"></textarea></div>
+          <div class="full"><label>NLAA bullet <span style="font-weight:400;color:var(--gray);">(blank = species marked NLAA; omitted when there are none)</span></label><textarea data-field="esa_ov_nlaa" style="min-height:36px;"></textarea></div>
+          <div class="full"><label>LAA bullet <span style="font-weight:400;color:var(--gray);">(blank = species marked LAA; omitted when there are none)</span></label><textarea data-field="esa_ov_laa" style="min-height:36px;"></textarea></div>
+          <div class="full"><label>Closing paragraph <span style="font-weight:400;color:var(--gray);">(blank = "We look forward to your review and response…")</span></label><textarea data-field="esa_ov_closing" style="min-height:36px;"></textarea></div>
+          <div><label>Signed by <span style="font-weight:400;color:var(--gray);">(blank = Nathaniel Alper)</span></label><input type="text" data-field="esa_signer" placeholder="Nathaniel Alper"></div>
+          <div><label>Signer title <span style="font-weight:400;color:var(--gray);">(blank = Environmental Scientist and Project Manager)</span></label><input type="text" data-field="esa_signerTitle" placeholder="Environmental Scientist and Project Manager"></div>
+        </div>
+      </details>
+      <details style="margin-top:8px;"><summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">Optional site facts <span style="font-weight:400;color:var(--gray);">(used in the Claude prompt and the project information pages)</span></summary>
+        <div class="field-grid" style="margin-top:8px;">
+          <div><label>In-water / stream work?</label><select data-field="esa_inWater"><option value="">— select —</option><option>No</option><option>Yes</option></select></div>
+          <div><label>Tree clearing (acres; 0 if none)</label><input type="text" data-field="esa_treeClearingAcres" placeholder="e.g., 0"></div>
+          <div><label>Ground disturbance (acres)</label><input type="text" data-field="esa_disturbedAcres" placeholder="e.g., 0.6"></div>
+          <div><label>Existing site conditions (one line)</label><input type="text" data-field="esa_existingUse" placeholder="e.g., vacant 2-story commercial building with paved lot; mowed lawn, no forest or wetlands"></div>
+          <div class="full"><label>Designated critical habitat note</label><input type="text" data-field="esa_critHab" placeholder="e.g., None designated in the project area"></div>
+        </div>
+      </details>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button type="button" onclick="generateESASection7Letter('esa')" style="background:var(--azri-navy);border:none;color:white;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📄 Generate Section 7 Request Letter (USFWS)</button>
+        <span style="font-size:11px;color:var(--gray);">Letter → project information packet → IPaC species list → D-Key letters, as one PDF (downloaded and attached to this card).</span>
       </div>
     </details>` : ''}
     ${a.id === 'historic' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
@@ -9132,11 +9315,14 @@ AUTHORITIES.forEach(a => {
         <div class="full"><label>2. Historic preservation consultation thus far <span style="font-weight:400;color:var(--gray);">(blank = "None.")</span></label><input type="text" data-field="hist_consultSoFar" placeholder="None."></div>
         <div><label>State database <span style="font-weight:400;color:var(--gray);">(default by state)</span></label><input type="text" data-field="hist_stateDbName" placeholder="e.g., Delaware CHRIS / MHT Medusa / V-CRIS"></div>
         <div class="full"><label>State database results <span style="font-weight:400;color:var(--gray);">(added after the NR Map results)</span></label><textarea data-field="hist_stateDb" style="min-height:44px;" placeholder="e.g., No previously surveyed resources on the Subject Property."></textarea></div>
+        <div class="full"><label>State database screenshot <span style="font-weight:400;color:var(--gray);">(CHRIS / Medusa / V-CRIS / PA-SHARE map or results page — image or PDF; listed in the letter's attachments and placed right after the NR Map)</span></label>
+          <button type="button" onclick="uploadSupportingDoc('hist_stateDbShot')" style="background:#e2e8f0;border:1px solid var(--border);color:#2d3748;padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;margin-top:2px;">⬆ Upload state database screenshot</button>
+          <div id="docs_hist_stateDbShot" style="margin-top:6px;"></div></div>
         <div class="full"><label>3. National Register of Historic Places and State Database Results — full override <span style="font-weight:400;color:var(--gray);">(blank = NR Map results (Subject Property + resources within 1,000 ft) + state database results above)</span></label><textarea data-field="hist_ov_nrhp" style="min-height:44px;"></textarea></div>
         <div class="full"><label>Project Scope of Work Summary <span style="font-weight:400;color:var(--gray);">(blank = 1125 project description)</span></label><textarea data-field="hist_ov_scope" style="min-height:44px;"></textarea></div>
         <div class="full"><label>Ground Disturbance <span style="font-weight:400;color:var(--gray);">(blank = Review Question answer + disturbed acres / excavation depth)</span></label><input type="text" data-field="hist_ov_ground"></div>
       </div>
-      <div style="font-size:11px;color:var(--gray);margin-top:6px;">Upload the state database map (CHRIS / Medusa / V-CRIS screenshot) with ⬆ on this card — it is listed and attached after the NR Map.</div>
+      <div style="font-size:11px;color:var(--gray);margin-top:6px;">Upload the state database screenshot with the button above — it is listed and attached right after the NR Map. Other files uploaded with ⬆ on this card are attached after it.</div>
     </details>` : ''}
     ${a.id === 'czm' ? `<details class="no-print" style="margin:0 22px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;padding:8px 14px;">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--azri-navy);">CZM consistency packet inputs <span style="font-weight:400;color:var(--gray);">(shared project facts come from 1125)</span></summary>
@@ -10243,7 +10429,7 @@ function crRenderCover() {
   box.innerHTML = d ? '<img src="' + d.data + '" style="height:46px;border:2px solid #000;"><span style="color:#2d3748;">' + crEsc(d.name) + '</span><button type="button" onclick="crRemoveCover()" title="Remove cover photo" style="border:none;background:none;color:#c00;cursor:pointer;font-size:14px;">×</button>' : '<span style="color:#a0aec0;">none</span>';
 }
 // Extra supporting-document buckets that belong to an authority's appendix
-var CR_EXTRA_DOCS = { air: ['air_greenbook'], esa: ['esa_ipac'] };
+var CR_EXTRA_DOCS = { air: ['air_greenbook'], esa: ['esa_ipac', 'esa_dkeys'], historic: ['hist_stateDbShot'] };
 var CR_STATUS = { compliant: 'Compliant', followup: 'Follow-Up Required', awaiting: 'Awaiting Response', na: 'Not Applicable', exempt: 'Exempt', unset: 'Not Yet Assessed' };
 
 function crEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -13612,7 +13798,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v163 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v164 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v164: Airport Hazards figure — frame sized (latitude-corrected) so the full 15,000 ft ring shows clear of the header and legend; heliports / helipads no longer drawn. Historic — dedicated state database screenshot upload in the Section 106 letter details (listed + attached after the NR Map). Farmland figure — soil units inside a Census Urban Area are left colorless (outline + symbol · class label). Endangered Species — Section 7 species table (status / critical habitat / D-Key) + USFWS Section 7 request letter (concurrence, or formal consultation when a listed species is LAA) with packet, IPaC list and D-Key letters attached.');
   console.log('  v163: CZM packet inputs — tick other sections (Wetlands, Floodplain, Flood Insurance, CBRS, ESA, WSR, Historic, Farmland, SSA) to add their figures to the CZM packet, with a warning when a ticked section has no figure yet; Client Report — List of Figures / Appendices entries, Compliance Summary appendix letters and every "Supporting documentation: Appendix X" now jump to that appendix.');
   console.log('  v162: Grant Recipient address fields (1101) — used for the Client Report cover and sent to the Noise worksheet as the client address when Prepared For = Applicant (RE address when Prepared For = RE).');
   console.log('  v161: 📁 Save folder (per project) — every generated map / figure / packet / letter / Word export / Client Report is written into the chosen folder, overwriting the previous version (Supporting Documents still auto-attach and refresh); Client Report gets a Save As dialog when no folder is set; Section 106 letter signed by Nathaniel Alper (override fields), never the RE HEROS preparer; HUD ER → Noise hand-off no longer sends the preparer; CZM write-up for DE Subpart F (CDBG) — not reviewable by DCMP.');
