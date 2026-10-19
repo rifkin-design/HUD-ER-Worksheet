@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v165</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v166</div>
   </div>
 </header>
 
@@ -5291,11 +5291,11 @@ async function generateFarmlandFigure(authId) {
     // Legend
     const siteLabel = figSiteLabel(proj, center);
     const legend = [{ label: 'Subject Property — ' + siteLabel, draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(225,17,17,0.15)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#e11'; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); } }];
+    if (urbanOverlay) legend.push({ label: 'Census Urban Area (2020) — shaded', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(0,170,200,0.3)'; ctx.fillRect(x, y, w, h); } });   // (v166) above the soils
     FARMLAND_STYLE.forEach(st => { if (seen[st.key]) legend.push({ label: st.label + ' (NRCS)', draw: (ctx, x, y, w, h) => { ctx.fillStyle = st.fill; ctx.fillRect(x, y, w, h); ctx.strokeStyle = st.stroke; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); } }); });
     if (seen.unk) legend.push({ label: 'Farmland class not rated (NRCS)', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); } });
     if (anyUrbanSoil) legend.push({ label: 'Soil map unit inside a Census Urban Area — not shaded; labeled symbol · farmland class', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(0,170,200,0.3)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = 'rgba(71,85,105,0.85)'; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, h); } });
     legend.push({ label: 'Soil map unit boundary with map-unit symbol', draw: (ctx, x, y, w, h) => { ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); ctx.font = 'bold 9px Arial'; ctx.fillStyle = '#1f2937'; ctx.textAlign = 'center'; ctx.fillText('HkB', x + w / 2, y + h / 2 + 3); } });
-    if (urbanOverlay) legend.push({ label: 'Census Urban Area (2020) — shaded', draw: (ctx, x, y, w, h) => { ctx.fillStyle = 'rgba(0,170,200,0.3)'; ctx.fillRect(x, y, w, h); } });
     await figFurnish(base, {
       title: 'Farmland Protection Map',
       meta: figProjectMeta(proj, center),
@@ -6103,7 +6103,7 @@ function pkHeader(P, first) {
   P.y = hb + 22; doc.setTextColor(30, 30, 30);
 }
 function pkFooter(P) { const { doc, M, W, H } = P; doc.setFontSize(8); doc.setTextColor(120, 120, 120); doc.text('AZ-RI Consultants  -  ' + pkSafe(P.titleShort) + '  -  page ' + P.page, M, H - 24); doc.setTextColor(30, 30, 30); }
-function pkEnsure(P, h) { if (P.y + h > P.H - 54) { pkFooter(P); P.doc.addPage(); pkHeader(P, false); } }
+function pkEnsure(P, h) { if (P.y + h > P.H - 54) { const d = P.doc, fs = d.getFontSize(), ff = d.getFont(), tc = d.getTextColor(); pkFooter(P); d.addPage(); pkHeader(P, false); d.setFont(ff.fontName, ff.fontStyle); d.setFontSize(fs); d.setTextColor(tc); } }   // (v166) restore the body font after a page break — the header/footer used to leave text on the new page at 8.5 pt
 function pkH1(P, t) { pkEnsure(P, 30); P.doc.setFont('helvetica', 'bold'); P.doc.setFontSize(13); P.doc.setTextColor(15, 42, 68); P.doc.text(pkSafe(t), P.M, P.y); P.y += 8; P.doc.setDrawColor(200, 200, 200); P.doc.setLineWidth(0.5); P.doc.line(P.M, P.y, P.W - P.M, P.y); P.y += 14; P.doc.setTextColor(30, 30, 30); }
 function pkH2(P, t) { pkEnsure(P, 22); P.doc.setFont('helvetica', 'bold'); P.doc.setFontSize(10.5); P.doc.text(pkSafe(t), P.M, P.y); P.y += 15; }
 function pkP(P, t, opts) { const o = opts || {}; P.doc.setFont('helvetica', o.bold ? 'bold' : (o.italic ? 'italic' : 'normal')); P.doc.setFontSize(o.size || 9.5); const lines = P.doc.splitTextToSize(pkSafe(t), P.W - 2 * P.M - (o.indent || 0)); lines.forEach(l => { pkEnsure(P, 13); P.doc.text(l, P.M + (o.indent || 0), P.y); P.y += 12.5; }); P.y += o.after == null ? 6 : o.after; }
@@ -13799,7 +13799,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v165 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v166 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v166: Farmland Map key — Census Urban Area listed right after the Subject Property, above the soil classes. Letters / packets — text that flows onto a new page keeps the body font size (the page header was leaving it at 8.5 pt, e.g. the Section 7 closing paragraph).');
   console.log('  v165: Client Report — Section 1 subsections numbered in sequence (1.1 Project Description, then Purpose and Need / Existing Conditions when filled, then Level of Review), so the TOC and report no longer jump from 1.1 to 1.4.');
   console.log('  v164: Airport Hazards figure — frame sized (latitude-corrected) so the full 15,000 ft ring shows clear of the header and legend; heliports / helipads no longer drawn. Historic — dedicated state database screenshot upload in the Section 106 letter details (listed + attached after the NR Map). Farmland figure — soil units inside a Census Urban Area are left colorless (outline + symbol · class label). Endangered Species — Section 7 species table (status / critical habitat / D-Key) + USFWS Section 7 request letter (concurrence, or formal consultation when a listed species is LAA) with packet, IPaC list and D-Key letters attached.');
   console.log('  v163: CZM packet inputs — tick other sections (Wetlands, Floodplain, Flood Insurance, CBRS, ESA, WSR, Historic, Farmland, SSA) to add their figures to the CZM packet, with a warning when a ticked section has no figure yet; Client Report — List of Figures / Appendices entries, Compliance Summary appendix letters and every "Supporting documentation: Appendix X" now jump to that appendix.');
