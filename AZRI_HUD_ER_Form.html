@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v167</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v168</div>
   </div>
 </header>
 
@@ -10978,9 +10978,22 @@ function loadJSON(event) {
 
 function resetForm() {
   if (!confirm('Clear all fields? This cannot be undone unless you saved a JSON copy.')) return;
-  document.querySelectorAll('input[type="text"], input[type="date"], textarea').forEach(el => el.value = '');
+  document.querySelectorAll('input[type="text"], input[type="date"], input[type="number"], input[type="email"], input[type="tel"], input[type="url"], textarea').forEach(el => el.value = '');
+  document.querySelectorAll('input[type="hidden"][data-field]').forEach(el => el.value = '');   // (v168) e.g. ESA species table JSON
+  document.querySelectorAll('input[type="checkbox"]').forEach(el => { if (el.id !== 'eaToggle' && el.id !== 'mapToggle') el.checked = false; });   // (v168) activities / planned use / packet ticks
   document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
   document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
+  // (v168) Everything else a saved review carries — attachments, mitigation rows, funding sources, AST rows, client flags,
+  // generated-figure caches — so the next project starts clean (Reset used to leave these behind).
+  supportingDocs = {}; if (typeof renderAllSupportingDocs === 'function') try { renderAllSupportingDocs(); } catch (e) {}
+  mitigationRows = []; if (typeof renderMitigationRows === 'function') try { renderMitigationRows(); } catch (e) {}
+  if (typeof fundingSources !== 'undefined') { fundingSources = []; if (typeof renderFundingSources === 'function') try { renderFundingSources(); } catch (e) {} }
+  if (typeof astRows !== 'undefined') { astRows = []; if (typeof renderASTRows === 'function') try { renderASTRows(); } catch (e) {} }
+  if (typeof CLIENT_QUESTION_FLAGS !== 'undefined') { CLIENT_QUESTION_FLAGS = {}; document.querySelectorAll('[id^="flagBtn_"]').forEach(b => b.textContent = '❓ Not sure — flag for client'); }
+  document.querySelectorAll('[id^="exemptResult_"], [id^="autoStatus_"]').forEach(el => el.textContent = '');
+  Object.keys(window).filter(k => /^_last[A-Z]/.test(k)).forEach(k => { try { window[k] = null; } catch (e) {} });
+  if (typeof esaRenderTable === 'function') try { esaRenderTable(); } catch (e) {}
+  if (typeof crRefreshAppendices === 'function') try { crRefreshAppendices(); } catch (e) {}
   document.getElementById('eaToggle').checked = false;
   document.getElementById('mapToggle').checked = false;
   FIELD_COMMENTS = {};
@@ -13820,7 +13833,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v167 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v168 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v168: Reset Form now clears everything — supporting documents / attachments, mitigation rows, funding sources, AST rows, checkboxes, hidden fields (ESA species table), client-question flags and generated-figure caches.');
   console.log('  v167: FIRM panel — skip FEMA "Countywide, Not Printed" placeholder panels (9999 effective date, e.g. a neighbouring county\'s panel near a county line) and use the effective printed panel (Flood Insurance / Floodplain auto-checks + FIRM Map). Contamination and Noise — "Report provided separately" name field; the Client Report appendix for that section gets a page "Report provided separately as [name]".');
   console.log('  v166: Farmland Map key — Census Urban Area listed right after the Subject Property, above the soil classes. Letters / packets — text that flows onto a new page keeps the body font size (the page header was leaving it at 8.5 pt, e.g. the Section 7 closing paragraph).');
   console.log('  v165: Client Report — Section 1 subsections numbered in sequence (1.1 Project Description, then Purpose and Need / Existing Conditions when filled, then Level of Review), so the TOC and report no longer jump from 1.1 to 1.4.');
