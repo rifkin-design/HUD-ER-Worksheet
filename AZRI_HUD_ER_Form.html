@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v169</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v170</div>
   </div>
 </header>
 
@@ -2203,24 +2203,17 @@ const AUTO_DETERMINERS = {
       return u.includes('0.2 PCT') || u.includes('0.2%') || u.includes('500-YEAR') || u.includes('500 YEAR');
     };
 
-    let zoneFeatures = [], panelInfo = null;
+    let zoneFeatures = [], sitePanels = [];
     try {
       zoneFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 28, lng, lat, 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID,STUDY_TYP');
     } catch (e) { console.warn('[flood_mgt] zone query failed:', e); }
     try {
-      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP,PNP_REASON');
-      panelInfo = pickFirmPanel(panelFeatures, zoneFeatures);   // (v167) skip "Not Printed" placeholders; (v169) prefer the site's own DFIRM
+      sitePanels = await nfhlSitePanels(site);   // (v167/v169/v170) every printed panel the parcel falls on, centroid panel first
     } catch (e) { console.warn('[flood_mgt] panel query failed:', e); }
-
-    let firmPanel = '', firmRev = '';
-    if (panelInfo) {
-      firmPanel = panelInfo.FIRM_PAN || panelInfo.DFIRM_ID || '';
-      if (panelInfo.EFF_DATE) {
-        const ts = parseInt(panelInfo.EFF_DATE);
-        if (!isNaN(ts)) firmRev = fmtUtcDate(ts);
-      }
-    }
-    const firmRef = firmPanel + (firmRev ? ` (${firmRev})` : '');
+    const firmRef = firmPanelsRef(sitePanels);
+    // Write-up lines "FIRM Panel # …" / "Revision # …" — several panels listed in the same order, separated by "; "
+    const firmPanel = sitePanels.map(a => a.FIRM_PAN || a.DFIRM_ID || '').join('; ');
+    const firmRev = sitePanels.map(a => { const t = parseInt(a.EFF_DATE); return isNaN(t) ? '' : fmtUtcDate(t); }).filter(Boolean).join('; ');
 
     const inSFHA = zoneFeatures.some(f => isSFHAZone(f.attributes.FLD_ZONE));
     const in500yr = zoneFeatures.some(f => is500yr(f.attributes.ZONE_SUBTY));
@@ -2268,26 +2261,16 @@ const AUTO_DETERMINERS = {
     };
 
     // Query Flood Hazard Areas (S_Fld_Haz_Ar = layer 28) and FIRM Panel (S_FIRM_Pan = layer 16)
-    let zoneFeatures = [], panelInfo = null;
+    let zoneFeatures = [], sitePanels = [];
     try {
       zoneFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 28, lng, lat, 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID,STUDY_TYP');
     } catch (e) { console.warn('[flood_ins] zone query failed:', e); }
     try {
-      const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP,PNP_REASON');
-      panelInfo = pickFirmPanel(panelFeatures, zoneFeatures);   // (v167) skip "Not Printed" placeholders; (v169) prefer the site's own DFIRM
+      sitePanels = await nfhlSitePanels(site);   // (v167/v169/v170) every printed panel the parcel falls on, centroid panel first
     } catch (e) { console.warn('[flood_ins] panel query failed:', e); }
 
-    // Build FIRM Panel reference in the SOP's format: "1100010039C (9/27/2010)"
-    let firmRef = '';
-    if (panelInfo) {
-      const panel = panelInfo.FIRM_PAN || panelInfo.DFIRM_ID || '';
-      let eff = '';
-      if (panelInfo.EFF_DATE) {
-        const ts = parseInt(panelInfo.EFF_DATE);
-        if (!isNaN(ts)) eff = fmtUtcDate(ts);
-      }
-      firmRef = panel + (eff ? ` (${eff})` : '');
-    }
+    // FIRM Panel reference in the SOP's format: "1100010039C (9/27/2010)" — several panels are separated by "; "
+    const firmRef = firmPanelsRef(sitePanels);
 
     const inSFHA = zoneFeatures.length > 0 && zoneFeatures.some(f => isSFHAZone(f.attributes.FLD_ZONE));
     const zone = zoneFeatures.length ? zoneFeatures[0].attributes.FLD_ZONE : 'X';
@@ -5000,6 +4983,40 @@ function pickFirmPanel(features, zoneFeatures) {
   if (sameJur.length) pool = sameJur;
   return pool.slice().sort((a, b) => (parseInt(b.EFF_DATE) || 0) - (parseInt(a.EFF_DATE) || 0))[0];
 }
+// (v170) EVERY printed FIRM panel the parcel boundary falls on — if the boundary crosses onto a second panel, report
+// both (Nathaniel, 10/21). The panel at the site centroid (v169 rule) is listed first. Panels are kept only when they
+// belong to a FEMA study (DFIRM_ID) whose flood-zone polygons actually touch the parcel, which drops a neighbouring
+// jurisdiction's panel whose grid merely overlaps (6151 Metro Dr: Baltimore Co. 0380 over a Baltimore City site).
+function firmPanelPlaceholder(a) {
+  const t = parseInt(a.EFF_DATE), y = isNaN(t) ? 0 : new Date(t).getUTCFullYear();
+  return /not printed/i.test(a.PANEL_TYP || '') || !!a.PNP_REASON || y >= 9000 || y === 0;
+}
+async function nfhlSitePanels(site) {
+  const [lng, lat] = site.centroid;
+  const pt = { x: lng, y: lat, spatialReference: { wkid: 4326 } };
+  const g = site.boundary && site.boundary.geometry;
+  const rings = !g ? [] : g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map(q => q[0]) : [];
+  const poly = rings.length ? { rings, spatialReference: { wkid: 4326 } } : null;
+  const pf = 'FIRM_PAN,EFF_DATE,PANEL_TYP,DFIRM_ID,PNP_REASON';
+  const [ptPanels, ptZones, polyPanels, polyZones] = await Promise.all([
+    nfhlQuery(NFHL_LAYER.panels, pt, 'esriGeometryPoint', { outFields: pf }),
+    nfhlQuery(NFHL_LAYER.zones, pt, 'esriGeometryPoint', { outFields: 'DFIRM_ID' }).catch(() => []),
+    poly ? nfhlQuery(NFHL_LAYER.panels, poly, 'esriGeometryPolygon', { outFields: pf }).catch(() => []) : Promise.resolve([]),
+    poly ? nfhlQuery(NFHL_LAYER.zones, poly, 'esriGeometryPolygon', { outFields: 'DFIRM_ID' }).catch(() => []) : Promise.resolve([])
+  ]);
+  const primary = pickFirmPanel(ptPanels, ptZones);
+  const out = primary ? [primary] : [];
+  const studies = new Set(polyZones.concat(ptZones).map(f => (f.attributes || {}).DFIRM_ID).filter(Boolean));
+  polyPanels.map(f => f.attributes || {}).filter(a => a.FIRM_PAN && !firmPanelPlaceholder(a) && studies.has(a.DFIRM_ID))
+    .sort((a, b) => String(a.FIRM_PAN).localeCompare(String(b.FIRM_PAN)))
+    .forEach(a => { if (!out.some(o => o.FIRM_PAN === a.FIRM_PAN)) out.push(a); });
+  return out;
+}
+// "2400870001F (6/16/2021)" or "2400100380G (11/2/2023); 2400100390G (11/2/2023)"; effWord = 'effective ' for figures
+function firmPanelsRef(panels, effWord) {
+  return (panels || []).map(a => { const t = parseInt(a.EFF_DATE); const eff = a.EFF_DATE && !isNaN(t) ? fmtUtcDate(t) : '';
+    return (a.FIRM_PAN || a.DFIRM_ID || '') + (eff ? ` (${effWord || ''}${eff})` : ''); }).join('; ');
+}
 async function nfhlQuery(layer, geometry, geometryType, extra) {
   const params = new URLSearchParams(Object.assign({ f: 'json', geometry: JSON.stringify(geometry), geometryType, inSR: '4326', spatialRel: 'esriSpatialRelIntersects', outFields: '*', returnGeometry: 'false', outSR: '4326' }, extra || {}));
   const j = await (await fetch(NFHL_SERVICE + '/' + layer + '/query?' + params)).json();
@@ -5023,16 +5040,14 @@ async function generateFloodFigure(authId) {
       if (rings.length) { siteGeom = { rings, spatialReference: { wkid: 4326 } }; siteType = 'esriGeometryPolygon'; }
     }
     const ptGeom = { x: center[0], y: center[1], spatialReference: { wkid: 4326 } };
-    const [siteZones, panels, lomrs, lomas, ptZones] = await Promise.all([
+    const [siteZones, sitePanels, lomrs, lomas] = await Promise.all([
       nfhlQuery(NFHL_LAYER.zones, siteGeom, siteType, { outFields: 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,STATIC_BFE,DFIRM_ID' }),
-      nfhlQuery(NFHL_LAYER.panels, ptGeom, 'esriGeometryPoint', { outFields: 'FIRM_PAN,EFF_DATE,PANEL_TYP,DFIRM_ID,PNP_REASON' }).catch(() => []),
+      nfhlSitePanels(site).catch(() => []),   // (v170) every printed panel the parcel falls on, centroid panel first
       nfhlQuery(NFHL_LAYER.lomr, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS' }).catch(() => []),
-      nfhlQuery(NFHL_LAYER.loma, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS,DETERMINATION' }).catch(() => []),
-      nfhlQuery(NFHL_LAYER.zones, ptGeom, 'esriGeometryPoint', { outFields: 'DFIRM_ID' }).catch(() => [])   // (v169) jurisdiction at the site point
+      nfhlQuery(NFHL_LAYER.loma, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS,DETERMINATION' }).catch(() => [])
     ]);
-    const panel = pickFirmPanel(panels, ptZones);   // (v167) the effective printed panel, not a neighbouring county's "Not Printed" placeholder
-    const effDate = panel && panel.EFF_DATE ? fmtUtcDate(panel.EFF_DATE) : '';
-    const firmRef = panel ? (panel.FIRM_PAN || panel.DFIRM_ID || '') + (effDate ? ' (effective ' + effDate + ')' : '') : '';
+    const firmRef = firmPanelsRef(sitePanels, 'effective ');
+    const firmLbl = sitePanels.length > 1 ? 'FIRM Panels ' : 'FIRM Panel ';
     const zoneTxt = a => (a.FLD_ZONE || '?') + (a.ZONE_SUBTY ? ' — ' + String(a.ZONE_SUBTY).toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) : '');
     const uniq = arr => arr.filter((v, i) => arr.indexOf(v) === i);
     const zonesOnSite = uniq(siteZones.map(f => zoneTxt(f.attributes)));
@@ -5112,7 +5127,7 @@ async function generateFloodFigure(authId) {
       ctx.font = 'bold 13px Arial'; ctx.textAlign = 'left';
       const tag = (txt, x, y, col) => { const w = ctx.measureText(txt).width; const lx = Math.min(Math.max(8, x), PW - w - 12), ly = Math.min(Math.max(60, y), PH - 14); ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(lx - 4, ly - 14, w + 8, 19); ctx.fillStyle = col; ctx.fillText(txt, lx, ly); };
       tag('Subject Property: ' + (noData ? 'no NFHL flood zone data mapped' : 'Zone ' + zonesOnSite.join('; ')), c[0] + 16, c[1] - 24, inSFHA ? '#b91c1c' : '#1e3a8a');
-      if (firmRef) tag('FIRM Panel ' + firmRef, c[0] + 16, c[1] - 2, '#1f2937');
+      if (firmRef) tag(firmLbl + firmRef, c[0] + 16, c[1] - 2, '#1f2937');
       if (isMgmt) tag(inSFHA ? 'Within the 1% annual chance floodplain (SFHA)' : in500 ? 'Within the 0.2% annual chance (500-yr) floodplain' : 'Outside the 1% and 0.2% annual chance floodplains', c[0] + 16, c[1] + 20, (inSFHA || in500) ? '#b91c1c' : '#166534');
       figPanelCaption(ctx, 10, 10, 'Site Detail', isMgmt ? 'Subject Property boundary · 1% (SFHA) and 0.2% floodplains' : 'Subject Property boundary and mapped flood zones');
       figDrawScale(ctx, detail.fpp, 20, PH - 36 - FIG_FB);
@@ -5175,19 +5190,19 @@ async function generateFloodFigure(authId) {
     await figDrawHeader(ctx, W, {
       title: isMgmt ? 'Floodplain Management Map' : 'Flood Insurance (FIRM) Map',
       meta: figProjectMeta(proj, center),
-      subtitle: (isMgmt ? 'Executive Order 11988 / 24 CFR Part 55 · §58.5(b)' : 'Flood Disaster Protection Act of 1973 (42 U.S.C. 4012a) · §58.6(a)') + ' · FEMA National Flood Hazard Layer' + (firmRef ? ' · FIRM Panel ' + firmRef : '') + (overlayOk ? '' : ' (overlay unavailable at generation time)')
+      subtitle: (isMgmt ? 'Executive Order 11988 / 24 CFR Part 55 · §58.5(b)' : 'Flood Disaster Protection Act of 1973 (42 U.S.C. 4012a) · §58.6(a)') + ' · FEMA National Flood Hazard Layer' + (firmRef ? ' · ' + firmLbl + firmRef : '') + (overlayOk ? '' : ' (overlay unavailable at generation time)')
     });
     figDrawLegend(ctx, legend, 16, null, FIG_HB + PH - 70);
-    figDrawSources(ctx, W, H, figSources(detail, ['FEMA National Flood Hazard Layer (NFHL)' + (firmRef ? ' — FIRM Panel ' + firmRef : '')]));
+    figDrawSources(ctx, W, H, figSources(detail, ['FEMA National Flood Hazard Layer (NFHL)' + (firmRef ? ' — ' + firmLbl + firmRef : '')]));
     const base = { cv };
     // Findings (internal — status line, Source/Ref, Supporting Doc caption only)
     let finding, status;
     const lomrTxt = lomrs.length ? ' A LOMR (' + lomrs.map(f => f.attributes.CASE_NO).filter(Boolean).join(', ') + ') intersects the site — review it.' : '';
     const lomaTxt = lomas.length ? ' A LOMA (' + lomas.map(f => f.attributes.CASE_NO).filter(Boolean).join(', ') + ') is recorded at the site.' : '';
     if (noData) { finding = 'No NFHL flood hazard data is mapped at the site (unmapped / NFHL not available here). Check the paper FIRM at the FEMA Map Service Center before writing up.'; status = 'followup'; }
-    else if (inSFHA) { finding = 'Subject Property is IN a Special Flood Hazard Area (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies — 8-Step (or 5-Step) process required; Write Up 2a.' : ' Flood insurance required; confirm NFIP participation in the Community Status Book → Write Up 3 (or cannot proceed if the community is not participating).') + lomrTxt + lomaTxt; status = 'followup'; }
-    else if (in500) { finding = 'Subject Property is NOT in an SFHA but IS in the 0.2% annual chance (500-yr) floodplain (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies via the 500-year approach — Write Up 2b.' : ' Flood insurance not required under §58.6(a) → Write Up 1 (still check preliminary / pending products at the MSC).') + lomrTxt + lomaTxt; status = isMgmt ? 'followup' : 'compliant'; }
-    else { finding = 'Subject Property is NOT in an SFHA (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' FIRM Panel ' + firmRef + '.' : '') + (isMgmt ? ' Not in the 500-year floodplain → Write Up 1a (confirm no preliminary / pending products move it).' : ' Flood insurance not required → Write Up 1 after confirming no preliminary / pending products at the MSC.') + lomrTxt + lomaTxt; status = 'compliant'; }
+    else if (inSFHA) { finding = 'Subject Property is IN a Special Flood Hazard Area (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' ' + firmLbl + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies — 8-Step (or 5-Step) process required; Write Up 2a.' : ' Flood insurance required; confirm NFIP participation in the Community Status Book → Write Up 3 (or cannot proceed if the community is not participating).') + lomrTxt + lomaTxt; status = 'followup'; }
+    else if (in500) { finding = 'Subject Property is NOT in an SFHA but IS in the 0.2% annual chance (500-yr) floodplain (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' ' + firmLbl + firmRef + '.' : '') + (isMgmt ? ' FFRMS applies via the 500-year approach — Write Up 2b.' : ' Flood insurance not required under §58.6(a) → Write Up 1 (still check preliminary / pending products at the MSC).') + lomrTxt + lomaTxt; status = isMgmt ? 'followup' : 'compliant'; }
+    else { finding = 'Subject Property is NOT in an SFHA (Zone ' + zonesOnSite.join('; ') + ').' + (firmRef ? ' ' + firmLbl + firmRef + '.' : '') + (isMgmt ? ' Not in the 500-year floodplain → Write Up 1a (confirm no preliminary / pending products move it).' : ' Flood insurance not required → Write Up 1 after confirming no preliminary / pending products at the MSC.') + lomrTxt + lomaTxt; status = 'compliant'; }
     if (prox) {
       const bits = [];
       if (prox.sfha && prox.sfha.distFt > 0) bits.push('nearest SFHA ' + figFmtFt(prox.sfha.distFt) + ' ' + bearing(center, prox.sfha.pt));
@@ -13841,7 +13856,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v169 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v170 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v170: FIRM panels — when the parcel boundary falls on more than one printed FIRM panel, all of them are reported (centroid panel first, separated by "; ") in the Flood Insurance / Floodplain Management Reference fields and on the FIRM figures. Panels from a neighbouring jurisdiction whose grid merely overlaps the site are still excluded.');
   console.log('  v169: FIRM panel at a jurisdiction line (e.g. Baltimore City / Baltimore Co.) — when two printed panels cover the site, use the panel from the same FEMA study (DFIRM_ID) as the flood zone at the site point, not simply the newest one. Fixes 6151 Metro Dr reporting County panel 2400100380G instead of City panel 2400870001F.');
   console.log('  v168: Reset Form now clears everything — supporting documents / attachments, mitigation rows, funding sources, AST rows, checkboxes, hidden fields (ESA species table), client-question flags and generated-figure caches.');
   console.log('  v167: FIRM panel — skip FEMA "Countywide, Not Printed" placeholder panels (9999 effective date, e.g. a neighbouring county\'s panel near a county line) and use the effective printed panel (Flood Insurance / Floodplain auto-checks + FIRM Map). Contamination and Noise — "Report provided separately" name field; the Client Report appendix for that section gets a page "Report provided separately as [name]".');
