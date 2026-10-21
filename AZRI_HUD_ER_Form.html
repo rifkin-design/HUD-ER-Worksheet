@@ -607,7 +607,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v168</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v169</div>
   </div>
 </header>
 
@@ -2209,7 +2209,7 @@ const AUTO_DETERMINERS = {
     } catch (e) { console.warn('[flood_mgt] zone query failed:', e); }
     try {
       const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP,PNP_REASON');
-      panelInfo = pickFirmPanel(panelFeatures);   // (v167) skip "Not Printed" placeholder panels (9999 dates)
+      panelInfo = pickFirmPanel(panelFeatures, zoneFeatures);   // (v167) skip "Not Printed" placeholders; (v169) prefer the site's own DFIRM
     } catch (e) { console.warn('[flood_mgt] panel query failed:', e); }
 
     let firmPanel = '', firmRev = '';
@@ -2274,7 +2274,7 @@ const AUTO_DETERMINERS = {
     } catch (e) { console.warn('[flood_ins] zone query failed:', e); }
     try {
       const panelFeatures = await arcgisIntersect('https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer', 3, lng, lat, 'FIRM_PAN,EFF_DATE,DFIRM_ID,PANEL_TYP,PNP_REASON');
-      panelInfo = pickFirmPanel(panelFeatures);   // (v167) skip "Not Printed" placeholder panels (9999 dates)
+      panelInfo = pickFirmPanel(panelFeatures, zoneFeatures);   // (v167) skip "Not Printed" placeholders; (v169) prefer the site's own DFIRM
     } catch (e) { console.warn('[flood_ins] panel query failed:', e); }
 
     // Build FIRM Panel reference in the SOP's format: "1100010039C (9/27/2010)"
@@ -4984,13 +4984,20 @@ function nfhlZoneLabel(a) {
 // (v167) FEMA's FIRM Panels layer often returns 2+ panels for one point near a county line — e.g. Carroll Co.
 // 24013C0350D "Countywide, Not Printed" (PNP_REASON "Area outside county boundary", EFF_DATE 12/31/9999) over the real
 // Baltimore Co. panel 2400100215G. Pick the printed panel with a real effective date; latest effective date wins.
-function pickFirmPanel(features) {
+// (v169) Two PRINTED panels can also both cover a point at a jurisdiction line — e.g. 6151 Metro Dr (Baltimore City):
+// Baltimore Co. 2400100380G (2023) and Baltimore City 2400870001F (2021). The flood-zone polygon at the site point
+// carries the DFIRM_ID of the jurisdiction the site is actually mapped in (240087 = City), so prefer the panel from
+// that same DFIRM; only fall back to "latest effective date" when the zone layer doesn't settle it.
+function pickFirmPanel(features, zoneFeatures) {
   const rows = (features || []).map(f => f.attributes || f).filter(Boolean);
   if (!rows.length) return null;
   const yr = a => { const t = parseInt(a.EFF_DATE); return isNaN(t) ? 0 : new Date(t).getUTCFullYear(); };
   const placeholder = a => /not printed/i.test(a.PANEL_TYP || '') || !!a.PNP_REASON || yr(a) >= 9000 || yr(a) === 0;
   const good = rows.filter(a => !placeholder(a));
-  const pool = good.length ? good : rows.filter(a => yr(a) < 9000).length ? rows.filter(a => yr(a) < 9000) : rows;
+  let pool = good.length ? good : rows.filter(a => yr(a) < 9000).length ? rows.filter(a => yr(a) < 9000) : rows;
+  const siteDfirms = new Set((zoneFeatures || []).map(f => (f.attributes || f || {}).DFIRM_ID).filter(Boolean));
+  const sameJur = pool.filter(a => siteDfirms.has(a.DFIRM_ID));
+  if (sameJur.length) pool = sameJur;
   return pool.slice().sort((a, b) => (parseInt(b.EFF_DATE) || 0) - (parseInt(a.EFF_DATE) || 0))[0];
 }
 async function nfhlQuery(layer, geometry, geometryType, extra) {
@@ -5016,13 +5023,14 @@ async function generateFloodFigure(authId) {
       if (rings.length) { siteGeom = { rings, spatialReference: { wkid: 4326 } }; siteType = 'esriGeometryPolygon'; }
     }
     const ptGeom = { x: center[0], y: center[1], spatialReference: { wkid: 4326 } };
-    const [siteZones, panels, lomrs, lomas] = await Promise.all([
+    const [siteZones, panels, lomrs, lomas, ptZones] = await Promise.all([
       nfhlQuery(NFHL_LAYER.zones, siteGeom, siteType, { outFields: 'FLD_ZONE,ZONE_SUBTY,SFHA_TF,STATIC_BFE,DFIRM_ID' }),
       nfhlQuery(NFHL_LAYER.panels, ptGeom, 'esriGeometryPoint', { outFields: 'FIRM_PAN,EFF_DATE,PANEL_TYP,DFIRM_ID,PNP_REASON' }).catch(() => []),
       nfhlQuery(NFHL_LAYER.lomr, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS' }).catch(() => []),
-      nfhlQuery(NFHL_LAYER.loma, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS,DETERMINATION' }).catch(() => [])
+      nfhlQuery(NFHL_LAYER.loma, siteGeom, siteType, { outFields: 'CASE_NO,EFF_DATE,STATUS,DETERMINATION' }).catch(() => []),
+      nfhlQuery(NFHL_LAYER.zones, ptGeom, 'esriGeometryPoint', { outFields: 'DFIRM_ID' }).catch(() => [])   // (v169) jurisdiction at the site point
     ]);
-    const panel = pickFirmPanel(panels);   // (v167) the effective printed panel, not a neighbouring county's "Not Printed" placeholder
+    const panel = pickFirmPanel(panels, ptZones);   // (v167) the effective printed panel, not a neighbouring county's "Not Printed" placeholder
     const effDate = panel && panel.EFF_DATE ? fmtUtcDate(panel.EFF_DATE) : '';
     const firmRef = panel ? (panel.FIRM_PAN || panel.DFIRM_ID || '') + (effDate ? ' (effective ' + effDate + ')' : '') : '';
     const zoneTxt = a => (a.FLD_ZONE || '?') + (a.ZONE_SUBTY ? ' — ' + String(a.ZONE_SUBTY).toLowerCase().replace(/\b\w/g, m => m.toUpperCase()) : '');
@@ -13833,7 +13841,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v168 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v169 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v169: FIRM panel at a jurisdiction line (e.g. Baltimore City / Baltimore Co.) — when two printed panels cover the site, use the panel from the same FEMA study (DFIRM_ID) as the flood zone at the site point, not simply the newest one. Fixes 6151 Metro Dr reporting County panel 2400100380G instead of City panel 2400870001F.');
   console.log('  v168: Reset Form now clears everything — supporting documents / attachments, mitigation rows, funding sources, AST rows, checkboxes, hidden fields (ESA species table), client-question flags and generated-figure caches.');
   console.log('  v167: FIRM panel — skip FEMA "Countywide, Not Printed" placeholder panels (9999 effective date, e.g. a neighbouring county\'s panel near a county line) and use the effective printed panel (Flood Insurance / Floodplain auto-checks + FIRM Map). Contamination and Noise — "Report provided separately" name field; the Client Report appendix for that section gets a page "Report provided separately as [name]".');
   console.log('  v166: Farmland Map key — Census Urban Area listed right after the Subject Property, above the soil classes. Letters / packets — text that flows onto a new page keeps the body font size (the page header was leaving it at 8.5 pt, e.g. the Section 7 closing paragraph).');
