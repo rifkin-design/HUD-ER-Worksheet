@@ -204,11 +204,11 @@
   .determination label:has(input[value="compliant"]:checked) {
     background: var(--green-bg); color: var(--green); border-color: var(--green);
   }
-  .determination label:has(input[value="followup"]:checked) {
-    background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow);
+  .determination label:has(input[value="followup"]:checked) {   /* (v172) follow-up = dark red */
+    background: #fed7d7; color: #9b2c2c; border-color: #9b2c2c;
   }
-  .determination label:has(input[value="awaiting"]:checked) {
-    background: #feebc8; color: #c05621; border-color: #c05621;
+  .determination label:has(input[value="awaiting"]:checked) {   /* (v172) awaiting = bright yellow */
+    background: #fef08a; color: #713f12; border-color: #eab308;
   }
   .determination label:has(input[value="na"]:checked) {
     background: var(--gray-bg); color: var(--gray); border-color: var(--gray);
@@ -246,9 +246,9 @@
     letter-spacing: 0.5px;
   }
   .status-pill.compliant { background: var(--green-bg); color: var(--green); }
-  .status-pill.followup { background: var(--yellow-bg); color: var(--yellow); }
+  .status-pill.followup { background: #fed7d7; color: #9b2c2c; }
   .status-pill.na { background: var(--gray-bg); color: var(--gray); }
-  .status-pill.awaiting { background: #feebc8; color: #c05621; }
+  .status-pill.awaiting { background: #fef08a; color: #713f12; }
   .status-pill.exempt { background: #e6f0fa; color: #2b6cb0; }
   .status-pill.unset { background: #fff; color: var(--gray); border: 1px dashed var(--border); }
   .summary-counts {
@@ -266,9 +266,9 @@
     border-left: 4px solid var(--gray);
   }
   .count-box.compliant { border-left-color: var(--green); }
-  .count-box.followup { border-left-color: var(--yellow); }
+  .count-box.followup { border-left-color: #9b2c2c; }
   .count-box.na { border-left-color: var(--gray); }
-  .count-box.awaiting { border-left-color: #c05621; }
+  .count-box.awaiting { border-left-color: #eab308; }
   .count-box.exempt { border-left-color: #2b6cb0; }
 
   /* (v104) Side navigation outline — jump to any section without scrolling. Never printed. */
@@ -289,8 +289,8 @@
   #sideNav a.nav-sub { padding: 3px 14px 3px 26px; font-size: 11.5px; color: #4a5568; }
   #sideNav a.nav-sub .nav-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: #cbd5e0; vertical-align: middle; }
   #sideNav a.nav-sub.st-compliant .nav-dot { background: #2f855a; }
-  #sideNav a.nav-sub.st-followup .nav-dot { background: var(--yellow); }   /* (v171) same colours as the determination buttons */
-  #sideNav a.nav-sub.st-awaiting .nav-dot { background: #c05621; }
+  #sideNav a.nav-sub.st-followup .nav-dot { background: #9b2c2c; }   /* (v171/v172) same colours as the determination buttons */
+  #sideNav a.nav-sub.st-awaiting .nav-dot { background: #facc15; box-shadow: 0 0 0 1px #ca8a04; }
   #sideNav a.nav-sub.st-na .nav-dot { background: var(--gray); }
   #sideNav a.nav-sub.st-exempt .nav-dot { background: #2b6cb0; }
   .authority { scroll-margin-top: 14px; }
@@ -608,7 +608,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v171</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v172</div>
   </div>
 </header>
 
@@ -3085,7 +3085,7 @@ function applyAutoResult(authId, result) {
   const statusEl = document.getElementById(`autoStatus_${authId}`);
   if (statusEl) {
     const icons = { compliant: '✓', followup: '⚠', awaiting: '⏳', na: '—' };
-    const colors = { compliant: 'var(--green)', followup: 'var(--yellow)', awaiting: '#c05621', na: 'var(--gray)' };
+    const colors = { compliant: 'var(--green)', followup: '#9b2c2c', awaiting: '#a16207', na: 'var(--gray)' };
     statusEl.textContent = `${icons[result.status] || ''} auto-pulled ${new Date().toLocaleTimeString()}`;
     statusEl.style.color = colors[result.status] || 'var(--gray)';
   }
@@ -10610,7 +10610,7 @@ async function buildClientReportPdf() {
   // (v161) Save As dialog first (needs the button click) unless the project has a save folder
   let crSaveH = null;
   if (!(await azrDirReady(true)) && window.showSaveFilePicker) {
-    const f0 = crFields(); const nm = (((f0.projectName || f0.siteAddress || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')) || 'Project') + '_HUD_ER_Report.pdf';
+    const f0 = crFields(); const nm = (((f0.projectName || f0.siteAddress || '').replace(/[^A-Za-z0-9]+/g, ' ').trim()) || 'Project') + ' HUD ER Report.pdf';   // (v172) spaces, not underscores
     try { crSaveH = await window.showSaveFilePicker({ suggestedName: nm, types: [{ description: 'PDF report', accept: { 'application/pdf': ['.pdf'] } }] }); }
     catch (e) { if (e && e.name === 'AbortError') { say('Cancelled.'); return; } crSaveH = null; }
   }
@@ -10642,7 +10642,7 @@ async function buildClientReportPdf() {
     const f = crFields();
     pdf.setTitle((f.projectName || f.siteAddress || '') + ' - HUD Environmental Review'); pdf.setAuthor('AZ-RI Consultants');
     const out = await pdf.save(); const blob = new Blob([out], { type: 'application/pdf' });
-    const name = (((f.projectName || f.siteAddress || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')) || 'Project') + '_HUD_ER_Report.pdf';
+    const name = (((f.projectName || f.siteAddress || '').replace(/[^A-Za-z0-9]+/g, ' ').trim()) || 'Project') + ' HUD ER Report.pdf';
     // (v161) project folder if set; otherwise the Save As handle picked when the button was clicked; otherwise Downloads
     if (!(await azrDirReady(false)) && crSaveH && crSaveH !== 'cancel') { try { const w = await crSaveH.createWritable(); await w.write(blob); await w.close(); } catch (e) { console.warn('[Client Report] save dialog write failed', e); await azrSaveBlob(blob, name); } }
     else await azrSaveBlob(blob, name);
@@ -11309,7 +11309,7 @@ function generateClientReport() {
   });
 
   const statusLabel = { compliant: 'Compliant', followup: 'Follow-Up Required', awaiting: 'Awaiting Response', na: 'Not Applicable', exempt: 'Exempt', unset: 'Not Yet Assessed' };
-  const statusColor = { compliant: '#2c7a7b', followup: '#b7791f', awaiting: '#c05621', na: '#718096', exempt: '#2b6cb0', unset: '#a0aec0' };
+  const statusColor = { compliant: '#2c7a7b', followup: '#9b2c2c', awaiting: '#ca8a04', na: '#718096', exempt: '#2b6cb0', unset: '#a0aec0' };
   const counts = { compliant: 0, followup: 0, awaiting: 0, na: 0, exempt: 0, unset: 0 };
   const flaggedList = [];
 
@@ -13919,7 +13919,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v171 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v172 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v172: (Nathaniel) status colours — Awaiting Response is bright yellow and Follow-Up Required is dark red on the determination buttons, sidebar dots, summary pills / counts and status lines; Client Report PDF file name uses spaces instead of underscores ("<Project> HUD ER Report.pdf").');
   console.log('  v171: (Nathaniel) sidebar status dots use the same colours as the determination buttons (Follow-up yellow, Awaiting orange, Exempt blue, N/A gray); 💾 Save + Save As (JSON) — Save As picks the review file location (remembered per project, separate from the 📁 Save folder), Save writes to it in one click; red "Unsaved changes" flag + leave-page warning; Section 106 letter default APE text updated.');
   console.log('  v170: FIRM panels — when the parcel boundary falls on more than one printed FIRM panel, all of them are reported (centroid panel first, separated by "; ") in the Flood Insurance / Floodplain Management Reference fields and on the FIRM figures. Panels from a neighbouring jurisdiction whose grid merely overlaps the site are still excluded.');
   console.log('  v169: FIRM panel at a jurisdiction line (e.g. Baltimore City / Baltimore Co.) — when two printed panels cover the site, use the panel from the same FEMA study (DFIRM_ID) as the flood zone at the site point, not simply the newest one. Fixes 6151 Metro Dr reporting County panel 2400100380G instead of City panel 2400870001F.');
