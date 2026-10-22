@@ -289,9 +289,10 @@
   #sideNav a.nav-sub { padding: 3px 14px 3px 26px; font-size: 11.5px; color: #4a5568; }
   #sideNav a.nav-sub .nav-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: #cbd5e0; vertical-align: middle; }
   #sideNav a.nav-sub.st-compliant .nav-dot { background: #2f855a; }
-  #sideNav a.nav-sub.st-followup .nav-dot { background: #c05621; }
-  #sideNav a.nav-sub.st-awaiting .nav-dot { background: #b7791f; }
-  #sideNav a.nav-sub.st-na .nav-dot, #sideNav a.nav-sub.st-exempt .nav-dot { background: #718096; }
+  #sideNav a.nav-sub.st-followup .nav-dot { background: var(--yellow); }   /* (v171) same colours as the determination buttons */
+  #sideNav a.nav-sub.st-awaiting .nav-dot { background: #c05621; }
+  #sideNav a.nav-sub.st-na .nav-dot { background: var(--gray); }
+  #sideNav a.nav-sub.st-exempt .nav-dot { background: #2b6cb0; }
   .authority { scroll-margin-top: 14px; }
   /* (v152) collapsible authority cards — screen only; printing always shows everything */
   @media screen { .authority.auth-collapsed > :not(.authority-header) { display: none !important; } }
@@ -607,7 +608,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v170</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v171</div>
   </div>
 </header>
 
@@ -634,7 +635,9 @@
   <button onclick="buildClientReportPdf()" title="Cover, table of contents, report sections and one appendix per Law &amp; Authority — same format as the Limited ESA and Noise reports" style="background:#0f2a44;color:#fff;font-weight:700;">📄 Client Report (PDF)</button>
   <button onclick="exportWord()">Export Word (HEROS ERR)</button>
   <button class="secondary" onclick="azrPickFolder()" title="Choose this project's folder — every generated map, figure, packet, letter and the Client Report is saved there (overwriting the old version) instead of Downloads. Remembered per project in this browser.">📁 Save folder</button><span id="azrDirLabel" style="font-size:11px;color:#4a5568;align-self:center;"></span>
-  <button class="secondary" onclick="saveJSON()">Save Review (JSON)</button>
+  <button class="secondary" onclick="saveJSONQuick()" title="Save the review to its JSON file in one click (the file chosen with Save As — remembered per project). First time: asks where to save." style="font-weight:700;">💾 Save</button>
+  <button class="secondary" onclick="saveJSONAs()" title="Choose where to save the review JSON (and its file name). Remembered per project in this browser — can be a different place from the 📁 Save folder.">Save As (JSON)</button><span id="azrJsonLabel" style="font-size:11px;color:#4a5568;align-self:center;"></span>
+  <span id="azrDirtyFlag" style="display:none;align-self:center;font-size:11px;font-weight:700;color:#9b2c2c;background:#fed7d7;border:1px solid #9b2c2c;border-radius:4px;padding:2px 7px;" title="Changes since the last Save — click 💾 Save">● Unsaved changes</span>
   <button class="secondary" onclick="document.getElementById('loadFile').click()">Load Review</button>
   <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)">
   <button class="secondary" onclick="loadSample()">Load Sample Site</button>
@@ -3668,6 +3671,7 @@ async function azrDirLoad() {
   if (k && window.indexedDB) { try { AZR_DIR = (await azrDirIdb('get', 'p:' + k)) || null; } catch (e) {} }
   if (AZR_DIR) { try { AZR_DIR_OK = (await AZR_DIR.queryPermission({ mode: 'readwrite' })) === 'granted'; } catch (e) {} }
   azrDirUi();
+  if (typeof azrJsonLoad === 'function') azrJsonLoad();
 }
 async function azrPickFolder() {
   if (!window.showDirectoryPicker) { alert('Saving to a chosen folder needs Chrome or Edge. In this browser files go to Downloads.'); return; }
@@ -3705,10 +3709,10 @@ async function azrSaveBlob(blob, name) {
   return false;
 }
 function azrSaveDoc(doc, name) { return azrSaveBlob(doc.output('blob'), name); }   // jsPDF document
-function azrSavedToast(name) {
+function azrSavedToast(name, where) {
   let t = document.getElementById('azrSavedToast');
   if (!t) { t = document.createElement('div'); t.id = 'azrSavedToast'; t.className = 'no-print'; t.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:#0f2a44;color:#fff;padding:7px 12px;border-radius:5px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:420px;'; document.body.appendChild(t); }
-  t.textContent = '💾 Saved ' + name + ' → ' + (AZR_DIR ? AZR_DIR.name : 'folder'); t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = 'none'; }, 3500);
+  t.textContent = '💾 Saved ' + name + (where ? ' (' + where + ')' : ' → ' + (AZR_DIR ? AZR_DIR.name : 'folder')); t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = 'none'; }, 3500);
 }
 document.addEventListener('change', e => { const f = e.target && e.target.dataset && e.target.dataset.field; if (f === 'projectName' || f === 'siteAddress') azrDirLoad(); });
 setTimeout(azrDirLoad, 800);
@@ -6794,7 +6798,7 @@ async function generateHistoricConsultation(authId) {
     pkP(P, ov('intro') || AZRI_FIRM.name + ' has been retained by ' + client + ' to request that the ' + recip.agency + ' perform a review of the following project for possible effects on historic properties listed, or eligible for listing, on the National Register of Historic Places in accordance with Section 106 of the National Historic Preservation Act (36 CFR Part 800). This Section 106 review is being conducted as part of a required HUD Environmental Review (24 CFR Part ' + (/part\s*50\b/i.test(C.level) ? '50' : '58') + ').');
     label('Project Name', ov('name') || C.meta.projectName || proj.projectName);
     label('Project Location', ov('location') || [C.meta.location, C.summary.acctids ? 'Parcel(s): ' + C.summary.acctids : '', C.center && !/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test((C.meta.location || '').trim()) ? 'Lat/Long: ' + C.center[1].toFixed(6) + ', ' + C.center[0].toFixed(6) : ''].filter(Boolean).join('. ') + '.');
-    label('Area of Potential Effect (APE)', ov('ape') || 'The APE is defined as the Subject Property and the immediate surrounding area in visual range.');
+    label('Area of Potential Effect (APE)', ov('ape') || 'The Area of Potential Effect (APE) is defined as the project parcel(s) and any area where ground-disturbing, visual, or atmospheric/audible effects from the undertaking may occur.');
     const prog = [proj.programName || proj.fundingProgram || proj.hudProgram, C.meta.grant].filter(Boolean).join(' - ');
     label('Federal Agency and Nature of Federal Involvement', g('hist_fedInvolvement') || ('U.S. Department of Housing and Urban Development (HUD)' + (prog ? ', ' + prog : '') + '.' + (proj.responsibleEntity ? ' Responsible Entity under 24 CFR Part 58: ' + proj.responsibleEntity + '.' : '') + ' No other Federal involvement.'));
     // 2) Consultation thus far
@@ -9345,7 +9349,7 @@ AUTHORITIES.forEach(a => {
         <div><label>Signer title <span style="font-weight:400;color:var(--gray);">(blank = Environmental Scientist and Project Manager)</span></label><input type="text" data-field="hist_signerTitle" placeholder="Environmental Scientist and Project Manager"></div>
         <div class="full"><label>Project Name <span style="font-weight:400;color:var(--gray);">(blank = 1125 project name)</span></label><input type="text" data-field="hist_ov_name"></div>
         <div class="full"><label>Project Location <span style="font-weight:400;color:var(--gray);">(blank = 1125 address + parcel(s))</span></label><input type="text" data-field="hist_ov_location"></div>
-        <div class="full"><label>Area of Potential Effect (APE) <span style="font-weight:400;color:var(--gray);">(blank = "The APE is defined as the Subject Property and the immediate surrounding area in visual range.")</span></label><textarea data-field="hist_ov_ape" style="min-height:44px;"></textarea></div>
+        <div class="full"><label>Area of Potential Effect (APE) <span style="font-weight:400;color:var(--gray);">(blank = "The Area of Potential Effect (APE) is defined as the project parcel(s) and any area where ground-disturbing, visual, or atmospheric/audible effects from the undertaking may occur.")</span></label><textarea data-field="hist_ov_ape" style="min-height:44px;"></textarea></div>
         <div class="full"><label>Federal Agency and Nature of Federal Involvement <span style="font-weight:400;color:var(--gray);">(blank = HUD + program / grant # from 1125, "No other Federal involvement.")</span></label><input type="text" data-field="hist_fedInvolvement"></div>
         <div class="full"><label>2. Historic preservation consultation thus far <span style="font-weight:400;color:var(--gray);">(blank = "None.")</span></label><input type="text" data-field="hist_consultSoFar" placeholder="None."></div>
         <div><label>State database <span style="font-weight:400;color:var(--gray);">(default by state)</span></label><input type="text" data-field="hist_stateDbName" placeholder="e.g., Delaware CHRIS / MHT Medusa / V-CRIS"></div>
@@ -10828,8 +10832,55 @@ function gatherData() {
   return data;
 }
 
-async function saveJSON() {
-  const data = gatherData();
+// ===== (v171) SAVE / SAVE AS (JSON) + UNSAVED-CHANGES WARNING =====
+// Save As (JSON) picks the review file's location and name; the file handle is remembered per project in this browser
+// (IndexedDB, key "json:<project>") — independent of the 📁 Save folder used for generated documents. 💾 Save then writes
+// to that file in one click (asks once per visit to allow editing). A red "● Unsaved changes" flag shows whenever the
+// review differs from what was last saved or loaded, and closing / reloading the tab with unsaved changes asks first.
+let AZR_JSON = null, AZR_JSON_KEY = null, AZR_SAVED_SIG = null;
+function azrSig() {
+  try {
+    const d = gatherData();
+    if (d.supportingDocs) { const s = {}; Object.keys(d.supportingDocs).forEach(k => { s[k] = (d.supportingDocs[k] || []).map(x => (x && (x.name || '')) + '|' + (x && (x.size || (x.data || '').length))); }); d.supportingDocs = s; }
+    delete d.levelResultHTML;
+    const t = JSON.stringify(d); let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+    return t.length + ':' + h;
+  } catch (e) { return null; }
+}
+function azrMarkSaved() { AZR_SAVED_SIG = azrSig(); azrDirtyUi(); }
+// after a load / reset the form keeps settling for a few seconds (derived fields, summaries) — re-take the baseline
+// until the user actually types or clicks something
+let AZR_LAST_USER = 0;
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => { if (e.isTrusted) AZR_LAST_USER = Date.now(); }, true));
+function azrSettleSaved() { const t0 = Date.now(); [0, 1500, 3500, 7000].forEach(ms => setTimeout(() => { if (AZR_LAST_USER <= t0) azrMarkSaved(); }, ms)); }
+function azrIsDirty() { if (AZR_SAVED_SIG == null) return false; const s = azrSig(); return s != null && s !== AZR_SAVED_SIG; }
+function azrDirtyUi() { const el = document.getElementById('azrDirtyFlag'); if (el) el.style.display = azrIsDirty() ? 'inline-block' : 'none'; }
+async function azrJsonLoad() {
+  AZR_JSON = null; const k = azrProjKey(); AZR_JSON_KEY = k;
+  if (k && window.indexedDB) { try { AZR_JSON = (await azrDirIdb('get', 'json:' + k)) || null; } catch (e) {} }
+  azrJsonUi();
+}
+function azrJsonUi() {
+  const el = document.getElementById('azrJsonLabel'); if (!el) return;
+  el.innerHTML = AZR_JSON ? ('→ <b>' + String(AZR_JSON.name).replace(/</g, '&lt;') + '</b> <a href="#" onclick="azrJsonForget();return false;" title="Forget this file — the next Save asks where to save" style="color:inherit;">✕</a>') : '';
+}
+async function azrJsonForget() { const k = azrProjKey(); try { if (k) await azrDirIdb('del', 'json:' + k); } catch (e) {} AZR_JSON = null; azrJsonUi(); }
+function azrReviewJson() { return JSON.stringify(gatherData(), null, 2); }
+async function azrJsonWrite(handle, json) {
+  let p = await handle.queryPermission({ mode: 'readwrite' });
+  if (p !== 'granted') p = await handle.requestPermission({ mode: 'readwrite' });
+  if (p !== 'granted') throw new Error('permission to write the file was not granted');
+  const w = await handle.createWritable(); await w.write(json); await w.close();
+}
+async function saveJSONQuick() {
+  if (azrProjKey() !== AZR_JSON_KEY) await azrJsonLoad();
+  if (!AZR_JSON || !window.showSaveFilePicker) return saveJSONAs();
+  try { const sig = azrSig(); await azrJsonWrite(AZR_JSON, azrReviewJson()); AZR_SAVED_SIG = sig; azrDirtyUi(); azrSavedToast(AZR_JSON.name, 'review file'); }
+  catch (e) { if (e && e.name === 'AbortError') return; console.warn('[Save] could not write the remembered file — choosing again', e); return saveJSONAs(); }
+}
+function saveJSON() { return saveJSONAs(); }   // older buttons / callers
+async function saveJSONAs() {
+  const data = gatherData(); const sig = azrSig();
   const projName = (data.fields.projectName || 'Untitled').replace(/[^a-z0-9]/gi,'_');
   const suggestedName = `AZRI_HUD_Review_${projName}.json`;
   const json = JSON.stringify(data, null, 2);
@@ -10839,12 +10890,15 @@ async function saveJSON() {
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: suggestedName, ...(AZR_DIR ? { startIn: AZR_DIR } : {}),   // (v161) opens in the project folder
+        suggestedName: (AZR_JSON && AZR_JSON.name) || suggestedName, id: 'azri-hud-er-json', ...(AZR_JSON ? { startIn: AZR_JSON } : AZR_DIR ? { startIn: AZR_DIR } : {}),   // (v171) reopens where the review was last saved
         types: [{ description: 'JSON Review File', accept: { 'application/json': ['.json'] } }]
       });
       const writable = await handle.createWritable();
       await writable.write(json);
       await writable.close();
+      AZR_JSON = handle; const k = azrProjKey(); AZR_JSON_KEY = k;
+      if (k) { try { await azrDirIdb('put', 'json:' + k, handle); } catch (e) { console.warn('[Save As] file location not remembered', e); } }
+      AZR_SAVED_SIG = sig; azrDirtyUi(); azrJsonUi(); azrSavedToast(handle.name, 'review file');
       return;
     } catch (err) {
       // User clicked Cancel in the Save dialog — stop quietly, don't fall back.
@@ -10862,7 +10916,15 @@ async function saveJSON() {
   a.download = suggestedName;
   a.click();
   URL.revokeObjectURL(a.href);
+  AZR_SAVED_SIG = sig; azrDirtyUi();
 }
+setInterval(azrDirtyUi, 3000);
+setTimeout(azrSettleSaved, 1000);   // baseline once the page (and any restored data) has settled
+window.addEventListener('beforeunload', e => { if (azrIsDirty()) { e.preventDefault(); e.returnValue = ''; } });
+// a review loaded from a file, the sample site, or a reset form starts out "saved"
+{ const _rf = resetForm, _ls = loadSample;
+  resetForm = function () { const before = azrSig(); const r = _rf.apply(this, arguments); setTimeout(() => { if (azrSig() !== before) azrSettleSaved(); }, 300); return r; };
+  loadSample = function () { const r = _ls.apply(this, arguments); setTimeout(azrSettleSaved, 300); return r; }; }
 
 function loadJSON(event) {
   const file = event.target.files[0];
@@ -10995,6 +11057,7 @@ function loadJSON(event) {
     // Safety net: rebuild the summary once more after the load settles, so it always
     // reflects the loaded statuses and write-ups even if a step above hiccuped.
     setTimeout(() => { try { updateMatrix(); buildResourceLinks(); applyEJNotApplicable(); } catch (e) { console.warn('post-load summary refresh failed:', e); } }, 150);
+    setTimeout(() => { azrJsonLoad(); azrSettleSaved(); }, 300);   // (v171) just-loaded file = saved state; pick up the remembered Save As file for this project
   };
   reader.readAsText(file);
 }
@@ -13856,7 +13919,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v170 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v171 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v171: (Nathaniel) sidebar status dots use the same colours as the determination buttons (Follow-up yellow, Awaiting orange, Exempt blue, N/A gray); 💾 Save + Save As (JSON) — Save As picks the review file location (remembered per project, separate from the 📁 Save folder), Save writes to it in one click; red "Unsaved changes" flag + leave-page warning; Section 106 letter default APE text updated.');
   console.log('  v170: FIRM panels — when the parcel boundary falls on more than one printed FIRM panel, all of them are reported (centroid panel first, separated by "; ") in the Flood Insurance / Floodplain Management Reference fields and on the FIRM figures. Panels from a neighbouring jurisdiction whose grid merely overlaps the site are still excluded.');
   console.log('  v169: FIRM panel at a jurisdiction line (e.g. Baltimore City / Baltimore Co.) — when two printed panels cover the site, use the panel from the same FEMA study (DFIRM_ID) as the flood zone at the site point, not simply the newest one. Fixes 6151 Metro Dr reporting County panel 2400100380G instead of City panel 2400870001F.');
   console.log('  v168: Reset Form now clears everything — supporting documents / attachments, mitigation rows, funding sources, AST rows, checkboxes, hidden fields (ESA species table), client-question flags and generated-figure caches.');
