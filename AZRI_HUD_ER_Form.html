@@ -272,6 +272,13 @@
   .count-box.exempt { border-left-color: #2b6cb0; }
 
   /* (v104) Side navigation outline — jump to any section without scrolling. Never printed. */
+  /* (v174) tiering */
+  .tier-opt{display:flex;flex-direction:column;gap:2px;flex:1;min-width:210px;padding:9px 12px 9px 34px;border:1.5px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;position:relative;text-transform:none;letter-spacing:0;font-weight:400;color:#2d3748}
+  .tier-opt input{position:absolute;left:11px;top:11px} .tier-opt b{font-size:13px;color:var(--azri-navy)} .tier-opt small{font-size:11.5px;color:var(--gray)} .tier-opt.on{border-color:var(--azri-teal,#2c7a7b);background:#eef6f6}
+  .tier-box{border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin:0 0 12px;background:#fff} .tier-box > b{color:var(--azri-navy);font-size:13px}
+  .tier-table{width:100%;border-collapse:collapse;margin-top:6px} .tier-table th,.tier-table td{border:1px solid var(--border);padding:4px 6px;font-size:12px;vertical-align:top;text-align:left} .tier-table th{background:#f2f6fb} .tier-table textarea,.tier-table input,.tier-table select{width:100%;box-sizing:border-box;font-size:12px}
+  .tier-radio{display:flex;gap:8px;align-items:flex-start;font-weight:400;text-transform:none;letter-spacing:0;font-size:12.5px;color:#2d3748;margin:6px 0} .tier-radio input{margin-top:3px}
+  .tier-badge{display:inline-block;margin-top:5px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px} .tier-badge.res{background:#e6fffa;color:#234e52;border:1px solid #81e6d9} .tier-badge.site{background:#fffaf0;color:#7b341e;border:1px solid #fbd38d}
   #sideNav {
     position: fixed; top: 84px; left: 12px; bottom: 16px; width: 226px; z-index: 1100;
     background: #fff; border: 1px solid #dde4ec; border-radius: 8px;
@@ -608,7 +615,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v173</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v174</div>
   </div>
 </header>
 
@@ -730,6 +737,17 @@
     <input type="hidden" id="reviewFrameworkHidden" data-field="reviewFramework" value="58">
     <input type="hidden" id="part50BasisHidden" data-field="part50Basis" value="">
 
+
+    <!-- (v174) TIERING — 24 CFR 58.15 -->
+    <div id="tierChooser" style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">
+      <div style="font-weight:600;font-size:12px;color:var(--azri-navy);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;">Tiering <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">(24 CFR 58.15)</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label class="tier-opt"><input type="radio" name="tierModeRadio" value="none" checked onchange="setTierMode(this.value)"> <b>Not tiered</b><small>Single-site review (HEROS as usual)</small></label>
+        <label class="tier-opt"><input type="radio" name="tierModeRadio" value="tier1" onchange="setTierMode(this.value)"> <b>Tier 1 — Broad-level review</b><small>Program / area review; written strategies for the site-specific reviews; Tier 2 site log</small></label>
+        <label class="tier-opt"><input type="radio" name="tierModeRadio" value="tier2" onchange="setTierMode(this.value)"> <b>Tier 2 — Site-specific review</b><small>One site under an approved Tier 1. Not entered in HEROS — the RE uploads it to the Tier 1 review</small></label>
+      </div>
+      <input type="hidden" id="tierModeHidden" data-field="tierMode" value="none">
+    </div>
     <!-- PROJECT FLAGS tied to the review type -->
     <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);">
       <div style="font-weight:600;font-size:12px;color:var(--azri-navy);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;">Project flags</div>
@@ -740,6 +758,12 @@
       <div id="mapFlagHint" style="display:none;font-size:11.5px;color:#9b2c2c;margin-top:4px;">HUD MAP projects are FHA-insured multifamily reviews performed by HUD under Part 50 — confirm the framework selection above.</div>
     </div>
   </div>
+</section>
+
+<!-- ===== (v174) TIERED REVIEW — Tier 1 broad-level / Tier 2 site-specific (24 CFR 58.15) ===== -->
+<section class="card" id="screen-tier" style="display:none">
+  <h2><span id="tierTitle">Tiered Review</span> <span class="citation">(HUD format — Tier 1 / Tier 2)</span></h2>
+  <div class="card-body" id="tierBody"></div>
 </section>
 
 <!-- ===== HEROS SCREEN 1105 — INITIAL SCREEN (50/58 - Non-Tiered) ===== -->
@@ -13919,7 +13943,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v173 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v174 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v174: Tiered reviews (24 CFR 58.15) — 1101 Tiering selector (Not tiered / Tier 1 broad-level / Tier 2 site-specific); Tiering card: Tier 1 reference, per-law resolved-at-Tier-1 vs site-specific with written strategies, Tier 1 and Tier 2 determinations, Tier 2 site log; HUD-format Tier 1 / Tier 2 ER (PDF with attachments by law, Word); Tier 2 hides the HEROS export and drafts the email to the RE.');
   console.log('  v173: (Nathaniel) Historic Preservation Write Up 1 amended — [Insert NR and State findings] and [Insert TDAT Write-up] placeholders, plus two endings: SHPO has not yet responded (determination forwarded upon receipt) [OR] SHPO determination received (No Historic Properties Affected / No Adverse Effect).');
   console.log('  v172: (Nathaniel) status colours — Awaiting Response is bright yellow and Follow-Up Required is dark red on the determination buttons, sidebar dots, summary pills / counts and status lines; Client Report PDF file name uses spaces instead of underscores ("<Project> HUD ER Report.pdf").');
   console.log('  v171: (Nathaniel) sidebar status dots use the same colours as the determination buttons (Follow-up yellow, Awaiting orange, Exempt blue, N/A gray); 💾 Save + Save As (JSON) — Save As picks the review file location (remembered per project, separate from the 📁 Save folder), Save writes to it in one click; red "Unsaved changes" flag + leave-page warning; Section 106 letter default APE text updated.');
@@ -14215,6 +14240,259 @@ const _commentObserver = new MutationObserver(muts => {
   }
 });
 _commentObserver.observe(document.body, { childList: true, subtree: true });
+</script>
+<script>
+// ===== (v174) TIERED REVIEWS — 24 CFR 58.15 =====
+// Tier 1 = broad-level review (HUD "Broad-Level Tiered Environmental Review" format): per law, compliance achieved at the
+// broad level (determination from the authority card) or the written strategy for the site-specific review; Tier 2 site log.
+// Tier 2 = site-specific review in the HUD CEST format: laws resolved at Tier 1 print "See Tier 1 Environmental Review";
+// the rest print this review's determinations. Tier 2 reviews are not entered in HEROS — the RE uploads the signed review
+// to the Tier 1 review in HEROS.
+const TIER_SITE_SPECIFIC_DEFAULT = ['airport', 'flood_ins', 'contam', 'flood_mgt', 'historic', 'noise'];
+const TIER_STRATEGY_DEFAULT = {
+  airport: 'Each site will be screened for proximity to civil airports (runway end within 2,500 feet) and military airfields (runway end within 15,000 feet). Sites within a Runway Protection Zone / Clear Zone or Accident Potential Zone will be evaluated under 24 CFR 51.303; for acquisition of an existing property in a Runway Protection Zone / Clear Zone, the buyer must sign the written notice required by 24 CFR 51.303(a)(3).',
+  cbra: 'Each site will be checked against the U.S. Fish and Wildlife Service Coastal Barrier Resources System mapper; sites within a CBRS unit will not be assisted.',
+  flood_ins: 'Each site will be checked against the current FEMA Flood Insurance Rate Map. If a structure or insurable property is in a Special Flood Hazard Area, the community must participate in the National Flood Insurance Program and flood insurance must be obtained and maintained in accordance with 24 CFR 58.6(a); sites in a Special Flood Hazard Area of a non-participating community will not be assisted.',
+  air: 'Each site will be reviewed for the activities proposed; projects limited to acquisition and rehabilitation of existing buildings do not generate emissions that require a conformity determination.',
+  czm: 'Each site will be checked against the state Coastal Zone Management Program boundary; sites within the coastal zone will be reviewed for consistency with the enforceable policies of the state program.',
+  contam: 'Each site will be evaluated with a review of federal and state environmental databases within one mile, a site inspection using the HUD contamination checklist, and a review of radon, lead-based paint and asbestos for the age and scope of the building. Sites with evidence of on-site contamination, or nearby contamination that could affect the health and safety of occupants, will require further investigation (e.g., a Phase I Environmental Site Assessment) and remediation, or will not be assisted.',
+  esa: 'Each site will be reviewed for the activities proposed; activities that do not involve new construction, ground disturbance or tree clearing in undeveloped areas will have no effect on listed species or critical habitat. Sites with such activities will be reviewed with the U.S. Fish and Wildlife Service IPaC system.',
+  explos: 'Each site will be screened for aboveground storage tanks of explosive or flammable materials within one mile; for projects that increase residential density or involve new construction, the Acceptable Separation Distance will be calculated under 24 CFR Part 51 Subpart C.',
+  farm: 'Each site will be reviewed for the activities proposed; acquisition and rehabilitation of existing buildings on developed land does not convert farmland.',
+  flood_mgt: 'Each site will be checked against the current FEMA Flood Insurance Rate Map and any preliminary or pending map products. Sites within the floodplain subject to 24 CFR Part 55 (including the Federal Flood Risk Management Standard floodplain) will complete the 8-Step or 5-Step decision-making process, as applicable, before funds are committed, or will not be assisted.',
+  historic: 'Each site will be evaluated under Section 106 of the National Historic Preservation Act (36 CFR Part 800): the age of the structures, National Register listing or eligibility, and location within a historic district. Sites with structures 50 years old or older, or with ground disturbance, will be submitted to the State Historic Preservation Office (and Tribes, as applicable) for consultation before funds are committed, unless the activity is covered by a programmatic agreement.',
+  noise: 'Each site will be screened for major roads within 1,000 feet, railroads within 3,000 feet and airports within 15 miles. A noise assessment will be completed for new construction and substantial rehabilitation; sites with a day-night average sound level above 65 dB will require attenuation to achieve the 45 dB interior goal (24 CFR 51.104), and noise attenuation is encouraged for other rehabilitation.',
+  aquifer: 'Each site will be checked against the EPA sole source aquifer map; sites over a sole source aquifer with activities that could affect it will be reviewed with EPA.',
+  wetlands: 'Each site will be reviewed for the activities proposed; activities with new construction or ground disturbance will be checked against the National Wetlands Inventory, and sites that affect wetlands will complete the 8-Step decision-making process.',
+  wsr: 'Each site will be checked against the National Wild and Scenic Rivers System and the Nationwide Rivers Inventory; sites near a listed river will be coordinated with the managing agency.',
+  housing_map: 'Each site will be reviewed for the HUD housing requirements that apply to the program.'
+};
+const TIER_TEXT = {
+  t2Tiering: 'This site-specific (Tier 2) review is tiered from the Tier 1 broad-level environmental review identified above, in accordance with 24 CFR 58.15. Laws and authorities for which compliance was achieved at the broad level are not repeated and are noted "See Tier 1 Environmental Review." The remaining laws and authorities were evaluated for this site in accordance with the written strategies in the Tier 1 review.',
+  t1Tiering: 'This is a broad-level (Tier 1) environmental review prepared in accordance with 24 CFR 58.15. For each law and authority, it records either the compliance determination made at the broad level or the policy, standard or process to be followed in the site-specific review. Individual Tier 2 (site-specific) reviews will be completed for each site, according to the written strategies below, before funds are committed to that site.',
+  t1Note: 'This document covers only the Tier 1 or broad-level review. It must be supplemented by individual Tier 2 (site-specific) reviews for each site. Complete each site-specific review according to the written strategies outlined in this broad-level review, and attach each to the Environmental Review Record.',
+  t2DetOk: 'The site complies with the written strategies in the Tier 1 broad-level review and with all laws and authorities cited at 24 CFR 58.5 and 58.6 (subject to any mitigation measures and conditions listed above). Funds may be committed to this site under the Tier 1 Authority to Use Grant Funds.',
+  t2DetNo: 'The site does not fit the Tier 1 broad-level review (it is outside the area or activities covered by the Tier 1 review, or there are unanticipated impacts or impacts not adequately addressed in the Tier 1 review). A separate environmental review is required for this site before funds are committed (24 CFR 58.15).',
+  t1DetEa: 'Extraordinary circumstances exist and this project may result in significant environmental impact. This project requires preparation of an Environmental Assessment (EA); prepare the EA according to 24 CFR Part 58 Subpart E.',
+  t1DetCest: 'There are no extraordinary circumstances which would require completion of an EA, and this project may remain CEST.',
+  err: 'This original, signed document and related supporting material must be retained on file by the Responsible Entity in an Environmental Review Record (ERR) for the activity/project (ref: 24 CFR Part 58.38) and in accordance with recordkeeping requirements for the HUD program(s).',
+  instr: 'Record below the compliance or conformance determinations for each statute, executive order, or regulation. Provide credible, traceable, and supportive source documentation for each authority. Where applicable, complete the necessary reviews or consultations and obtain or note applicable permits of approvals. Clearly note citations, dates/names/titles of contacts, and page references. Attach additional documentation as appropriate.',
+  mitInstr: 'Summarize below all mitigation measures adopted by the Responsible Entity to reduce, avoid, or eliminate adverse environmental impacts and to avoid non-compliance or non-conformance with the above-listed authorities and factors. These measures/conditions must be incorporated into project contracts, development agreements, and other relevant documents. The staff responsible for implementing and monitoring mitigation measures should be clearly identified in the mitigation plan.'
+};
+// HUD CEST-format law names and citations (rows of the compliance table), grouped as in the HUD form
+const TIER_ROWS = [
+  { grp: 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR 50.4 & 58.6' },
+  { id: 'airport', n: 'Airport Hazards', c: '24 CFR Part 51 Subpart D' },
+  { id: 'cbra', n: 'Coastal Barrier Resources', c: 'Coastal Barrier Resources Act, as amended by the Coastal Barrier Improvement Act of 1990 [16 USC 3501]' },
+  { id: 'flood_ins', n: 'Flood Insurance', c: 'Flood Disaster Protection Act of 1973 and National Flood Insurance Reform Act of 1994 [42 USC 4001-4128 and 42 USC 5154a]' },
+  { grp: 'STATUTES, EXECUTIVE ORDERS, AND REGULATIONS LISTED AT 24 CFR 50.4 & 58.5' },
+  { id: 'air', n: 'Clean Air', c: 'Clean Air Act, as amended, particularly section 176(c) & (d); 40 CFR Parts 6, 51, 93' },
+  { id: 'czm', n: 'Coastal Zone Management', c: 'Coastal Zone Management Act, sections 307(c) & (d)' },
+  { id: 'contam', n: 'Contamination and Toxic Substances', c: '24 CFR Part 50.3(i) & 58.5(i)(2)' },
+  { id: 'esa', n: 'Endangered Species', c: 'Endangered Species Act of 1973, particularly section 7; 50 CFR Part 402' },
+  { id: 'explos', n: 'Explosive and Flammable Hazards', c: '24 CFR Part 51 Subpart C' },
+  { id: 'farm', n: 'Farmlands Protection', c: 'Farmland Protection Policy Act of 1981, particularly sections 1504(b) and 1541; 7 CFR Part 658' },
+  { id: 'flood_mgt', n: 'Floodplain Management', c: 'Executive Order 11988, particularly section 2(a); 24 CFR Part 55' },
+  { id: 'historic', n: 'Historic Preservation', c: 'National Historic Preservation Act of 1966, particularly sections 106 and 110; 36 CFR Part 800' },
+  { id: 'noise', n: 'Noise Abatement and Control', c: 'Noise Control Act of 1972, as amended by the Quiet Communities Act of 1978; 24 CFR Part 51 Subpart B' },
+  { id: 'aquifer', n: 'Sole Source Aquifers', c: 'Safe Drinking Water Act of 1974, as amended, particularly section 1424(e); 40 CFR Part 149' },
+  { id: 'wetlands', n: 'Wetlands Protection', c: 'Executive Order 11990, particularly sections 2 and 5' },
+  { id: 'wsr', n: 'Wild and Scenic Rivers', c: 'Wild and Scenic Rivers Act of 1968, particularly section 7(b) and (c)' }
+];
+function tierMode() { const el = document.getElementById('tierModeHidden'); return (el && el.value) || 'none'; }
+function tierVal(name) { const el = document.querySelector('[data-field="' + name + '"]'); return el ? (el.type === 'checkbox' ? el.checked : el.value) : ''; }
+function tierLawIds() { return TIER_ROWS.filter(r => r.id).map(r => r.id); }
+function tierResolvedAtT1(id) { const v = tierVal('tier_' + id + '_t1'); return v ? v === 'yes' : !TIER_SITE_SPECIFIC_DEFAULT.includes(id); }
+function tierStrategy(id) { const v = String(tierVal('tier_' + id + '_strategy') || '').trim(); return v || TIER_STRATEGY_DEFAULT[id] || ''; }
+function tierSites() { try { const a = JSON.parse(tierVal('tierSitesJSON') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function tierSetSites(a) { const el = document.querySelector('[data-field="tierSitesJSON"]'); if (el) el.value = JSON.stringify(a); tierRenderSites(); if (typeof azrDirtyUi === 'function') azrDirtyUi(); }
+function tierBuildPanel() {
+  const body = document.getElementById('tierBody'); if (!body || body.dataset.built) return; body.dataset.built = '1';
+  const fld = (label, name, ph, wide, type) => '<div' + (wide ? ' class="full"' : '') + '><label>' + label + '</label>' + (type === 'area' ? '<textarea data-field="' + name + '" rows="3" placeholder="' + (ph || '') + '"></textarea>' : '<input type="text" data-field="' + name + '" placeholder="' + (ph || '') + '">') + '</div>';
+  let h = '';
+  h += '<div class="tier-only-t2"><div class="tier-box"><b>Tier 1 review this site is tiered from</b><div class="field-grid">' + fld('Tier 1 review name', 'tier1Name', 'e.g., Community Preservation Trust — Home Purchase and Renovations (Tier 1)', true) + fld('Tier 1 HEROS number', 'tier1Heros', '900000010123456') + fld('Tier 1 review date', 'tier1Date', 'Month Day, Year') + fld('Authority to Use Grant Funds (HUD 7015.16) date', 'tier1Augf', 'Month Day, Year') + fld('Site name (Tier 2)', 'tier2SiteName', '5015 Iroquois Street') + '</div></div></div>';
+  h += '<div class="tier-only-t1"><div class="tier-box"><b>Broad-level review scope</b><div class="field-grid">' + fld('Approximate size of the project area', 'tier1Area', 'e.g., Prince George\'s County, Maryland') + fld('Length of time covered by this review', 'tier1Period', 'e.g., five years (through October 2031)') + fld('Maximum number of dwelling units or lots addressed by this tiered review', 'tier1MaxUnits', 'e.g., up to eight (8) single-family homes') + '</div></div></div>';
+  h += '<div class="tier-box"><b>Shared fields (HUD format)</b><div class="field-grid">' + fld('Direct comments to', 'tierDirectComments', 'Name, title, Responsible Entity') + fld('Preparer (RE)', 'tierPreparer', 'Name, title (blank = the reviewer on 1105)') + '</div></div>';
+  // per-law table
+  h += '<div class="tier-box"><b>Laws and authorities — <span class="tier-only-t1">compliance achieved at the broad level, or the written strategy for the site-specific review</span><span class="tier-only-t2">resolved at Tier 1, or reviewed for this site</span></b>' +
+    '<div class="muted" style="font-size:12px;margin:4px 0 6px;"><span class="tier-only-t1">"Yes" prints the determination from the law\'s card in section 2005. "No" prints the written strategy below (edit it to match the RE\'s program).</span><span class="tier-only-t2">"Resolved at Tier 1" prints <i>See Tier 1 Environmental Review</i>; "Site-specific" prints the determination from the law\'s card in section 2005. Set these to match the Tier 1 review\'s written strategies.</span></div>' +
+    '<table class="tier-table"><tr><th style="width:24%">Law / authority</th><th style="width:18%"><span class="tier-only-t1">Compliance achieved at the broad level?</span><span class="tier-only-t2">Tier 1 / Tier 2</span></th><th class="tier-only-t1">Written strategy for the site-specific review <span class="muted">("No" rows)</span></th></tr>' +
+    TIER_ROWS.filter(r => r.id).map(r => '<tr><td><b>' + r.n + '</b></td><td><select data-field="tier_' + r.id + '_t1" onchange="tierRefresh()"><option value="">' + (TIER_SITE_SPECIFIC_DEFAULT.includes(r.id) ? 'Site-specific (default)' : 'Resolved at Tier 1 (default)') + '</option><option value="yes">Yes — resolved at Tier 1</option><option value="no">No — site-specific review</option></select></td><td class="tier-only-t1"><textarea data-field="tier_' + r.id + '_strategy" rows="2" placeholder="' + (TIER_STRATEGY_DEFAULT[r.id] || '').replace(/"/g, '&quot;') + '"></textarea></td></tr>').join('') + '</table></div>';
+  // determinations
+  h += '<div class="tier-box tier-only-t2"><b>Tier 2 determination</b><label class="tier-radio"><input type="radio" name="tier2Det" value="ok"> ' + TIER_TEXT.t2DetOk + '</label><label class="tier-radio"><input type="radio" name="tier2Det" value="no"> ' + TIER_TEXT.t2DetNo + '</label>' +
+    '<div class="field-grid">' + fld('Summary of Findings and Conclusions', 'tierSummary', 'e.g., All questions regarding evidence of environmental concerns were answered in the negative.', true, 'area') + '</div></div>';
+  h += '<div class="tier-box tier-only-t1"><b>Tier 1 determination</b><label class="tier-radio"><input type="radio" name="tier1Det" value="ea"> ' + TIER_TEXT.t1DetEa + '</label><label class="tier-radio"><input type="radio" name="tier1Det" value="cest"> ' + TIER_TEXT.t1DetCest + '</label></div>';
+  // site log
+  h += '<div class="tier-box tier-only-t1"><b>Appendix — Site-Specific or Tier 2 Reviews</b> <span class="muted" style="font-size:12px;">Update as site-specific reviews are completed; prints as the Appendix of the Tier 1 review.</span><input type="hidden" data-field="tierSitesJSON" value="[]"><div id="tierSitesTable"></div><button type="button" onclick="tierSetSites(tierSites().concat([{name:\'\',addr:\'\',date:\'\',det:\'\'}]))">+ Add site</button></div>';
+  // outputs
+  h += '<div class="tier-box no-print"><b>Output</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center;">' +
+    '<button type="button" onclick="tierBuildPdf()" style="background:#0f2a44;color:#fff;font-weight:700;border:none;border-radius:5px;padding:8px 14px;cursor:pointer;">📄 <span class="tier-only-t1">Tier 1</span><span class="tier-only-t2">Tier 2</span> ER (HUD format) — PDF</button>' +
+    '<button type="button" onclick="tierExportWord()" style="border:1px solid #0f2a44;background:#fff;color:#0f2a44;border-radius:5px;padding:8px 14px;cursor:pointer;">⬇ Word (.doc)</button>' +
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;text-transform:none;letter-spacing:0;font-weight:400;"><input type="checkbox" data-field="tierAttachDocs" checked> attach the supporting documents (by law)</label>' +
+    '<button type="button" class="tier-only-t2" onclick="tierEmailRe()" style="border:1px solid #2c7a7b;background:#fff;color:#2c7a7b;border-radius:5px;padding:8px 14px;cursor:pointer;">✉ Email to the RE</button>' +
+    '<span id="tierStatus" style="font-size:12px;color:#4a5568;"></span></div>' +
+    '<div class="tier-only-t2" style="font-size:12px;color:#4a5568;margin-top:6px;">Tier 2 reviews are not entered in HEROS: send the signed-ready PDF to the Responsible Entity, who uploads it to the Tier 1 review in HEROS (site-specific reviews) and signs it for the ERR.</div></div>';
+  body.innerHTML = h;
+  // defaults that are real values (not placeholders) are applied lazily by tierStrategy(); nothing else to seed
+  tierRenderSites();
+}
+function tierRenderSites() {
+  const box = document.getElementById('tierSitesTable'); if (!box) return; const S = tierSites();
+  box.innerHTML = '<table class="tier-table"><tr><th>Site-specific project name</th><th>Address or location</th><th>Tier 2 review date</th><th>Determination / notes</th><th></th></tr>' +
+    S.map((s, i) => '<tr>' + ['name', 'addr', 'date', 'det'].map(k => '<td><input type="text" value="' + String(s[k] || '').replace(/"/g, '&quot;') + '" onchange="(function(v){const a=tierSites();a[' + i + '].' + k + '=v;tierSetSites(a);})(this.value)"></td>').join('') + '<td><button type="button" onclick="(function(){const a=tierSites();a.splice(' + i + ',1);tierSetSites(a);})()">✕</button></td></tr>').join('') + '</table>' + (S.length ? '' : '<div class="muted" style="font-size:12px;">No sites logged yet.</div>');
+}
+function setTierMode(v) {
+  const h = document.getElementById('tierModeHidden'); if (h) h.value = v || 'none';
+  const r = document.querySelector('input[name="tierModeRadio"][value="' + (v || 'none') + '"]'); if (r) r.checked = true;
+  tierRefresh();
+  if (typeof azrDirtyUi === 'function') azrDirtyUi();
+}
+function tierRefresh() {
+  tierBuildPanel();
+  const m = tierMode(); const sec = document.getElementById('screen-tier');
+  if (sec) sec.style.display = m === 'none' ? 'none' : '';
+  document.querySelectorAll('.tier-only-t1').forEach(e => e.style.display = m === 'tier1' ? '' : 'none');
+  document.querySelectorAll('.tier-only-t2').forEach(e => e.style.display = m === 'tier2' ? '' : 'none');
+  document.querySelectorAll('.tier-opt').forEach(l => { const i = l.querySelector('input'); l.classList.toggle('on', !!(i && i.checked)); });
+  const t = document.getElementById('tierTitle'); if (t) t.textContent = m === 'tier1' ? 'Tier 1 — Broad-Level Tiered Review (24 CFR 58.15)' : 'Tier 2 — Site-Specific Review (24 CFR 58.15)';
+  // the HEROS export does not apply to a Tier 2 review
+  document.querySelectorAll('button[onclick="exportWord()"]').forEach(b => { b.style.display = m === 'tier2' ? 'none' : ''; });
+  const c = document.querySelector('#screen-1101 h2 .citation'); if (c) c.textContent = m === 'none' ? '(50/58 — Non-Tiered)' : m === 'tier1' ? '(58 — Tiered: Tier 1 broad-level review)' : '(58 — Tiered: Tier 2 site-specific review — not entered in HEROS)';
+  // per-law badge on the 2005 cards
+  (typeof AUTHORITIES !== 'undefined' ? AUTHORITIES : []).forEach(a => {
+    const card = document.getElementById('auth_' + a.id); if (!card) return;
+    let b = card.querySelector('.tier-badge');
+    if (m === 'none' || !tierLawIds().includes(a.id)) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.className = 'tier-badge no-print'; const hd = card.querySelector('.authority-header > div'); if (hd) hd.appendChild(b); }
+    const res = tierResolvedAtT1(a.id);
+    b.textContent = m === 'tier2' ? (res ? '⤴ Resolved at Tier 1 — prints "See Tier 1 Environmental Review"' : '📍 Site-specific (Tier 2) — prints this card\'s determination') : (res ? '✓ Tier 1: compliance achieved at the broad level — prints this card\'s determination' : '⤵ Tier 1: site-specific review — prints the written strategy (Tiering card)');
+    b.className = 'tier-badge no-print ' + (res ? 'res' : 'site');
+  });
+  if (typeof buildSideNav === 'function') buildSideNav();
+}
+document.addEventListener('change', e => { const f = e.target && e.target.dataset && e.target.dataset.field; if (f === 'tierMode') setTierMode(e.target.value); if (f === 'tierSitesJSON') tierRenderSites(); if (f && /^tier_/.test(f)) tierRefresh(); });
+
+// ---------- HUD-format document ----------
+function tierAuthNotes(f, id) {
+  let n = f[id + '_notes'] || '';
+  if (id === 'contam' && typeof contamSubsectionText === 'function') { const t = contamSubsectionText(f); if (t) n += (n ? '\n\n' : '') + t; }
+  if (id === 'housing_map' && typeof housingSubsectionText === 'function') { const t = housingSubsectionText(f); if (t) n += (n ? '\n\n' : '') + t; }
+  return n.trim();
+}
+function tierStatus(id) { const c = document.querySelector('input[name="' + id + '_status"]:checked'); return c ? c.value : ''; }
+function tierYN(yes) { return "<span class='sym'>" + (yes === true ? '☒' : '☐') + "</span> Yes &nbsp; <span class='sym'>" + (yes === false ? '☒' : '☐') + "</span> No"; }
+function tierBox(on) { return "<span class='sym'>" + (on ? '☒' : '☐') + '</span>'; }
+function tierHtml() {
+  const f = crFields(); const esc = crEsc; const m = tierMode(); const t1 = m === 'tier1';
+  const siteFull = [f.siteAddress, f.siteCity, [f.siteState, f.siteZip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  let fs = []; try { fs = JSON.parse(f.fundingSourcesJSON || '[]'); } catch (e) {}
+  fs = fs.filter(x => x && (x.grantId || x.program || x.programName || x.amount));
+  const money = v => { v = String(v || '').trim(); return v ? (/^\$/.test(v) ? v : '$' + v) : ''; };
+  const L = (k, v) => '<p><b>' + esc(k) + '</b> ' + (String(v || '').trim() ? esc(v).replace(/\n/g, '<br>') : '') + '</p>';
+  const lvl = (document.querySelector('input[name="levelOfReview"]:checked') || {}).value || 'cest';
+  const cites = []; document.querySelectorAll('input[name="cest_cite"]:checked, input[name="censt_cite"]:checked, input[name="exempt_cite"]:checked').forEach(cb => { const l = cb.closest('label'); if (l) { const s = l.textContent.replace(/\s+/g, ' ').trim(); const mm = s.match(/§?\s*58\.\d+\([^ ]*/); cites.push(mm ? mm[0].replace(/^§?\s*/, '§') : s.slice(0, 60)); } });
+  let h = '';
+  // title
+  if (t1) h += "<p style='text-align:center'><b><span style='font-size:13pt'>Broad-Level Tiered Environmental Review for Activity/Project that is Categorically Excluded Subject to Section 58.5</span></b><br><b>Pursuant to 24 CFR Part 58.35(a)</b></p>";
+  else h += "<p style='text-align:center'><b>TIER 2 — SITE-SPECIFIC REVIEW</b></p><p style='text-align:center'><b><span style='font-size:13pt'>Environmental Review for Activity/Project that is Categorically Excluded Subject to Section 58.5</span></b><br><b>Pursuant to 24 CFR 58.35(a)</b></p>";
+  h += '<h3>Project Information</h3>' + L('Project Name:', (t1 ? f.projectName : [f.projectName, tierVal('tier2SiteName')].filter(Boolean).join(' — ')));
+  if (!t1) h += L('Tier 1 Broad-Level Review:', [tierVal('tier1Name'), tierVal('tier1Heros') ? 'HEROS No. ' + tierVal('tier1Heros') : '', tierVal('tier1Date') ? 'dated ' + tierVal('tier1Date') : '', tierVal('tier1Augf') ? 'Authority to Use Grant Funds dated ' + tierVal('tier1Augf') : ''].filter(Boolean).join('; ') || '[Tier 1 review name, HEROS number and date]');
+  h += L(t1 ? 'Responsible Entity (RE):' : 'Responsible Entity:', f.responsibleEntity) + L('Grant Recipient (if different than Responsible Entity):', f.applicant) + L('State/Local Identifier:', f.stateLocalIdentifier) +
+    L(t1 ? 'RE Preparer:' : 'Preparer:', tierVal('tierPreparer') || f.reviewer || f.hudPreparer) + L(t1 ? 'Certifying Officer:' : 'Certifying Officer Name and Title:', f.certifyingOfficer) +
+    (t1 ? L('Point of Contact:', f.applicantPOC) : '') + L('Consultant (if applicable):', f.consultant || 'AZ-RI Consultants') + L('Direct Comments to:', tierVal('tierDirectComments')) +
+    L('Project Location:', siteFull) + (f.additionalLocation ? L('Additional Location Information:', f.additionalLocation) : '');
+  h += '<p><b>Description of the Proposed Project</b> [24 CFR 50.21 &amp; 58.32]<b>:</b></p>' + (crText(f.projectDescription) || '<p>[Description of the proposed project]</p>');
+  h += '<p><i>' + esc(t1 ? TIER_TEXT.t1Tiering : TIER_TEXT.t2Tiering) + '</i></p>';
+  if (t1) h += L('Approximate size of the project area:', tierVal('tier1Area')) + L('Length of time covered by this review:', tierVal('tier1Period')) + L('Maximum number of dwelling units or lots addressed by this tiered review:', tierVal('tier1MaxUnits'));
+  h += '<p><b>Level of Environmental Review Determination:</b><br>' + (lvl === 'cest' || !lvl ? 'Categorically Excluded per 24 CFR 58.35(a), and subject to laws and authorities at §58.5' + (cites.length ? ': ' + esc(cites.join(', ')) : '') : esc((CR_STATUS && 0) || ({ exempt: 'Exempt per 24 CFR 58.34', censt: 'Categorically Excluded not subject to §58.5, per 24 CFR 58.35(b)', ea: 'Environmental Assessment per 24 CFR 58.36', eis: 'Environmental Impact Statement' }[lvl] || ''))) + '</p>';
+  h += '<h3>Funding Information</h3><table class="grid tierfund"><tr><th>Grant Number</th><th>HUD Program</th><th>Program Name</th><th>Funding Amount</th></tr>' + (fs.length ? fs.map(x => '<tr><td>' + esc(x.grantId) + '</td><td>' + esc(x.program) + '</td><td>' + esc(x.programName) + '</td><td>' + esc(money(x.amount)) + '</td></tr>').join('') : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>') + '</table>';
+  h += L('Estimated Total HUD Funded Amount:', money(f.totalHudAmount || f.funding)) + '<p><b>Estimated Total Project Cost</b> (HUD and non-HUD funds) [24 CFR 58.32(d)]<b>:</b> ' + esc(money(f.totalProjectCost)) + '</p>';
+  // compliance table
+  h += "<div class='pagebreak'></div><h3>Compliance with 24 CFR 50.4, 58.5, and 58.6 Laws and Authorities</h3><p>" + esc(TIER_TEXT.instr) + '</p>';
+  const rowsHtml = TIER_ROWS.map(r => {
+    if (r.grp) return "<tr><td colspan='3'><b>" + esc(r.grp) + '</b></td></tr>';
+    const name = '<b>' + esc(r.n) + '</b><br>' + esc(r.c); const res = tierResolvedAtT1(r.id); const notes = tierAuthNotes(f, r.id); const st = tierStatus(r.id);
+    if (t1) return '<tr><td>' + name + '</td><td>' + tierYN(res) + '</td><td>' + (res ? (crText(notes) || '<p>[Compliance determination made at the broad level]</p>') : '<p><i>Site-specific review:</i> ' + esc(tierStrategy(r.id)) + '</p>') + '</td></tr>';
+    if (res) return '<tr><td>' + name + '</td><td>' + tierYN(null) + '</td><td>See Tier 1 Environmental Review</td></tr>';
+    const yes = st === 'followup' || st === 'awaiting' ? true : (st ? false : null);
+    return '<tr><td>' + name + '</td><td>' + tierYN(yes) + '</td><td>' + (crText(notes) || '<p>[Compliance determination for this site]</p>') + '</td></tr>';
+  }).join('');
+  h += "<table class='grid tiercomp'><tr><th>Compliance Factors: Statutes, Executive Orders, and Regulations listed at 24 CFR §58.5 and §58.6</th><th>" + (t1 ? 'Was compliance achieved at the broad level of review?' : 'Are formal compliance steps or mitigation required?') + '</th><th>' + (t1 ? 'If Yes: compliance determinations made at the broad level. If No: the policy, standard, or process to be followed in the site-specific review.' : 'Compliance determinations') + '</th></tr>' + rowsHtml + '</table>';
+  if (t1) h += '<p><i>' + esc(TIER_TEXT.t1Note) + '</i></p>';
+  // field inspection, summary, mitigation (Tier 2); mitigation for Tier 1 when present
+  if (!t1) {
+    h += '<p><b>Field Inspection</b> (Date and completed by)<b>:</b> ' + esc([f.fieldInspectionDate, f.fieldInspectionBy ? 'completed by ' + f.fieldInspectionBy + (f.fieldInspectionTitle ? ', ' + f.fieldInspectionTitle : '') : ''].filter(Boolean).join(' ')) + '</p>';
+    h += '<p><b>Summary of Findings and Conclusions:</b></p>' + (crText(tierVal('tierSummary') || f.overallRecommendation) || '<p>&nbsp;</p>');
+  }
+  const mit = (typeof mitigationRows !== 'undefined' ? mitigationRows : []).filter(r => r && (r.authority || r.measure));
+  if (!t1 || mit.length) h += '<p><b>Mitigation Measures and Conditions</b><br>' + esc(TIER_TEXT.mitInstr) + "</p><table class='grid tiermit'><tr><th>Law, Authority, or Factor</th><th>Mitigation Measure</th></tr>" + (mit.length ? mit.map(r => '<tr><td>' + esc(r.authority) + '</td><td>' + esc(r.measure).replace(/\n/g, '<br>') + (r.plan ? '<br><i>' + esc(r.plan).replace(/\n/g, '<br>') + '</i>' : '') + '</td></tr>').join('') : '<tr><td>&nbsp;</td><td></td></tr>') + '</table>';
+  // determination
+  const det = (document.querySelector('input[name="' + (t1 ? 'tier1Det' : 'tier2Det') + '"]:checked') || {}).value || '';
+  h += '<p><b>Determination:</b></p>' + (t1
+    ? '<p>' + tierBox(det === 'ea') + ' ' + esc(TIER_TEXT.t1DetEa) + '</p><p>' + tierBox(det === 'cest') + ' ' + esc(TIER_TEXT.t1DetCest) + '</p>'
+    : '<p>' + tierBox(det === 'ok') + ' ' + esc(TIER_TEXT.t2DetOk) + '</p><p>' + tierBox(det === 'no') + ' ' + esc(TIER_TEXT.t2DetNo) + '</p>');
+  h += '<p>&nbsp;</p><p>Preparer Signature: ______________________________________ Date: ____________</p><p>Name/Title/Organization: ' + esc([tierVal('tierPreparer') || f.reviewer || '', f.consultant || ''].filter(Boolean).join(', ') || '______________________________________') + '</p>' +
+    '<p>&nbsp;</p><p>Responsible Entity Agency Official Signature:</p><p>______________________________________________ Date: ____________</p><p>Name/Title: ' + esc(f.certifyingOfficer || '______________________________________') + '</p>' +
+    '<p><i>' + esc(TIER_TEXT.err) + '</i></p>';
+  if (t1) {
+    const S = tierSites();
+    h += "<div class='pagebreak'></div><h3>APPENDIX: Site-Specific or Tier 2 Reviews</h3><p>Update this document as site-specific reviews are completed.</p><table class='grid tiersites'><tr><th>Site-specific project name</th><th>Address or location</th><th>Tier 2 review date</th><th>Determination / notes</th></tr>" +
+      (S.length ? S.map(s => '<tr><td>' + esc(s.name) + '</td><td>' + esc(s.addr) + '</td><td>' + esc(s.date) + '</td><td>' + esc(s.det) + '</td></tr>').join('') : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr><tr><td>&nbsp;</td><td></td><td></td><td></td></tr>') + '</table>';
+  }
+  return h;
+}
+function tierFileName(ext) { const f = crFields(); const base = (((tierMode() === 'tier2' ? (tierVal('tier2SiteName') || f.siteAddress) : f.projectName) || f.projectName || 'Project').replace(/[^A-Za-z0-9#&]+/g, ' ').trim()); return base + (tierMode() === 'tier1' ? ' Tier 1 ER' : ' Tier 2 ER') + '.' + ext; }
+function tierDocDef(html, opts) {
+  const dd = crDocDef(html, Object.assign({ noCover: true }, opts || {}));
+  const f = crFields(); const ttl = (tierMode() === 'tier1' ? 'Tier 1 Broad-Level Environmental Review' : 'Tier 2 Site-Specific Environmental Review');
+  dd.header = null; dd.pageMargins = [54, 48, 54, 56];
+  dd.footer = (page, count) => ({ margin: [54, 10, 54, 0], columns: [{ text: (f.projectName || '') + (tierMode() === 'tier2' && tierVal('tier2SiteName') ? ' — ' + tierVal('tier2SiteName') : '') + '\n' + ttl + ' · prepared by AZ-RI Consultants', fontSize: 7.5, color: '#555' }, { text: 'Page ' + page + ' of ' + count, alignment: 'right', fontSize: 7.5, color: '#555' }] });
+  // the HUD form is plain: no TOC entries, smaller headings
+  (function walk(n) { if (Array.isArray(n)) return n.forEach(walk); if (!n || typeof n !== 'object') return; if (n.tocItem) delete n.tocItem; if (n.nodeName === 'H3') { n.fontSize = 11.5; n.color = '#000'; n.bold = true; } if (n.table && n.style && n.style.indexOf) { const w = n.style.indexOf('tiercomp') > -1 ? ['26%', '14%', '*'] : n.style.indexOf('tiermit') > -1 ? ['30%', '*'] : null; if (w) n.table.widths = w; } ['stack', 'columns', 'ul', 'ol', 'text'].forEach(k => { if (Array.isArray(n[k])) walk(n[k]); }); if (n.table) n.table.body.forEach(r => r.forEach(walk)); })(dd.content);
+  return dd;
+}
+async function tierBuildPdf() {
+  const st = document.getElementById('tierStatus'); const say = (m, c) => { if (st) { st.textContent = m; st.style.color = c || '#4a5568'; } };
+  if (tierMode() === 'none') { alert('Choose Tier 1 or Tier 2 on 1101 first.'); return; }
+  if (!crLibsReady()) { say('PDF libraries not loaded — open the worksheet from GitHub Pages.', '#c00'); return; }
+  const name = tierFileName('pdf');
+  let saveH = null;
+  if (!(await azrDirReady(true)) && window.showSaveFilePicker) { try { saveH = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }] }); } catch (e) { if (e && e.name === 'AbortError') { say('Cancelled.'); return; } saveH = null; } }
+  try {
+    say('Rendering…'); crFontsInit();
+    const bytes = await crPdfmakeBytes(tierDocDef(crPrepHtml(tierHtml())));
+    const pdf = await PDFLib.PDFDocument.load(bytes); let extra = 0;
+    if (tierVal('tierAttachDocs')) {
+      const fonts = { b: await pdf.embedFont(PDFLib.StandardFonts.HelveticaBold) }; const t1 = tierMode() === 'tier1';
+      const ids = tierLawIds().filter(id => t1 || !tierResolvedAtT1(id)).concat(['housing_map']);
+      for (const id of ids) {
+        const docs = crIncludedDocs(id); if (!docs.length) continue;
+        const a = AUTHORITIES.find(x => x.id === id); await crDividerPage(pdf, fonts.b, 'Attachment', a ? crAuthName(a) : id); extra++;
+        for (const x of docs) { try { extra += await crAppendDoc(pdf, x.d); } catch (e) { console.warn('[Tier] could not append', x.d.name, e); } }
+      }
+    }
+    pdf.setTitle(name.replace(/\.pdf$/, '')); pdf.setAuthor('AZ-RI Consultants');
+    const out = await pdf.save(); const blob = new Blob([out], { type: 'application/pdf' });
+    if (saveH) { const w = await saveH.createWritable(); await w.write(blob); await w.close(); } else await azrSaveBlob(blob, name);
+    say('✓ ' + name + ' — ' + pdf.getPageCount() + ' pages' + (extra ? ' (incl. ' + extra + ' attachment pages)' : ''), '#2f855a');
+    return { bytes: out };
+  } catch (e) { console.error(e); say('PDF failed: ' + (e.message || e), '#c00'); throw e; }
+}
+function tierExportWord() {
+  if (tierMode() === 'none') { alert('Choose Tier 1 or Tier 2 on 1101 first.'); return; }
+  const css = "body{font-family:Arial,Helvetica,sans-serif;font-size:11pt}h3{font-size:12pt;margin:14px 0 4px}table.grid{border-collapse:collapse;width:100%}table.grid td,table.grid th{border:1pt solid #000;padding:4pt;font-size:10pt;vertical-align:top;text-align:left}table.grid th{background:#d9d9d9}.pagebreak{page-break-before:always}";
+  const html = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>@page{size:8.5in 11in;margin:1in}" + css + '</style></head><body>' + tierHtml().replace(/<span class='sym'>/g, "<span style=\"font-family:'Segoe UI Symbol','MS Gothic'\">") + '</body></html>';
+  azrSaveBlob(new Blob(['﻿', html], { type: 'application/msword' }), tierFileName('doc'));
+}
+function tierEmailRe() {
+  const f = crFields(); const site = tierVal('tier2SiteName') || [f.siteAddress, f.siteCity].filter(Boolean).join(', ');
+  const subj = 'Tier 2 Site-Specific Environmental Review — ' + site + (f.projectName ? ' (' + f.projectName + ')' : '');
+  const body = 'Hello,\n\nAttached is the Tier 2 site-specific environmental review for ' + site + ', tiered from the Tier 1 review' + (tierVal('tier1Name') ? ' "' + tierVal('tier1Name') + '"' : '') + (tierVal('tier1Heros') ? ' (HEROS No. ' + tierVal('tier1Heros') + ')' : '') + ', with its supporting documentation.\n\nPlease review and sign, and upload it to the Tier 1 review in HEROS for the Environmental Review Record. Let us know if you have any questions.\n\nThank you,\n';
+  window.location.href = 'mailto:?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+}
+tierBuildPanel();
+window.addEventListener('load', () => { setTimeout(() => { setTierMode(tierMode()); }, 300); });
+
 </script>
 <!-- Auto version stamp: shows this file's last-modified (deploy) date so users can confirm they're on the latest. Hidden in print/exports. -->
 <style>@media print{#__verStamp{display:none!important;}}</style>
