@@ -615,7 +615,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v174</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v175</div>
   </div>
 </header>
 
@@ -1953,7 +1953,7 @@ const AUTHORITY_SOP = {
     <div style="margin-top:6px;"><b>Additional Steps (hourly / new proposal)</b> — completing Form <a href="https://www.nrcs.usda.gov/sites/default/files/2022-06/AD1006.pdf" target="_blank" rel="noopener">AD-1006</a>: the preparer completes <b>Parts I, III, VI, and VII</b>; <b>NRCS</b> completes Parts II, IV, and V. A Part VII combined score of <b>160 points or more</b> requires evaluating at least one alternative project site. NRCS has <b>45 days</b> to make a determination and will return the form to you.</div>
   `,
   flood_mgt: `
-    <div style="margin-bottom:8px;"><b>Step 1 — Does it apply? (applicability check)</b><br>Floodplain Management is <b>EO 11988 / 24 CFR Part 55 / §58.5(b)</b>. <b>No blanket exemption.</b> (5-Step vs. 8-Step exemptions live in <a href="https://www.law.cornell.edu/cfr/text/24/55.12" target="_blank" rel="noopener">24 CFR 55.12</a>.)
+    <div style="margin-bottom:8px;"><b>Step 1 — Does it apply? (applicability check)</b><br>Floodplain Management is <b>EO 11988 / 24 CFR Part 55 / §58.5(b)</b>. <b>No blanket exemption.</b> (Part 55 inapplicability is <a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-55/subpart-B/section-55.12" target="_blank" rel="noopener">24 CFR 55.12</a>; 8-Step inapplicability is <a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-55/subpart-B/section-55.13" target="_blank" rel="noopener">55.13</a>; the Modified 5-Step categories are <a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-55/subpart-B/section-55.14" target="_blank" rel="noopener">55.14</a> — numbering per HUD's 2024 FFRMS rule.)
       <div style="margin:4px 0;color:#9b2c2c;">FHA note: HUD's temporary partial waiver of the MPS "BFE + 2 ft" elevation (24 CFR 200.926d(c)(4)) reverts FHA new construction to "at/above BFE." It was signed <b>Feb 21, 2025 for ONE YEAR</b>, so on its face it expired ~Feb 21, 2026 — confirm it has been extended/renewed before relying on the BFE-only standard.</div>
     </div>
     <div style="margin-bottom:8px;"><b>Step 2 — Determine the FFRMS extent</b> (CISA tools are unavailable, so use the <b>500-year floodplain</b> or the <b>Freeboard Value</b> approach)
@@ -1970,7 +1970,7 @@ const AUTHORITY_SOP = {
         <li><b>IN FFRMS</b> — directly in a FEMA SFHA (or will be via pending/preliminary) → <b>Write Up 2a</b>; via the 500-year floodplain → <b>Write Up 2b</b>; via the Freeboard Value approach → <b>Write Up 2c</b>.</li>
       </ul>
     </div>
-    <div><b>Step 4 — If in the FFRMS or a FEMA floodplain: 5-Step / 8-Step</b><br>An 8-Step Decision-Making Process is required unless it is inapplicable per <a href="https://www.law.cornell.edu/cfr/text/24/55.12" target="_blank" rel="noopener">55.12(b)</a> or a 5-Step applies per 55.12(a).
+    <div><b>Step 4 — If in the FFRMS or a FEMA floodplain: 5-Step / 8-Step</b><br>An 8-Step Decision-Making Process (<a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-55/subpart-C/section-55.20" target="_blank" rel="noopener">24 CFR 55.20</a>) is required unless Part 55 is inapplicable (55.12), the 8-Step is inapplicable (55.13), or the action is one of the Modified 5-Step categories in 55.14 (e.g., 55.14(c) rehab of existing residential / 55.14(d) existing non-residential in a good-standing NFIP Regular Program community, not a substantial improvement, footprint and paved area up ≤ 20%). <b>➜ 8-Step / 5-Step (JSON)</b> on this card hands the project to the <a href="https://rifkin-design.github.io/hud-8-step/" target="_blank" rel="noopener">8-Step / 5-Step report tool</a>.
       <ul style="margin:4px 0 4px 18px;">
         <li>Exempt from both the 5- and 8-Step → <b>Write Up 3a.</b></li>
         <li>5-Step required → <b>Write Up 3b</b> → Additional Steps.</li>
@@ -2081,7 +2081,8 @@ const AUTHORITY_SOP = {
     <div><b>Step 4 — Site-visit verification</b>
       <ul style="margin:4px 0 4px 18px;">
         <li>Wetlands <b>not observed</b> and the NWI map is clearly no longer accurate (e.g., a parking lot where a wetland is mapped) → <b>Write Up 4.</b> Save site-visit photos of the mapped NWI area in one document, PDF, and label <b>"No Wetlands."</b></li>
-        <li>Wetlands <b>observed or may be present</b> on Site → <b>Write Up 5</b> → determine whether an <b>8-Step</b> or <b>modified 8-Step (5-Step)</b> decision-making process applies (<a href="https://www.law.cornell.edu/cfr/text/24/55.20" target="_blank" rel="noopener">24 CFR 55.20</a>). <b>New construction or direct impact to an on-site wetland → 8-Step is required.</b></li>
+        <li>Wetlands <b>observed or may be present</b> on Site and <b>new construction will directly impact them</b> (fill, grading, draining) → <b>Write Up 5</b> → <b>8-Step required</b> (<a href="https://www.ecfr.gov/current/title-24/subtitle-A/part-55/subpart-A/section-55.10" target="_blank" rel="noopener">24 CFR 55.10(a)</a>, 55.20). Click <b>➜ 8-Step / 5-Step (JSON)</b> on this card.</li>
+        <li>Wetlands on Site but the work will <b>not directly impact</b> them → <b>Write Up 6</b>: indirect impacts (stormwater, pollutants) are minimized with BMPs and no 8-Step is required (55.10(b)); HUD encourages a covenant or easement on the wetland.</li>
       </ul>
     </div>
     <div style="margin-top:6px;"><b>Additional Steps (hourly / new proposal)</b> — the 8-Step (or modified 5-Step) Decision-Making Process is provided under a separate proposal and submitted as a separate report added to the ERR.</div>
@@ -7094,6 +7095,38 @@ function sendToNoiseWorksheet() {
   }
 }
 
+// ===== (v175) 8-Step / 5-Step hand-off — Floodplain Management & Wetlands cards → hud-8-step tool =====
+const EIGHT_STEP_URL = 'https://rifkin-design.github.io/hud-8-step/';
+const EIGHT_STEP_HANDOFF_KEY = 'azri_handoff_hud_er_to_8step';
+function eightStepHandoffData(from) {
+  const g = gatherData();
+  const SD = g.supportingDocs || {}; const docs = {};
+  ['flood_mgt', 'flood_ins', 'wetlands', 'cr_cover'].forEach(k => { if (SD[k] && SD[k].length) docs[k] = SD[k]; });
+  let county = '', acres = 0;
+  ((typeof parcelFeatures !== 'undefined' && parcelFeatures) || []).forEach(f => { const pr = f.properties || {}; if (!county && pr.COUNTY) county = String(pr.COUNTY).replace(/\s+county$/i, '') + ' County'; if (+pr.ACRES) acres += +pr.ACRES; });
+  const radios = {}; Object.keys(g.radios || {}).forEach(k => { if (/^(exq_(flood_mgt|wetlands|flood_ins)_|reviewFrameworkRadio)/.test(k)) radios[k] = g.radios[k]; });
+  const pf = (typeof crPreparedFor === 'function') ? crPreparedFor() : null;
+  return { app: 'azri-hud-er-to-8step', v: 1, sentAt: new Date().toISOString(), hudBuild: 'v175', from: from || '',
+    fields: g.fields, radios, authorities: { flood_mgt: g.authorities.flood_mgt, wetlands: g.authorities.wetlands, flood_ins: g.authorities.flood_ins },
+    preparedFor: pf ? { name: pf.name, l1: pf.l1, l2: pf.l2 } : null, site: { county, acres: acres || null }, supportingDocs: docs };
+}
+function sendTo8Step(from) {
+  const h = eightStepHandoffData(from);
+  const st = document.getElementById('autoStatus_' + from);
+  const say = (t, c) => { if (st) { st.textContent = t; st.style.color = c || 'var(--azri-navy)'; } };
+  const f = h.fields || {};
+  if (!String(f.projectName || f.siteAddress || '').trim()) { alert('Fill in the Project Name and Site Address in 1125 first.'); return; }
+  const name = '8-Step_handoff_' + String(f.projectName || f.siteAddress).replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40) + '.json';
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(h)], { type: 'application/json' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  if (/(^|\.)rifkin-design\.github\.io$/i.test(location.hostname)) {
+    let note = '';
+    try { localStorage.setItem(EIGHT_STEP_HANDOFF_KEY, JSON.stringify(h)); }
+    catch (e) { try { const lite = Object.assign({}, h, { supportingDocs: {} }); localStorage.setItem(EIGHT_STEP_HANDOFF_KEY, JSON.stringify(lite)); note = ' (figures too large to pass directly — load ' + name + ' in the 8-Step tool to bring them in)'; } catch (e2) { note = ' — load ' + name + ' there with ⬆ Load HUD ER hand-off'; } }
+    window.open(EIGHT_STEP_URL + '?from=hud-er', '_blank');
+    say('⬇ ' + name + ' saved and the 8-Step / 5-Step tool opened with this project' + note + '.');
+  } else say('⬇ ' + name + ' saved — open the 8-Step / 5-Step tool (' + EIGHT_STEP_URL + ') and click ⬆ Load HUD ER hand-off.');
+}
+
 // ===== MAP GENERATOR REGISTRY (per authority) =====
 const MAP_GENERATORS = {
   airport: { fn: 'generateAirportFigure', label: '🗺 Airport Hazards Figure (FAA runway ends)' },
@@ -7946,7 +7979,7 @@ const BOILERPLATE = {
     { label: 'Write Up 2a — In FFRMS due to SFHA', text: "Based on a  review of the FEMA Flood Insurance Rate Map (FIRM) the subject property is located in a FEMA-Designated Special Flood Hazard Area (SFHA).\n-or-\nBased on a  review of the FEMA Flood Insurance Rate Map (FIRM) the subject property is not currently located in a FEMA-Designated Special Flood Hazard Area (SFHA). However, pending and/or preliminary products were identified and reviewed. It was determined that the proposed changes to the floodplain will change the current status of the project, resulting in the structure or insurable property being located in a floodplain.\nFIRM Panel # xx\nRevision #\nDue to being within or potentially within a FEMA designated SFHA, the project is subject to the FFRMS." },
     { label: 'Write Up 2b — In FFRMS via 500-year approach', text: 'The extent of the Federal Flood Risk Management Standard (FFRMS) was determined by using a 500 year floodplain designated by FEMA\'s FIRM (Flood Insurance Rate Map).\nThe extent of the 500 year flood map was not modified by preliminary or Pending products.\n-or-\nThe extent of the 500 year flood map was modified by preliminary or Pending products, and the map with the furthest extent of the 500 year floodplain was considered to determine the FFRMS\nFIRM Panel # xx\nRevision #\nDue to being within or potentially within a FEMA designated 500 year floodplain, the project is subject to the FFRMS.', _updated: true },
     { label: 'Write Up 2c — In FFRMS via Freeboard Value Approach', text: 'Due to the unavailability of a 500 year floodplain, the extent of the Federal Flood Risk Management Standard (FFRMS) was determined by using a freeboard value approach and a Base Flood Elevation (BFE) determined by FEMA\'s FIRM (Flood Insurance Rate Map).\nThe height of the BFE was not modified by preliminary or Pending products.\n-or-\nThe height of the BFE was modified by preliminary or Pending products, and the map with the highest BFE was considered to determine the FFRMS\nFIRM Panel # xx\nRevision #\nDue to being at or within 2 feet of elevation of the BFE of a nearby FEMA designated SFHA, the project is subject to the FFRMS.', _updated: true },
-    { label: 'Write Up 3a — Subject to FFRMS but exempt from 5/8-step (24 CFR 55.12)', text: "Despite being subject to the Federal Flood Risk Management Standard (FFRMS), because the project is xx, no 8-Step or 5-Step Decision Making Process is required. The project is in compliance with Executive Order 11988 (Floodplain Management).\nRequired Mitigation:" },
+    { label: 'Write Up 3a — Subject to FFRMS but exempt from 5/8-step (24 CFR 55.12 / 55.13)', text: "Despite being subject to the Federal Flood Risk Management Standard (FFRMS), because the project is xx, no 8-Step or 5-Step Decision Making Process is required. The project is in compliance with Executive Order 11988 (Floodplain Management).\nRequired Mitigation:" },
     { label: 'Write Up 3b — 5-Step Decision Making process required', text: "Due to being subject to the Federal Flood Risk Management Standard (FFRMS), and because the project is xx, a Modified 5-Step Decision Making process must be conducted for this project. This will be completed and submitted in a separate report which can be added to the ERR." },
     { label: 'Write Up 3c — 8-Step Decision Making process required', text: "Due to being subject to the Federal Flood Risk Management Standard (FFRMS), and because the project is xx, an 8-Step Decision Making process must be conducted for this project. This will be completed and submitted in a separate report which can be added to the ERR." }
   ],
@@ -7971,7 +8004,8 @@ const BOILERPLATE = {
     { label: 'Write Up 2 — NWI shows no wetlands on Site', text: 'A review of the applicable National Wetlands Inventory (NWI) indicates that there are no wetlands on Site. Therefore, the project is in compliance with Executive Order 11990, Wetlands Protection.' },
     { label: 'Write Up 3 — Wetlands on Site, exclusion applies', text: 'A review of the applicable National Wetlands Inventory (NWI) shows a type Wetland on Site. However, the following wetland exclusion applies to this project: type CFR reference (e.g. 24 CFR 55.12xx and summarize the exclusion and why it applies). Therefore, the project is in compliance with Executive Order 11990, Wetlands Protection.' },
     { label: 'Write Up 4 — NWI shows wetlands but site visit confirmed not present', text: "A review of the applicable National Wetlands Inventory (NWI) shows a type Wetland on Site. However AZ-RI's did not observe any signs of NWI Wetland areas or additional wetland areas on the Site during the site visit on date . Describe what is currently in the location instead (ex: paved parking area).\n\nAZ-RI has determined that the type Wetland that appears on the NWI is not present on Site. AZ-RI concludes that the project will not impact a wetland as defined in E.O. 11990. As a result, the project is in compliance with this section." },
-    { label: 'Write Up 5 — Wetlands confirmed on Site, 8-step required (mitigation)', text: 'A review of the applicable National Wetlands Inventory (NWI) shows a type Wetland on Site. The AZ-RI site visit (date) confirmed the presence of these wetlands on Site.\n\nRequired follow up (Mitigation): The project will require the completion of an 8-Step Decision Making Process.' }
+    { label: 'Write Up 5 — Wetlands confirmed on Site, 8-step required (mitigation)', text: 'A review of the applicable National Wetlands Inventory (NWI) shows a type Wetland on Site. The AZ-RI site visit (date) confirmed the presence of these wetlands on Site. The project involves new construction that will directly impact the on-site wetland (24 CFR 55.10(a)).\n\nRequired follow up (Mitigation): The project will require the completion of an 8-Step Decision Making Process (24 CFR 55.20).' },
+    { label: 'Write Up 6 — Wetlands on Site, no direct impact (55.10(b) — no 8-step)', text: 'A review of the applicable National Wetlands Inventory (NWI) shows a type Wetland on Site, and its presence was confirmed during the AZ-RI site visit (date). However, the proposed work will not fill, grade, drain or otherwise directly impact the wetland. In accordance with 24 CFR 55.10(b), indirect impacts to the wetland (such as changes in stormwater runoff or the release of pollutants) will be minimized through best management practices, including erosion and sediment controls during construction and stormwater management meeting State and local requirements. An 8-Step Decision Making Process is not required. The project is in compliance with Executive Order 11990, Wetlands Protection.' }
   ],
   wsr: [
     { label: 'Write Up 1 — No proximate W&S, Study, or NRI rivers', text: 'The National Wild and Scenic Rivers System website was reviewed as well as the National Park Service Nationwide Rivers Inventory Mapper for the Subject Property. The Subject Property is not within proximity of a designated Wild and Scenic River, Study River, or Nationwide Rivers Inventory River. As a result, this project is in compliance with the Wild and Scenic Rivers Act (16 U.S.C. 1271–1287; 24 CFR §58.5(f)).' },
@@ -8533,17 +8567,17 @@ const EXEMPTION_CHECKS = {
       : { exempt: false, status: 'followup', msg: 'Applies — run the FIRM Figure (zoom + vicinity) and the FEMA MSC preliminary/pending check per the SOP, then insert Write Up 1, 2 or 3.' }
   },
   flood_mgt: {
-    intro: 'Floodplain Management (EO 11988 / 24 CFR Part 55). Whether the site is in the FFRMS floodplain is a location question (Floodplain Figure). The <b>scope</b> of work decides which Part 55 track applies if it is: §55.12(c) inapplicability (no physical action / non-construction assistance), §55.12(a) 5-Step (repair, rehab, modernization or improvement of an existing structure with no footprint increase and not substantial improvement), or the full 8-Step (new construction, substantial improvement, footprint increase, demolition/rebuild).',
+    intro: 'Floodplain Management (EO 11988 / 24 CFR Part 55). Whether the site is in the FFRMS floodplain is a location question (Floodplain Figure). The <b>scope</b> of work decides which Part 55 track applies if it is: §55.12 / §55.13 inapplicability (no physical action / non-construction assistance, leasing, minor 1–4 unit repairs), §55.14 Modified 5-Step (repair, rehab, modernization or improvement of an existing structure — footprint and paved area up no more than 20%, not a substantial improvement), or the full 8-Step (new construction, substantial improvement, footprint increase, demolition/rebuild).',
     questions: [
       { id: 'scope', label: 'Which best describes the HUD-assisted activity for Part 55 purposes?', options: [
-        { v: 'none', t: 'No physical action in the floodplain — acquisition/leasing of an existing structure without rehab, services, operating or rental subsidy, TBRA, or other non-construction assistance (§55.12(c))' },
-        { v: 'minor', t: 'Repair, rehabilitation, modernization, weatherization or improvement of an EXISTING structure — no footprint increase, not a substantial improvement (§55.12(a) 5-Step candidate)' },
+        { v: 'none', t: 'No physical action in the floodplain — acquisition/leasing of an existing structure without rehab, services, operating or rental subsidy, TBRA, or other non-construction assistance (§55.12 / §55.13 — e.g., §55.12(a)/(b) exempt or categorically excluded activities, §55.12(h) non-project-based vouchers, §55.13(e) leasing)' },
+        { v: 'minor', t: 'Repair, rehabilitation, modernization, weatherization or improvement of an EXISTING structure — footprint and paved area up no more than 20%, not a substantial improvement (§55.14(c)/(d) Modified 5-Step candidate)' },
         { v: 'major', t: 'New construction, substantial improvement, footprint increase, or demolition and rebuild (full 8-Step if in the FFRMS floodplain)' }
       ]}
     ],
     evaluate: a => {
-      if (a.scope === 'none') return { exempt: true, status: 'exempt', writeUpIdx: 5, msg: 'Part 55 decision-making inapplicable under §55.12(c) for this activity — Write Up 3a inserted (edit the cite to the specific §55.12(c) paragraph); marked Exempt. Still run the Floodplain Figure so the ERR documents the floodplain status.' };
-      if (a.scope === 'minor') return { exempt: false, status: 'followup', msg: 'Existing-structure work — if the Floodplain Figure places the site in the FFRMS floodplain, the §55.12(a) 5-Step process applies (Write Up 3b); if outside, Write Up 1a/1b.' };
+      if (a.scope === 'none') return { exempt: true, status: 'exempt', writeUpIdx: 5, msg: 'Part 55 decision-making inapplicable under §55.12 / §55.13 for this activity — Write Up 3a inserted (edit the cite to the specific paragraph); marked Exempt. Still run the Floodplain Figure so the ERR documents the floodplain status.' };
+      if (a.scope === 'minor') return { exempt: false, status: 'followup', msg: 'Existing-structure work — if the Floodplain Figure places the site in the FFRMS floodplain, the §55.14 Modified 5-Step process applies (Write Up 3b); if outside, Write Up 1a/1b.' };
       return { exempt: false, status: 'followup', msg: 'New construction / substantial improvement — if in the FFRMS floodplain the full 8-Step process applies (Write Up 3c); Critical Actions (hospitals, nursing homes, emergency facilities) use the 0.2% floodplain. If outside, Write Up 1a/1b.' };
     }
   },
@@ -9118,6 +9152,7 @@ AUTHORITIES.forEach(a => {
     mapBtnHtml = '<button class="no-print" onclick="' + fn + '(\'' + a.id + '\')" style="background:white;border:1px solid var(--azri-navy);color:var(--azri-navy);padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">' + label + '</button>';
   }
   // (v157) Noise → hand the project, client and site boundary to the Noise Assessment Worksheet
+  if (a.id === 'flood_mgt' || a.id === 'wetlands') mapBtnHtml += ' <button class="no-print" onclick="sendTo8Step(\'' + a.id + '\')" title="Saves an 8-Step / 5-Step hand-off file (project, client, RE / HUD contact, FIRM and NWI findings, floodplain and wetland figures) and opens the 8-Step / 5-Step Decision Making Process tool with it." style="background:#658d1b;border:1px solid #658d1b;color:#fff;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">➜ 8-Step / 5-Step (JSON)</button>';
   if (a.id === 'noise') mapBtnHtml += ' <button class="no-print" onclick="sendToNoiseWorksheet()" title="Opens the Noise Assessment Worksheet with this review\'s project name, address, county, client, preparer, project type and parcel boundary filled in, then runs its noise screening." style="background:var(--azri-navy,#0f2a44);border:1px solid var(--azri-navy,#0f2a44);color:#fff;padding:3px 10px;border-radius:3px;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600;">➜ Full Noise Assessment (open Noise Worksheet)</button>';
   // Precompute the always-visible SOP panel (string concat — no nested template literal in the IIFE)
   let sopHtml = '';
@@ -13943,7 +13978,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v174 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v175 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v175: ➜ 8-Step / 5-Step (JSON) on the Floodplain Management and Wetlands cards — hand-off file for the 8-Step / 5-Step Decision Making Process tool; Part 55 citations updated to the 2024 numbering (55.12 / 55.13 / 55.14); Wetlands Write Up 6 (on-site wetland, no direct impact, 55.10(b)).');
   console.log('  v174: Tiered reviews (24 CFR 58.15) — 1101 Tiering selector (Not tiered / Tier 1 broad-level / Tier 2 site-specific); Tiering card: Tier 1 reference, per-law resolved-at-Tier-1 vs site-specific with written strategies, Tier 1 and Tier 2 determinations, Tier 2 site log; HUD-format Tier 1 / Tier 2 ER (PDF with attachments by law, Word); Tier 2 hides the HEROS export and drafts the email to the RE.');
   console.log('  v173: (Nathaniel) Historic Preservation Write Up 1 amended — [Insert NR and State findings] and [Insert TDAT Write-up] placeholders, plus two endings: SHPO has not yet responded (determination forwarded upon receipt) [OR] SHPO determination received (No Historic Properties Affected / No Adverse Effect).');
   console.log('  v172: (Nathaniel) status colours — Awaiting Response is bright yellow and Follow-Up Required is dark red on the determination buttons, sidebar dots, summary pills / counts and status lines; Client Report PDF file name uses spaces instead of underscores ("<Project> HUD ER Report.pdf").');
