@@ -615,7 +615,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v175</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v176</div>
   </div>
 </header>
 
@@ -8718,7 +8718,7 @@ function contamSubsectionText(f) {
   const radonExtra = (!f.contamRadonNotes && f.contamRadonValue) ? ('Radon concentration: ' + f.contamRadonValue + ' pCi/L.') : '';
   if (f.contamRadonNotes || radonExtra) parts.push('RADON (HUD Notice CPD-23-103): ' + [f.contamRadonNotes, radonExtra].filter(Boolean).join(' '));
   // LBP/Asbestos: the inserted write-up in the notes is the ERR text; no status prefix needed.
-  if (f.contamLbpNotes) parts.push('LEAD-BASED PAINT (24 CFR Part 35): ' + f.contamLbpNotes);
+  if (f.contamLbpNotes) parts.push('LEAD-BASED PAINT (24 CFR Part 35 / 40 CFR Part 745): ' + f.contamLbpNotes);
   if (f.contamAsbestosNotes) parts.push('ASBESTOS: ' + f.contamAsbestosNotes);
   return parts.join('\n\n');
 }
@@ -8739,7 +8739,7 @@ function housingSubsectionText(f) {
 
 // ===== HOUSING REQUIREMENTS WRITE-UPS (v109) — MAP Guide, Chapter 9 =====
 const MAP_LBP_WRITEUPS = {
-  inspected: 'A lead-based paint inspection/risk assessment was performed by an appropriate certified lead professional on [DATE] by [firm/inspector]. Findings: [summarize results — LBP present/absent, and by which component]. [If LBP is present: describe interim controls, abatement, or ongoing maintenance consistent with 24 CFR Part 35 and applicable program guidance.]',
+  inspected: 'A lead-based paint inspection/risk assessment was performed by an appropriate certified lead professional on [DATE] by [firm/inspector]. Findings: [summarize results — LBP present/absent, and by which component]. [If LBP is present: describe interim controls, abatement, or ongoing maintenance consistent with 24 CFR Part 35, 40 CFR Part 745 and applicable program guidance.]',
   lead_free: 'The project was previously deemed to be lead free. Lead-free certificate(s) are attached/uploaded to the ERR and referenced below.',
   not_pre1978: 'The project does not involve any buildings constructed prior to 1978 and is therefore not subject to the Lead Safe Housing Rule (24 CFR Part 35) target housing requirements. Documentation of construction date(s): [source/date].',
   not_required: 'Program guidance does not require lead-based paint testing for this project. [Cite the applicable exemption — e.g., housing designated exclusively for the elderly or persons with disabilities with no child under 6 residing or expected to reside, or 0-bedroom dwelling units, per 24 CFR Part 35.]'
@@ -8788,9 +8788,9 @@ const LBP_WRITEUPS = {
   pre1978_demo: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because the project is unoccupied, proposed for demolition and the property will remain unoccupied until demolition, the Lead-based paint requirements do not apply.',
   pre1978_elderly: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because the project is designated exclusively for the elderly or persons with disabilities and no child of less than 6 years of age resides or is expected to reside at the project, the Lead-based paint requirements do not apply.',
   pre1978_zerobed: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because the project contains zero-bedroom dwelling units and no child of less than 6 years of age resides or is expected to reside at the project, the Lead-based paint requirements do not apply.',
-  pre1978: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP).',
+  pre1978: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). Because federal funds will be used for the purchase, lease, support services, operation, or work that may disturb painted surfaces of pre-1978 housing, the project must comply with the lead-based paint evaluation and hazard reduction requirements of HUD\'s lead-based paint rules (Lead Disclosure; and Lead Safe Housing, 24 CFR Part 35) and EPA\'s lead-based paint rules (Renovation, Repair and Painting; Pre-Renovation Education; and Lead Training and Certification, 40 CFR Part 745).',
   pre1978_comm: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). However, because this is a non-residential project, the LBP requirements do not apply. Nevertheless, contractors impacting surfaces containing LBP must adhere to the Occupational Safety and Health Administration\'s (OSHA’s) Lead in Construction Standard. Lead-containing materials should also be sampled and analyzed using the Toxicity Characteristic Leaching Procedure (TCLP) with lead analysis to ensure proper waste segregation and disposal.',
-  pre1978_followup: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP).\n\nRecommended Follow up (Mitigation): The grant recipient will ensure that contractors impacting surfaces containing LBP adhere to the Occupational Safety and Health Administration\'s (OSHA’s) Lead in Construction Standard and also ensure that Lead-containing materials are properly characterized for disposal.'
+  pre1978_followup: 'The building(s) on the Subject Property were constructed before 1978 and therefore assumed to contain Lead-based paint (LBP). Because federal funds will be used for the purchase, lease, support services, operation, or work that may disturb painted surfaces of pre-1978 housing, the project must comply with the lead-based paint evaluation and hazard reduction requirements of HUD\'s lead-based paint rules (Lead Disclosure; and Lead Safe Housing, 24 CFR Part 35) and EPA\'s lead-based paint rules (Renovation, Repair and Painting; Pre-Renovation Education; and Lead Training and Certification, 40 CFR Part 745).\n\nRecommended Follow up (Mitigation): The grant recipient will ensure that lead-based paint evaluation and hazard reduction are completed in accordance with 24 CFR Part 35, that renovation work is performed by EPA RRP-certified firms and renovators in accordance with 40 CFR Part 745, that contractors impacting surfaces containing LBP adhere to the Occupational Safety and Health Administration\'s (OSHA’s) Lead in Construction Standard, and that Lead-containing materials are properly characterized for disposal.'
 };
 const ACM_WRITEUPS = {
   no_struct: 'There were no structures on the Subject Property and therefore no Asbestos Containing Materials.',
@@ -8806,7 +8806,7 @@ function insertLbpWriteUp() {
   const st = document.getElementById('lbpWriteUpStatus');
   if (!sel || !LBP_WRITEUPS[sel]) { if (st) st.textContent = 'Select the LBP scenario first.'; return; }
   if (ta) { ta.value = LBP_WRITEUPS[sel]; ta.dispatchEvent(new Event('input', { bubbles: true })); }
-  if (st) st.textContent = 'LBP write-up inserted.' + (sel === 'pre1978' || sel === 'pre1978_followup' ? ' Pre-1978 residential — 24 CFR Part 35 requirements apply; coordinate program-specific evaluation/reduction requirements.' : '');
+  if (st) st.textContent = 'LBP write-up inserted.' + (sel === 'pre1978' || sel === 'pre1978_followup' ? ' Pre-1978 residential — 24 CFR Part 35 and 40 CFR Part 745 requirements apply; coordinate program-specific evaluation/reduction requirements.' : '');
 }
 
 function insertAsbestosWriteUp() {
@@ -9597,7 +9597,7 @@ AUTHORITIES.forEach(a => {
       </div>
 
       <div style="margin-bottom:14px;">
-        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Lead-Based Paint <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— 24 CFR Part 35 (Lead Safe Housing Rule); target housing = residential built before 1978. <b>Exemptions (24 CFR 35.115):</b> no buildings · built after 1978 · unoccupied &amp; slated for demolition (remains unoccupied until demolition) · exclusively for the elderly or persons with disabilities with no child under 6 residing/expected · zero-bedroom dwellings with no child under 6 · non-residential. Determine if exempt, then insert the correct write-up.</span></div>
+        <div style="font-weight:600;font-size:12.5px;color:var(--azri-navy);text-transform:none;letter-spacing:0;">Lead-Based Paint <span style="font-weight:400;font-size:11.5px;color:#4a5568;">— 24 CFR Part 35 (Lead Disclosure &amp; Lead Safe Housing Rule) and 40 CFR Part 745 (EPA RRP, Pre-Renovation Education, Lead Training &amp; Certification); target housing = residential built before 1978. Applies when federal funds are used for purchase, lease, support services, operation, or work that may disturb painted surfaces of pre-1978 housing (CPF grant agreement LBP clause). <b>Exemptions (24 CFR 35.115):</b> no buildings · built after 1978 · unoccupied &amp; slated for demolition (remains unoccupied until demolition) · exclusively for the elderly or persons with disabilities with no child under 6 residing/expected · zero-bedroom dwellings with no child under 6 · non-residential. Determine if exempt, then insert the correct write-up.</span></div>
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;align-items:flex-end;">
           <div style="min-width:300px;flex:1;">
             <label style="font-size:11px;">LBP scenario (selects the write-up)</label>
@@ -9608,9 +9608,9 @@ AUTHORITIES.forEach(a => {
               <option value="pre1978_demo">Write Up 3 — Pre-1978, unoccupied &amp; slated for demolition (exempt)</option>
               <option value="pre1978_elderly">Write Up 4 — Pre-1978, exclusively elderly/disabled, no child under 6 (exempt)</option>
               <option value="pre1978_zerobed">Write Up 5 — Pre-1978, zero-bedroom units, no child under 6 (exempt)</option>
-              <option value="pre1978">Write Up 6 — Pre-1978, LBP assumed (requirements apply)</option>
+              <option value="pre1978">Write Up 6 — Pre-1978, LBP assumed (24 CFR 35 + 40 CFR 745 apply)</option>
               <option value="pre1978_comm">Write Up 7 — Pre-1978, commercial/non-residential (OSHA + TCLP note)</option>
-              <option value="pre1978_followup">Write Up 8 — Pre-1978, LBP assumed + Recommended Follow up (OSHA + waste characterization)</option>
+              <option value="pre1978_followup">Write Up 8 — Pre-1978, LBP assumed (24 CFR 35 + 40 CFR 745) + Recommended Follow up (LSHR, RRP, OSHA, waste characterization)</option>
             </select>
           </div>
           <div class="no-print" style="flex:0 0 auto;">
@@ -13978,7 +13978,7 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v175 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v176 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
   console.log('  v175: ➜ 8-Step / 5-Step (JSON) on the Floodplain Management and Wetlands cards — hand-off file for the 8-Step / 5-Step Decision Making Process tool; Part 55 citations updated to the 2024 numbering (55.12 / 55.13 / 55.14); Wetlands Write Up 6 (on-site wetland, no direct impact, 55.10(b)).');
   console.log('  v174: Tiered reviews (24 CFR 58.15) — 1101 Tiering selector (Not tiered / Tier 1 broad-level / Tier 2 site-specific); Tiering card: Tier 1 reference, per-law resolved-at-Tier-1 vs site-specific with written strategies, Tier 1 and Tier 2 determinations, Tier 2 site log; HUD-format Tier 1 / Tier 2 ER (PDF with attachments by law, Word); Tier 2 hides the HEROS export and drafts the email to the RE.');
   console.log('  v173: (Nathaniel) Historic Preservation Write Up 1 amended — [Insert NR and State findings] and [Insert TDAT Write-up] placeholders, plus two endings: SHPO has not yet responded (determination forwarded upon receipt) [OR] SHPO determination received (No Historic Properties Affected / No Adverse Effect).');
