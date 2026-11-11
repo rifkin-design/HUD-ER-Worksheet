@@ -615,7 +615,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v176</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v177</div>
   </div>
 </header>
 
@@ -7956,7 +7956,8 @@ const BOILERPLATE = {
     { label: 'Write Up 2 — IPaC review, no species/habitat (compliant)', text: 'Federally listed species and/or designated critical habitats were reviewed for the Subject Property using the Fish and Wildlife (FWS) IPaC. The Subject Property does not contain any critical habitats or endangered or threatened species. As a result, this project will have no effect on species or habitats and is therefore in compliance with the Endangered Species Act.' },
     { label: 'Write Up 3 — Species/habitat present, FWS response pending', text: 'Federally listed species and/or designated critical habitats were reviewed for the Subject Property, from the Fish and Wildlife (FWS) IPaC. The Subject Property does contain critical habitats and or endangered and/or threatened species are listed for the project area: xx.\n\nTherefore, the USFW Service was contacted to obtain a determination regarding the listed habitats/species.\n\nThe USFW determination will be forwarded to the Client, HUD and/or the RE upon receipt.' },
     { label: 'Write Up 3 — Species/habitat present, FWS response received', text: 'Federally listed species and/or designated critical habitats were reviewed for the Subject Property, from the Fish and Wildlife (FWS) IPaC. The Subject Property does contain critical habitats and or endangered and/or threatened species are listed for the project area: xx.\n\nTherefore, the USFW Service was contacted to obtain a determination regarding the listed habitats/species.\n\nAZ-RI received a response from USFW stating the following: xx\n\nThe project is in compliance with the Endangered Species Act.' },
-    { label: 'Write Up 5 — Species/habitat present, D-Keys State No Consultation Necessary', text: 'Federally listed species and/or designated critical habitats were reviewed for the Subject Property using the Fish and Wildlife (FWS) IPaC. The Subject Property contains the following critical habitats or endangered or threatened species -and/or- candidate species: xx. IPaC determination keys were completed for xx and returned a determination of “[D-Key Result]”. Projects with D-key results of “No Effect” or “Not Likely to Adversely Affect” do not require further Section 7 Consultation for those species. [Candidate species do not require Section 7 consultation]. As a result, this project will have no effect on species or habitats and is therefore in compliance with the Endangered Species Act.', _updated: true }
+    { label: 'Write Up 5 — Species/habitat present, D-Keys State No Consultation Necessary', text: 'Federally listed species and/or designated critical habitats were reviewed for the Subject Property using the Fish and Wildlife (FWS) IPaC. The Subject Property contains the following critical habitats or endangered or threatened species -and/or- candidate species: xx. IPaC determination keys were completed for xx and returned a determination of “[D-Key Result]”. Projects with D-key results of “No Effect” or “Not Likely to Adversely Affect” do not require further Section 7 Consultation for those species. [Candidate species do not require Section 7 consultation]. As a result, this project will have no effect on species or habitats and is therefore in compliance with the Endangered Species Act.', _updated: true },
+    { label: 'Add to NLAA Determinations', text: 'The HUD Representative or Responsible Entity signing off on the review should search the project in IPaC using project code [XXXX] and convert the technical assistance letter into a concurrence letter. Unless contacted by the US FWS Field Office, no further action is required.' }
   ],
   explos: [
     { label: 'Write Up 1 — Exempt (no NC, no density-increase rehab)', text: 'The proposed project will not increase residential densities, convert the type of use of a building to habitation, or make a vacant building habitable. Therefore, the project is in compliance with 24 CFR Part 51, Subpart C, Explosives and Flammable Hazards.' },
@@ -9916,7 +9917,10 @@ function insertBoilerplateByIdx(authId, idx) {
   if (!item) return;
   const ta = document.querySelector(`[data-field="${authId}_notes"]`);
   if (ta) {
-    ta.value = (ta.value ? ta.value + '\n\n' : '') + item.text;
+    let txt = item.text;
+    // (v177) ESA "Add to NLAA Determinations" — fill the IPaC project code when it has been entered
+    if (authId === 'esa' && txt.includes('[XXXX]')) { const c = (document.querySelector('[data-field="esa_ipacCode"]') || {}).value; if (c && c.trim()) txt = txt.split('[XXXX]').join(c.trim()); }
+    ta.value = (ta.value ? ta.value + '\n\n' : '') + txt;
     ta.dispatchEvent(new Event('input', { bubbles: true }));
   }
   closeBoilerplate();
@@ -13978,7 +13982,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v176 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v177 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v177: (Nathaniel) Endangered Species write-up "Add to NLAA Determinations" — HUD Rep / RE converts the IPaC technical assistance letter into a concurrence letter; [XXXX] fills from the IPaC project code when entered.');
   console.log('  v175: ➜ 8-Step / 5-Step (JSON) on the Floodplain Management and Wetlands cards — hand-off file for the 8-Step / 5-Step Decision Making Process tool; Part 55 citations updated to the 2024 numbering (55.12 / 55.13 / 55.14); Wetlands Write Up 6 (on-site wetland, no direct impact, 55.10(b)).');
   console.log('  v174: Tiered reviews (24 CFR 58.15) — 1101 Tiering selector (Not tiered / Tier 1 broad-level / Tier 2 site-specific); Tiering card: Tier 1 reference, per-law resolved-at-Tier-1 vs site-specific with written strategies, Tier 1 and Tier 2 determinations, Tier 2 site log; HUD-format Tier 1 / Tier 2 ER (PDF with attachments by law, Word); Tier 2 hides the HEROS export and drafts the email to the RE.');
   console.log('  v173: (Nathaniel) Historic Preservation Write Up 1 amended — [Insert NR and State findings] and [Insert TDAT Write-up] placeholders, plus two endings: SHPO has not yet responded (determination forwarded upon receipt) [OR] SHPO determination received (No Historic Properties Affected / No Adverse Effect).');
