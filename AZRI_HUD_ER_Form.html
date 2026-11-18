@@ -615,7 +615,7 @@
   <div style="text-align:right;font-size:12px;opacity:0.85;">
     <div style="font-weight:600;">AZ-RI Consultants</div>
     <div>Environmental Compliance Services</div>
-    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v179</div>
+    <div style="font-size:10px;opacity:0.7;margin-top:2px;">Build v180</div>
   </div>
 </header>
 
@@ -7962,6 +7962,7 @@ const BOILERPLATE = {
   ],
   contam: [
     { label: 'Phase I ESA — no RECs', text: 'A Phase I Environmental Site Assessment was conducted [date] in accordance with ASTM E1527-21. The assessment identified no Recognized Environmental Conditions (RECs), Controlled RECs, or Historical RECs at the property. Project is free of hazardous materials, contamination, toxic chemicals, and radioactive substances per §58.5(i)(2).' },
+    { label: 'Limited ESA — no RECs', text: 'A Limited ESA, including a HUD-compliant Site Contamination Checklist was completed for the Subject Property in accordance with due diligence requirements for single family dwellings of four units or less. No Recognized Environmental Conditions (RECs) nor Vapor Encroachment Concerns (VECs) were identified.' },   // (v180, Nathaniel)
     { label: 'Phase I — REC requires Phase II', text: 'A Phase I ESA dated [date] identified the following REC(s): [describe]. A Phase II ESA is required prior to HUD environmental clearance to characterize potential impacts. FOLLOW-UP REQUIRED.' }
   ],
   esa: [
@@ -10524,18 +10525,22 @@ var _crCoverFramed = null;
 // (v158) Cover photo (stored as supportingDocs.cr_cover — not an authority, so never an appendix) and "Prepared For" resolution
 function crCoverDoc() { return ((typeof supportingDocs !== 'undefined' && supportingDocs.cr_cover) || []).find(d => /^image\//i.test(d.type || '')) || null; }
 function crCoverData() { const d = crCoverDoc(); if (!d) return null; return (_crCoverFramed && _crCoverFramed.src === d.data) ? _crCoverFramed.data : d.data; }
-function crPrepareCover() {   // 6 px black frame baked in (htmlToPdfmake can't border an image), capped at 1400 px — same as the Limited ESA
+// (v180, Nathaniel) the cover photo is cropped to the Phase I ESA worksheet's default: 4:3, 1200 x 900 px, centred — so the cover
+// always has the same picture size, whatever the shape of the original. Covers already saved in a review are cropped when the
+// report is built.
+function crCropBox(w, h) { const r = 4 / 3; let sw = w, sh = h, sx = 0, sy = 0; if (sw / sh > r) { sw = Math.round(sh * r); sx = Math.round((w - sw) / 2); } else { sh = Math.round(sw / r); sy = Math.round((h - sh) / 2); } return { sx, sy, sw, sh }; }
+function crPrepareCover() {   // 6 px black frame baked in (htmlToPdfmake can't border an image) — (v180) on the 1200 x 900 4:3 crop
   const d = crCoverDoc(); if (!d) return Promise.resolve(); if (_crCoverFramed && _crCoverFramed.src === d.data) return Promise.resolve();
-  return new Promise(res => { const im = new Image(); im.onload = () => { const sc = Math.min(1, 1400 / im.width); const w = Math.round(im.width * sc), h = Math.round(im.height * sc), b = 6;
-    const c = document.createElement('canvas'); c.width = w + 2 * b; c.height = h + 2 * b; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, b, b, w, h);
+  return new Promise(res => { const im = new Image(); im.onload = () => { const k = crCropBox(im.width, im.height); const w = 1200, h = 900, b = 6;
+    const c = document.createElement('canvas'); c.width = w + 2 * b; c.height = h + 2 * b; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, k.sx, k.sy, k.sw, k.sh, b, b, w, h);
     _crCoverFramed = { src: d.data, data: c.toDataURL('image/jpeg', 0.9), w: c.width, h: c.height }; res(); }; im.onerror = () => res(); im.src = d.data; });
 }
 function crPickCover() {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/jpeg,image/png';
   inp.onchange = () => { const f = inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => {
-    const im = new Image(); im.onload = () => {   // downsize to ≤1600 px so the saved review JSON stays small
-      const sc = Math.min(1, 1600 / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
-      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); const data = c.toDataURL('image/jpeg', 0.88);
+    const im = new Image(); im.onload = () => {   // (v180) cropped to 4:3, 1200 x 900 (centre) — same as the Phase I ESA worksheet
+      const k = crCropBox(im.width, im.height); const c = document.createElement('canvas'); c.width = 1200; c.height = 900; const x = c.getContext('2d');
+      x.fillStyle = '#fff'; x.fillRect(0, 0, 1200, 900); x.drawImage(im, k.sx, k.sy, k.sw, k.sh, 0, 0, 1200, 900); const data = c.toDataURL('image/jpeg', 0.85);
       supportingDocs.cr_cover = [{ name: f.name.replace(/\.[^.]+$/, '') + '.jpg', size: Math.round(data.length * 0.75), type: 'image/jpeg', uploadedAt: new Date().toISOString(), data }];
       _crCoverFramed = null; crRenderCover(); if (typeof triggerAutosave === 'function') triggerAutosave(); };
     im.src = r.result; }; r.readAsDataURL(f); };
@@ -14128,7 +14133,8 @@ function renderHerosCitations() {
 
 // Initialize map and state pack after DOM is ready
 window.addEventListener('load', () => {
-  console.log('%c[AZ-RI HUD ER Form] Build v179 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('%c[AZ-RI HUD ER Form] Build v180 loaded', 'background:#0f2a44;color:white;padding:2px 8px;border-radius:3px;');
+  console.log('  v180: (Nathaniel) cover photo cropped to the Phase I ESA default (4:3, 1200 x 900, centred — saved covers too, when the report is built); Site Contamination write-up "Limited ESA — no RECs".');
   console.log('  v179: Screen 5000 — Mitigation Plan memo (HUD Tracking Template, Word): lists Follow-Up authorities / EA factors rated 3-4 as issues to evaluate, adds a row for each, inserts HUD standard 4-item plan, Comments on Completed Measures per row, builds the .docx from HUD template.');
   console.log('  v178: staff roster (Scott Rifkin, Nathaniel Alper, Brandon Dillow) with bios and blue signatures — Client Report gets a Qualifications of Preparers section for the ticked Report team; ESA Section 7 / Section 106 letters print the signer\'s signature and default title when the signer is on the roster.');
   console.log('  v177: (Nathaniel) Endangered Species write-up "Add to NLAA Determinations" — HUD Rep / RE converts the IPaC technical assistance letter into a concurrence letter; [XXXX] fills from the IPaC project code when entered.');
